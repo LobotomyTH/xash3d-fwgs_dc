@@ -1003,8 +1003,11 @@ qboolean CL_AddVisibleEntity( cl_entity_t *ent, int entityType )
 	if( RP_LOCALCLIENT( ent ))
 	{
 		cl.local.apply_effects = true;
-
-		if( !CL_IsThirdPerson( ) && ( ent->index == cl.viewentity ))
+#if XASH_DREAMCAST
+		if( !CL__IsThirdPerson( ) && ( ent->index == cl.viewentity ))
+#else
+	if( !CL_IsThirdPerson( ) && ( ent->index == cl.viewentity ))
+#endif // XASH_DREAMCAST // rename CL__IsThirdPerson due to linking since it is defined at cl too
 		{
 			// we don't draw player in default renderer in firstperson mode
 			// but let the client.dll know about player entity anyway
