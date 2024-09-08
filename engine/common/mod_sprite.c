@@ -30,7 +30,11 @@ Mod_LoadSpriteModel
 load sprite model
 ====================
 */
+#if XASH_DREAMCAST
+void _Mod_LoadSpriteModel( model_t *mod, const void *buffer, qboolean *loaded )
+#else
 void Mod_LoadSpriteModel( model_t *mod, const void *buffer, qboolean *loaded )
+#endif
 {
 	dsprite_q1_t	*pinq1;
 	dsprite_hl_t	*pinhl;
