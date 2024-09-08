@@ -290,12 +290,12 @@ qboolean Sound_LoadMPG( const char *name, const byte *buffer, fs_offset_t filesi
 
 static fs_offset_t FS_SeekMpg( void *file, fs_offset_t offset, int whence )
 {
-	return g_fsapi.Seek((file_t *)file, offset, whence ) == -1 ? -1 : g_fsapi.Tell((file_t *)file );
+	return g_fsapi.Seek((dc_file_t *)file, offset, whence ) == -1 ? -1 : g_fsapi.Tell((dc_file_t *)file );
 }
 
 static mpg_ssize_t FS_ReadMpg( void *file, void *buf, size_t count )
 {
-	return g_fsapi.Read((file_t *)file, buf, count );
+	return g_fsapi.Read((dc_file_t *)file, buf, count );
 }
 
 /*
@@ -307,13 +307,18 @@ stream_t *Stream_OpenMPG( const char *filename )
 {
 	stream_t	*stream;
 	void	*mpeg;
-	file_t	*file;
+	dc_file_t	*file;
 	int	ret;
 	wavinfo_t	sc;
-
+#if XASH_DREAMCAST
+	char direct_path[MAX_SYSPATH] = "/cd/valve/";
+	Q_strncat(direct_path, filename, sizeof(direct_path));
+	file = FS_SysOpen(direct_path, "rb");
+	if( !file ) return NULL;
+#else
 	file = FS_Open( filename, "rb", false );
 	if( !file ) return NULL;
-
+#endif
 	// at this point we have valid stream
 	stream = Mem_Calloc( host.soundpool, sizeof( stream_t ));
 	stream->file = file;
