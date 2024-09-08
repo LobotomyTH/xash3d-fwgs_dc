@@ -45,6 +45,9 @@ GNU General Public License for more details.
 			#define VRTLD_LIBDL_COMPAT
 			#include <vrtld.h>
 			#define O_BINARY 0
+		#elif XASH_DREAMCAST
+			#define HAVE_DUP
+			#define O_BINARY 0
 		#else
 			#include <dlfcn.h>
 			#define HAVE_DUP

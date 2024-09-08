@@ -21,7 +21,11 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #ifndef CVAR
 #define CVAR
 
+#if XASH_DREAMCAST
+#include <stdint.h>
+#else
 #include STDINT_H
+#endif
 #include "xash3d_types.h"
 
 /*
