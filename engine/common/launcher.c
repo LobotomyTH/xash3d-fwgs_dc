@@ -22,7 +22,9 @@ GNU General Public License for more details.
 #endif
 #include "build.h"
 #include "common.h"
-
+#if XASH_DREAMCAST
+#include <kos.h>
+#endif
 #ifndef XASH_GAMEDIR
 #define XASH_GAMEDIR "valve" // !!! Replace with your default (base) game directory !!!
 #endif
@@ -70,6 +72,9 @@ static int Sys_Start( void )
 	return Host_Main( szArgc, szArgv, szGameDir, 0, Sys_ChangeGame );
 }
 
+#if XASH_DREAMCAST
+KOS_INIT_FLAGS(INIT_CDROM | INIT_CONTROLLER | INIT_KEYBOARD | INIT_MOUSE | INIT_VMU | INIT_NET);
+#endif
 int main( int argc, char **argv )
 {
 #if XASH_PSVITA
