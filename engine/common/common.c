@@ -890,7 +890,11 @@ pfnGetGameDir
 void GAME_EXPORT pfnGetGameDir( char *szGetGameDir )
 {
 	if( !szGetGameDir ) return;
+#if XASH_DREAMCAST
+	Q_strncpy( szGetGameDir, "valve", sizeof( "valve" ));
+#else
 	Q_strncpy( szGetGameDir, GI->gamefolder, sizeof( GI->gamefolder ));
+#endif
 }
 
 qboolean COM_IsSafeFileToDownload( const char *filename )
