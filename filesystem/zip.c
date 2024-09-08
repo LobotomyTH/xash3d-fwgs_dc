@@ -123,7 +123,7 @@ typedef struct zipfile_s
 
 struct zip_s
 {
-	file_t *handle;
+	dc_file_t *handle;
 	int		numfiles;
 	zipfile_t files[]; // flexible
 };
@@ -389,7 +389,7 @@ FS_OpenZipFile
 Open a packed file using its package file descriptor
 ===========
 */
-static file_t *FS_OpenFile_ZIP( searchpath_t *search, const char *filename, const char *mode, int pack_ind )
+static dc_file_t *FS_OpenFile_ZIP( searchpath_t *search, const char *filename, const char *mode, int pack_ind )
 {
 	zipfile_t *pfile = &search->zip->files[pack_ind];
 

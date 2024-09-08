@@ -158,22 +158,23 @@ typedef struct fs_api_t
 	void (*LoadGameInfo)( const char *rootfolder );
 
 	// file ops
-	file_t *(*Open)( const char *filepath, const char *mode, qboolean gamedironly );
-	fs_offset_t (*Write)( file_t *file, const void *data, size_t datasize );
-	fs_offset_t (*Read)( file_t *file, void *buffer, size_t buffersize );
-	int (*Seek)( file_t *file, fs_offset_t offset, int whence );
-	fs_offset_t (*Tell)( file_t *file );
-	qboolean (*Eof)( file_t *file );
-	int (*Flush)( file_t *file );
-	int (*Close)( file_t *file );
-	int (*Gets)( file_t *file, char *string, size_t bufsize );
-	int (*UnGetc)( file_t *file, char c );
-	int (*Getc)( file_t *file );
-	int (*VPrintf)( file_t *file, const char *format, va_list ap );
-	int (*Printf)( file_t *file, const char *format, ... ) _format( 2 );
-	int (*Print)( file_t *file, const char *msg );
-	fs_offset_t (*FileLength)( file_t *f );
-	qboolean (*FileCopy)( file_t *pOutput, file_t *pInput, int fileSize );
+	dc_file_t *(*Open)( const char *filepath, const char *mode, qboolean gamedironly );
+	fs_offset_t (*Write)( dc_file_t *file, const void *data, size_t datasize );
+	fs_offset_t (*Read)( dc_file_t *file, void *buffer, size_t buffersize );
+	int (*Seek)( dc_file_t *file, fs_offset_t offset, int whence );
+	fs_offset_t (*Tell)( dc_file_t *file );
+	qboolean (*Eof)( dc_file_t *file );
+	int (*Flush)( dc_file_t *file );
+	int (*Close)( dc_file_t *file );
+	int (*Gets)( dc_file_t *file, char *string, size_t bufsize );
+	int (*UnGetc)( dc_file_t *file, char c );
+	int (*Getc)( dc_file_t *file );
+	int (*VPrintf)( dc_file_t *file, const char *format, va_list ap );
+	int (*Printf)( dc_file_t *file, const char *format, ... ) _format( 2 );
+	int (*Print)( dc_file_t *file, const char *msg );
+	fs_offset_t (*FileLength)( dc_file_t *f );
+	qboolean (*FileCopy)( dc_file_t *pOutput, dc_file_t *pInput, int fileSize );
+
 
 	// file buffer ops
 	byte *(*LoadFile)( const char *path, fs_offset_t *filesizeptr, qboolean gamedironly );
@@ -193,7 +194,7 @@ typedef struct fs_api_t
 	qboolean (*SysFileExists)( const char *path );
 	const char *(*GetDiskPath)( const char *name, qboolean gamedironly );
 
-	const char *(*ArchivePath)( file_t *f ); // returns path to archive from which file was opened or "plain"
+	const char *(*ArchivePath)( dc_file_t *f ); // returns path to archive from which file was opened or "plain"
 	void *(*MountArchive_Fullpath)( const char *path, int flags ); // mounts the archive by path, if supported
 
 	qboolean (*GetFullDiskPath)( char *buffer, size_t size, const char *name, qboolean gamedironly );

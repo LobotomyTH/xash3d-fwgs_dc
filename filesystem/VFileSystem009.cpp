@@ -16,7 +16,11 @@ GNU General Public License for more details.
 #include <stdio.h>
 #include <time.h>
 #include <stdarg.h>
+#if XASH_DREAMCAST
+#include <alloca.h>
+#else
 #include ALLOCA_H
+#endif
 #include "crtlib.h"
 #include "filesystem.h"
 #include "filesystem_internal.h"
@@ -41,7 +45,7 @@ GNU General Public License for more details.
 // shouldn't leave current scope
 #define FixupPath( var, str ) \
 	const size_t var ## _size = Q_strlen(( str )) + 1; \
-	char * const var = static_cast<char *>( alloca( var ## _size )); \
+	char * const var = static_cast<char *>( malloc( var ## _size )); \
 	CopyAndFixSlashes( var, ( str ), var ## _size )
 
 static inline bool IsIdGamedir( const char *id )
@@ -178,7 +182,7 @@ public:
 
 	FileHandle_t Open( const char *path, const char *mode, const char *id ) override
 	{
-		file_t *fd;
+		dc_file_t *fd;
 
 		FixupPath( p, path );
 		fd = FS_Open( p, mode, IsIdGamedir( id ));
@@ -188,7 +192,7 @@ public:
 
 	void Close( FileHandle_t handle ) override
 	{
-		FS_Close( static_cast<file_t *>( handle ));
+		FS_Close( static_cast<dc_file_t *>( handle ));
 	}
 
 	void Seek( FileHandle_t handle, int offset, FileSystemSeek_t whence ) override
@@ -208,17 +212,17 @@ public:
 			break;
 		}
 
-		FS_Seek( static_cast<file_t *>( handle ), offset, whence_ );
+		FS_Seek( static_cast<dc_file_t *>( handle ), offset, whence_ );
 	}
 
 	unsigned int Tell( FileHandle_t handle ) override
 	{
-		return FS_Tell( static_cast<file_t *>( handle ));
+		return FS_Tell( static_cast<dc_file_t *>( handle ));
 	}
 
 	unsigned int Size( FileHandle_t handle ) override
 	{
-		return static_cast<file_t *>( handle )->real_length;
+		return static_cast<dc_file_t *>( handle )->real_length;
 	}
 
 	unsigned int Size( const char *path ) override
@@ -250,32 +254,32 @@ public:
 
 	bool IsOk( FileHandle_t handle ) override
 	{
-		return !FS_Eof( static_cast<file_t *>( handle ));
+		return !FS_Eof( static_cast<dc_file_t *>( handle ));
 	}
 
 	void Flush( FileHandle_t handle ) override
 	{
-		FS_Flush( static_cast<file_t *>( handle ));
+		FS_Flush( static_cast<dc_file_t *>( handle ));
 	}
 
 	bool EndOfFile( FileHandle_t handle ) override
 	{
-		return FS_Eof( static_cast<file_t *>( handle ));
+		return FS_Eof( static_cast<dc_file_t *>( handle ));
 	}
 
 	int Read( void *buf, int size, FileHandle_t handle ) override
 	{
-		return FS_Read( static_cast<file_t *>( handle ), buf, size );
+		return FS_Read( static_cast<dc_file_t *>( handle ), buf, size );
 	}
 
 	int Write( const void *buf, int size, FileHandle_t handle ) override
 	{
-		return FS_Write( static_cast<file_t *>( handle ), buf, size );
+		return FS_Write( static_cast<dc_file_t *>( handle ), buf, size );
 	}
 
 	char *ReadLine( char *buf, int size, FileHandle_t handle ) override
 	{
-		const int c = FS_Gets( static_cast<file_t *>( handle ), buf, size );
+		const int c = FS_Gets( static_cast<dc_file_t *>( handle ), buf, size );
 
 		return c >= 0 ? buf : nullptr;
 	}
@@ -286,7 +290,7 @@ public:
 		int ret;
 
 		va_start( ap, fmt );
-		ret = FS_VPrintf( static_cast<file_t *>( handle ), fmt, ap );
+		ret = FS_VPrintf( static_cast<dc_file_t *>( handle ), fmt, ap );
 		va_end( ap );
 
 		return ret;

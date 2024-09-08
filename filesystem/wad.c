@@ -76,7 +76,7 @@ struct wfile_s
 	int		infotableofs;
 	int		numlumps;
 	poolhandle_t mempool;			// W_ReadLump temp buffers
-	file_t		*handle;
+	dc_file_t		*handle;
 	dlumpinfo_t	*lumps;
 	time_t		filetime;
 };
@@ -274,7 +274,7 @@ static void FS_Close_WAD( searchpath_t *search )
 FS_OpenFile_WAD
 ===========
 */
-static file_t *FS_OpenFile_WAD( searchpath_t *search, const char *filename, const char *mode, int pack_ind )
+static dc_file_t *FS_OpenFile_WAD( searchpath_t *search, const char *filename, const char *mode, int pack_ind )
 {
 	return NULL;
 }

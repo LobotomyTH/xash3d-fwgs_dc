@@ -67,7 +67,7 @@ typedef struct
 
 struct pack_s
 {
-	file_t *handle;
+	dc_file_t *handle;
 	int		numfiles;
 	dpackfile_t files[]; // flexible
 };
@@ -98,7 +98,7 @@ of the list so they override previous pack files.
 static pack_t *FS_LoadPackPAK( const char *packfile, int *error )
 {
 	dpackheader_t header;
-	file_t *packhandle;
+	dc_file_t *packhandle;
 	int         numpackfiles;
 	pack_t      *pack;
 	fs_size_t     c;
@@ -188,7 +188,7 @@ FS_OpenPackedFile
 Open a packed file using its package file descriptor
 ===========
 */
-static file_t *FS_OpenFile_PAK( searchpath_t *search, const char *filename, const char *mode, int pack_ind )
+static dc_file_t *FS_OpenFile_PAK( searchpath_t *search, const char *filename, const char *mode, int pack_ind )
 {
 	dpackfile_t	*pfile;
 

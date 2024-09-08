@@ -99,8 +99,7 @@ typedef struct searchpath_s
 
 	void    (*pfnPrintInfo)( struct searchpath_s *search, char *dst, size_t size );
 	void    (*pfnClose)( struct searchpath_s *search );
-	file_t *(*pfnOpenFile)( struct searchpath_s *search, const char *filename, const char *mode, int pack_ind );
-	int     (*pfnFileTime)( struct searchpath_s *search, const char *filename );
+	dc_file_t *(*pfnOpenFile)( struct searchpath_s *search, const char *filename, const char *mode, int pack_ind );	int     (*pfnFileTime)( struct searchpath_s *search, const char *filename );
 	int     (*pfnFindFile)( struct searchpath_s *search, const char *path, char *fixedname, size_t len );
 	void    (*pfnSearch)( struct searchpath_s *search, stringlist_t *list, const char *pattern, int caseinsensitive );
 	byte   *(*pfnLoadFile)( struct searchpath_s *search, const char *path, int pack_ind, fs_offset_t *filesize, void *( *pfnAlloc )( size_t ), void ( *pfnFree )( void * ));
@@ -163,22 +162,22 @@ void FS_Path_f( void );
 void FS_LoadGameInfo( const char *rootfolder );
 
 // file ops
-file_t *FS_Open( const char *filepath, const char *mode, qboolean gamedironly );
-fs_offset_t FS_Write( file_t *file, const void *data, size_t datasize );
-fs_offset_t FS_Read( file_t *file, void *buffer, size_t buffersize );
-int FS_Seek( file_t *file, fs_offset_t offset, int whence );
-fs_offset_t FS_Tell( file_t *file );
-qboolean FS_Eof( file_t *file );
-int FS_Flush( file_t *file );
-int FS_Close( file_t *file );
-int FS_Gets( file_t *file, char *string, size_t bufsize );
-int FS_UnGetc( file_t *file, char c );
-int FS_Getc( file_t *file );
-int FS_VPrintf( file_t *file, const char *format, va_list ap );
-int FS_Printf( file_t *file, const char *format, ... ) _format( 2 );
-int FS_Print( file_t *file, const char *msg );
-fs_offset_t FS_FileLength( file_t *f );
-qboolean FS_FileCopy( file_t *pOutput, file_t *pInput, int fileSize );
+dc_file_t *FS_Open( const char *filepath, const char *mode, qboolean gamedironly );
+fs_offset_t FS_Write( dc_file_t *file, const void *data, size_t datasize );
+fs_offset_t FS_Read( dc_file_t *file, void *buffer, size_t buffersize );
+int FS_Seek( dc_file_t *file, fs_offset_t offset, int whence );
+fs_offset_t FS_Tell( dc_file_t *file );
+qboolean FS_Eof( dc_file_t *file );
+int FS_Flush( dc_file_t *file );
+int FS_Close( dc_file_t *file );
+int FS_Gets( dc_file_t *file, char *string, size_t bufsize );
+int FS_UnGetc( dc_file_t *file, char c );
+int FS_Getc( dc_file_t *file );
+int FS_VPrintf( dc_file_t *file, const char *format, va_list ap );
+int FS_Printf( dc_file_t *file, const char *format, ... ) _format( 2 );
+int FS_Print( dc_file_t *file, const char *msg );
+fs_offset_t FS_FileLength( dc_file_t *f );
+qboolean FS_FileCopy( dc_file_t *pOutput, dc_file_t *pInput, int fileSize );
 
 // file buffer ops
 byte *FS_LoadFile( const char *path, fs_offset_t *filesizeptr, qboolean gamedironly );
@@ -209,11 +208,11 @@ qboolean FS_GetFullDiskPath( char *buffer, size_t size, const char *name, qboole
 void     FS_CreatePath( char *path );
 qboolean FS_SysFolderExists( const char *path );
 qboolean FS_SysFileOrFolderExists( const char *path );
-file_t  *FS_OpenReadFile( const char *filename, const char *mode, qboolean gamedironly );
+dc_file_t *FS_OpenReadFile( const char *filename, const char *mode, qboolean gamedironly );
 
 int           FS_SysFileTime( const char *filename );
-file_t       *FS_OpenHandle( searchpath_t *search, int handle, fs_offset_t offset, fs_offset_t len );
-file_t       *FS_SysOpen( const char *filepath, const char *mode );
+dc_file_t     *FS_OpenHandle( searchpath_t *search, int handle, fs_offset_t offset, fs_offset_t len );
+dc_file_t     *FS_SysOpen( const char *filepath, const char *mode );
 searchpath_t *FS_FindFile( const char *name, int *index, char *fixedname, size_t len, qboolean gamedironly );
 qboolean FS_FullPathToRelativePath( char *dst, const char *src, size_t size );
 
