@@ -21,7 +21,11 @@ GNU General Public License for more details.
 // than could actually be referenced during gameplay,
 // because we don't want to free anything until we are
 // sure we won't need it.
+#if XASH_DREAMCAST
+#define MAX_SFX		2048
+#else
 #define MAX_SFX		8192
+#endif
 #define MAX_SFX_HASH	(MAX_SFX/4)
 
 static int	s_numSfx = 0;
@@ -277,7 +281,7 @@ void S_BeginRegistration( void )
 	int	i;
 
 	snd_ambient = false;
-
+#if !XASH_DREAMCAST
 	// check for automatic ambient sounds
 	for( i = 0; i < NUM_AMBIENTS; i++ )
 	{
@@ -287,7 +291,7 @@ void S_BeginRegistration( void )
 		ambient_sfx[i] = S_RegisterSound( GI->ambientsound[i] );
 		if( ambient_sfx[i] ) snd_ambient = true; // allow auto-ambients
 	}
-
+#endif
 	s_registering = true;
 }
 
