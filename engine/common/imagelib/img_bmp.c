@@ -325,7 +325,7 @@ qboolean Image_LoadBMP( const char *name, const byte *buffer, fs_offset_t filesi
 
 qboolean Image_SaveBMP( const char *name, rgbdata_t *pix )
 {
-	file_t		*pfile = NULL;
+	dc_file_t		*pfile = NULL;
 	size_t		total_size, cur_size;
 	rgba_t		rgrgbPalette[256];
 	dword		cbBmpBits;
