@@ -29,6 +29,11 @@ GNU General Public License for more details.
 #include "platform/psvita/net_psvita.h"
 static const struct in6_addr in6addr_any;
 #endif
+#if XASH_DREAMCAST
+#include <kos/net.h>
+#define IP_TOS 1
+#define IP_MULTICAST_LOOP 34
+#endif
 
 #define NET_USE_FRAGMENTS
 
@@ -356,7 +361,7 @@ static qboolean NET_GetHostByName( const char *hostname, int family, struct sock
 #endif
 }
 
-#if !XASH_EMSCRIPTEN && !XASH_DOS4GW && !defined XASH_NO_ASYNC_NS_RESOLVE
+#if !XASH_EMSCRIPTEN && !XASH_DOS4GW && !XASH_DREAMCAST && !defined XASH_NO_ASYNC_NS_RESOLVE
 #define CAN_ASYNC_NS_RESOLVE
 #endif // !XASH_EMSCRIPTEN && !XASH_DOS4GW && !defined XASH_NO_ASYNC_NS_RESOLVE
 
@@ -1692,8 +1697,11 @@ static int NET_IPSocket( const char *net_iface, int port, int family )
 			Con_DPrintf( S_WARN "%s: port: %d socket: %s\n", __func__, port, NET_ErrorString( ));
 		return INVALID_SOCKET;
 	}
-
+#if XASH_DREAMCAST
+	if( NET_IsSocketError( fcntl( net_socket, F_SETFL, O_NONBLOCK )))
+#else
 	if( NET_IsSocketError( ioctlsocket( net_socket, FIONBIO, (void*)&_true )))
+#endif // XASH_DREAMCAST FIONBIO isn't available, switched to fcntl													  
 	{
 		struct timeval timeout;
 
@@ -1702,7 +1710,7 @@ static int NET_IPSocket( const char *net_iface, int port, int family )
 		timeout.tv_sec = timeout.tv_usec = 0;
 		setsockopt( net_socket, SOL_SOCKET, SO_RCVTIMEO, (char *)&timeout, sizeof(timeout));
 	}
-
+#if !XASH_DREAMCAST
 	// make it broadcast capable
 	if( NET_IsSocketError( setsockopt( net_socket, SOL_SOCKET, SO_BROADCAST, (char *)&_true, sizeof( _true ))))
 	{
@@ -1715,7 +1723,7 @@ static int NET_IPSocket( const char *net_iface, int port, int family )
 		closesocket( net_socket );
 		return INVALID_SOCKET;
 	}
-
+#endif // XASH_DREAMCAST these protos aren't supported, disable for Dreamcast
 	addr.ss_family = family;
 
 	if( family == AF_INET6 )
@@ -1867,11 +1875,14 @@ Returns the servers' ip address as a string.
 static void NET_GetLocalAddress( void )
 {
 	char		hostname[512];
+	#if XASH_DREAMCAST
+	char		hostname_v6[512];
+	netif_t ip;
+	#endif								   			 
 	char		buff[512];
 	struct sockaddr_storage	address;
 	WSAsize_t		namelen;
 	const char		*net_addr_string;
-
 	memset( &net_local, 0, sizeof( netadr_t ));
 	memset( &net6_local, 0, sizeof( netadr_t ));
 
@@ -1880,10 +1891,16 @@ static void NET_GetLocalAddress( void )
 		Con_Printf( "TCP/IP Disabled.\n" );
 		return;
 	}
-
+	
+#if XASH_DREAMCAST
+	net_ipv4_get_stats();
+	inet_ntop(AF_INET, &net_default_dev->ip_addr[0], hostname,
+                  INET_ADDRSTRLEN);		  
+	inet_ntop(AF_INET6, &net_default_dev->ip6_addrs[0], hostname_v6, INET6_ADDRSTRLEN);
+#else
 	gethostname( hostname, sizeof( hostname ));
 	hostname[sizeof(hostname) - 1] = 0;
-
+#endif								
 	if( net.allow_ip )
 	{
 		// If we have changed the ip var from the command line, use that instead.
@@ -1912,8 +1929,11 @@ static void NET_GetLocalAddress( void )
 		// If we have changed the ip var from the command line, use that instead.
 		if( Q_stricmp( net_ip6name.string, "localhost" ))
 			Q_strncpy( buff, net_ip6name.string, sizeof( buff ));
+#if XASH_DREAMCAST
+		else Q_strncpy( buff, hostname_v6, sizeof( buff ));
+#else
 		else Q_strncpy( buff, hostname, sizeof( buff ));
-
+#endif
 		if( NET_StringToAdrEx( buff, &net6_local, AF_INET6 ))
 		{
 			namelen = sizeof( struct sockaddr_in6 );
@@ -2112,6 +2132,13 @@ void NET_Init( void )
 		net.ip_sockets[i]  = INVALID_SOCKET;
 		net.ip6_sockets[i] = INVALID_SOCKET;
 	}
+#if XASH_DREAMCAST
+	if (net_init(net_default_dev))
+	{
+		Con_DPrintf( S_ERROR "network initialization failed.\n" );
+		return;
+	}
+#endif
 
 #if XASH_WIN32
 	if( WSAStartup( MAKEWORD( 1, 1 ), &net.winsockdata ))
@@ -2124,7 +2151,6 @@ void NET_Init( void )
 #ifdef CAN_ASYNC_NS_RESOLVE
 	NET_InitializeCriticalSections();
 #endif
-
 	net.allow_ip = !Sys_CheckParm( "-noip" );
 	net.allow_ip6 = !Sys_CheckParm( "-noip6" );
 
@@ -2212,7 +2238,7 @@ typedef struct httpfile_s
 	struct httpfile_s *next;
 	httpserver_t *server;
 	char path[MAX_SYSPATH];
-	file_t *file;
+	dc_file_t *file;
 	int socket;
 	int size;
 	int downloaded;
@@ -2557,7 +2583,11 @@ void HTTP_Run( void )
 			// You may skip this if not supported by system,
 			// but download will lock engine, maybe you will need to add manual returns
 			mode = 1;
+#if XASH_DREAMCAST
+			return -1;
+#else
 			ioctlsocket( curfile->socket, FIONBIO, (void*)&mode );
+#endif									   
 #if XASH_LINUX
 			// SOCK_NONBLOCK is not portable, so use fcntl
 			fcntl( curfile->socket, F_SETFL, fcntl( curfile->socket, F_GETFL, 0 ) | O_NONBLOCK );
