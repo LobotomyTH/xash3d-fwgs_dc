@@ -2379,9 +2379,11 @@ static void CL_ReadNetMessage( void )
 	case PROTO_LEGACY:
 		parsefn = CL_ParseLegacyServerMessage;
 		break;
+	#if !XASH_DREAMCAST
 	case PROTO_QUAKE:
 		parsefn = CL_ParseQuakeMessage;
 		break;
+	#endif // XASH_DREAMCAST we don't need quake protocol on DC
 	case PROTO_GOLDSRC:
 	default:
 		ASSERT( 0 );

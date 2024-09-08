@@ -21,7 +21,7 @@ GNU General Public License for more details.
 #include "shake.h"
 #include "hltv.h"
 #include "input.h"
-
+#if !XASH_DREAMCAST
 enum {
 	STAT_HEALTH = 0,
 	STAT_FRAGS,
@@ -1106,3 +1106,4 @@ void CL_ParseQuakeMessage( sizebuf_t *msg )
 	// check deferred cmds
 	CL_QuakeExecStuff();
 }
+#endif // XASH_DREAMCAST
