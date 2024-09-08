@@ -96,6 +96,7 @@ Voice_InitOpusEncoder
 */
 static qboolean Voice_InitOpusEncoder( int quality )
 {
+#if !XASH_DREAMCAST				   
 	int err = 0;
 
 	voice.encoder = opus_custom_encoder_create( voice.custom_mode, VOICE_PCM_CHANNELS, &err );
@@ -123,7 +124,7 @@ static qboolean Voice_InitOpusEncoder( int quality )
 		opus_custom_encoder_ctl( voice.encoder, OPUS_SET_BITRATE( 36000 ));
 		break;
 	}
-
+#endif
 	return true;
 }
 
@@ -135,6 +136,7 @@ Voice_ShutdownOpusDecoder
 */
 static void Voice_ShutdownOpusDecoder( void )
 {
+#if !XASH_DREAMCAST					
 	for( int i = 0; i < MAX_CLIENTS; i++ )
 	{
 		if( !voice.decoders[i] )
@@ -143,6 +145,7 @@ static void Voice_ShutdownOpusDecoder( void )
 		opus_custom_decoder_destroy( voice.decoders[i] );
 		voice.decoders[i] = NULL;
 	}
+#endif	   
 }
 
 /*
@@ -153,20 +156,24 @@ Voice_ShutdownOpusEncoder
 */
 static void Voice_ShutdownOpusEncoder( void )
 {
+#if !XASH_DREAMCAST					
 	if( voice.encoder )
 	{
 		opus_custom_encoder_destroy( voice.encoder );
 		voice.encoder = NULL;
 	}
+#endif	   
 }
 
 static void Voice_ShutdownCustomMode( void )
 {
+#if !XASH_DREAMCAST					
 	if( voice.custom_mode )
 	{
 		opus_custom_mode_destroy( voice.custom_mode );
 		voice.custom_mode = NULL;
 	}
+#endif	   
 }
 
 /*
@@ -177,6 +184,7 @@ Voice_GetOpusCompressedData
 */
 static uint Voice_GetOpusCompressedData( byte *out, uint maxsize, uint *frames )
 {
+#if !XASH_DREAMCAST					
 	uint ofs = 0, size = 0;
 	uint frame_size_bytes = voice.frame_size * voice.width;
 
@@ -246,6 +254,9 @@ static uint Voice_GetOpusCompressedData( byte *out, uint maxsize, uint *frames )
 		VoiceCapture_Lock( false );
 
 	return size;
+#else	  
+	return -1;
+#endif		  
 }
 
 /*
@@ -464,8 +475,10 @@ Feed the decoded data to engine sound subsystem
 */
 static void Voice_StartChannel( uint samples, byte *data, int entnum )
 {
+#if !XASH_DREAMCAST					
 	SND_ForceInitMouth( entnum );
 	S_RawEntSamples( entnum, samples, voice.samplerate, voice.width, VOICE_PCM_CHANNELS, data, bound( 0, 255 * voice_scale.value, 255 ));
+#endif	   
 }
 
 /*
@@ -477,6 +490,7 @@ Received encoded voice data, decode it
 */
 void Voice_AddIncomingData( int ent, const byte *data, uint size, uint frames )
 {
+#if !XASH_DREAMCAST					
 	const int playernum = ent - 1;
 	int samples = 0;
 	int ofs = 0;
@@ -510,6 +524,7 @@ void Voice_AddIncomingData( int ent, const byte *data, uint size, uint frames )
 
 	if( samples > 0 )
 		Voice_StartChannel( samples, voice.decompress_buffer, ent );
+#endif		
 }
 
 /*
@@ -625,6 +640,7 @@ Initialize the voice subsystem
 */
 qboolean Voice_Init( const char *pszCodecName, int quality, qboolean preinit )
 {
+#if !XASH_DREAMCAST					
 	if( Q_strcmp( pszCodecName, VOICE_OPUS_CUSTOM_CODEC ))
 	{
 		Con_Printf( S_ERROR "Server requested unsupported codec: %s\n", pszCodecName );
@@ -687,4 +703,7 @@ qboolean Voice_Init( const char *pszCodecName, int quality, qboolean preinit )
 	}
 
 	return true;
+#else
+	return false;
+#endif
 }
