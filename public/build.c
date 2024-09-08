@@ -119,6 +119,8 @@ const char *Q_PlatformStringByID( const int platform )
 		return "nswitch";
 	case PLATFORM_PSVITA:
 		return "psvita";
+	case PLATFORM_DREAMCAST:
+		return "dreamcast";	 
 	}
 
 	assert( 0 );
@@ -204,6 +206,8 @@ const char *Q_ArchitectureStringByID( const int arch, const uint abi, const int 
 			return is64 ? "riscv64d" : "riscv32d";
 		}
 		break;
+	case ARCHITECTURE_SH4:
+		return "sh4";
 	}
 
 	assert( 0 );
@@ -243,7 +247,11 @@ XASH_BUILD_COMMIT must be passed in quotes
 */
 const char *Q_buildcommit( void )
 {
+#if XASH_DREAMCAST
+	return "nonset";
+#else
 	return XASH_BUILD_COMMIT;
+#endif
 }
 
 /*
@@ -256,6 +264,11 @@ XASH_BUILD_BRANCH must be passed in quotes
 */
 const char *Q_buildbranch( void )
 {
+#if XASH_DREAMCAST
+	return "dev";
+#else
 	return XASH_BUILD_BRANCH;
+#endif
+
 }
 
