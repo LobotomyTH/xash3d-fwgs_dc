@@ -284,7 +284,9 @@ static void Sys_PrintStdout( const char *logtime, const char *msg )
 		fprintf( stderr, "%s %s", logtime, buf );
 	}
 #endif
-
+#if XASH_DREAMCAST
+	printf ("%s %s\n", logtime, buf);
+#endif								  
 #elif !XASH_WIN32 // Wcon does the job
 	Sys_PrintLogfile( STDOUT_FILENO, logtime, msg, XASH_COLORIZE_CONSOLE );
 	Sys_FlushStdout();
@@ -394,10 +396,10 @@ Con_Reportf
 void Con_Reportf( const char *szFmt, ... )
 {
 	va_list args;
-
+#if !XASH_DREAMCAST
 	if( host_developer.value < DEV_EXTENDED )
 		return;
-
+#endif
 	va_start( args, szFmt );
 	Con_Printfv( false, szFmt, args );
 	va_end( args );
