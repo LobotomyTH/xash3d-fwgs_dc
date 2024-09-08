@@ -33,7 +33,11 @@ GNU General Public License for more details.
 CVAR_DEFINE_AUTO( mp_decals, "300", FCVAR_ARCHIVE, "decals limit in multiplayer" );
 static CVAR_DEFINE_AUTO( dev_overview, "0", 0, "draw level in overview-mode" );
 static CVAR_DEFINE_AUTO( cl_resend, "6.0", 0, "time to resend connect" );
+#if XASH_DREAMCAST
+CVAR_DEFINE( cl_allow_download, "cl_allowdownload", "0", FCVAR_ARCHIVE, "allow to downloading resources from the server" );
+#else
 CVAR_DEFINE( cl_allow_download, "cl_allowdownload", "1", FCVAR_ARCHIVE, "allow to downloading resources from the server" );
+#endif // XASH_DREAMCAST disable downloads by default
 static CVAR_DEFINE( cl_allow_upload, "cl_allowupload", "1", FCVAR_ARCHIVE, "allow to uploading resources to the server" );
 CVAR_DEFINE_AUTO( cl_download_ingame, "1", FCVAR_ARCHIVE, "allow to downloading resources while client is active" );
 static CVAR_DEFINE_AUTO( cl_logofile, "lambda", FCVAR_ARCHIVE, "player logo name" );
@@ -187,8 +191,9 @@ static void CL_CheckClientState( void )
 		cls.changelevel = false;		// changelevel is done
 		cls.changedemo = false;		// changedemo is done
 		cl.first_frame = true;		// first rendering frame
-
+		#if !XASH_DREAMCAST
 		SCR_MakeLevelShot();		// make levelshot if needs
+		#endif // !XASH_DREAMCAST																			
 		Cvar_SetValue( "scr_loading", 0.0f );	// reset progress bar
 		Netchan_ReportFlow( &cls.netchan );
 
@@ -1222,7 +1227,7 @@ static void CL_CreateResourceList( void )
 	byte		rgucMD5_hash[16];
 	resource_t	*pNewResource;
 	int		nSize;
-	file_t		*fp;
+	dc_file_t		*fp;
 
 	HPAK_FlushHostQueue();
 	cl.num_resources = 0;
@@ -2853,9 +2858,11 @@ qboolean CL_PrecacheResources( void )
 {
 	resource_t	*pRes;
 
+#if !XASH_DREAMCAST			   
 	// if we downloaded new WAD files or any other archives they must be added to searchpath
 	if( CL_ShouldRescanFilesystem( ))
-		g_fsapi.Rescan();
+		g_fsapi.Rescan(); 
+#endif // !XASH_DREAMCAST //no downloads, no rescan
 
 	// NOTE: world need to be loaded as first model
 	for( pRes = cl.resourcesonhand.pNext; pRes && pRes != &cl.resourcesonhand; pRes = pRes->pNext )

@@ -113,7 +113,7 @@ typedef struct
 	qboolean		active;
 	qboolean		net_log;
 	netadr_t		net_address;
-	file_t		*file;
+	dc_file_t		*file;
 } server_log_t;
 
 typedef struct server_s
@@ -630,7 +630,11 @@ qboolean SV_RestoreCustomDecal( struct decallist_s *entry, edict_t *pEdict, qboo
 
 static inline edict_t *SV_EdictNum( int n )
 {
+#if XASH_DREAMCAST
+	if( likely( n >= 0 && n < 600 ))
+#else
 	if( likely( n >= 0 && n < GI->max_edicts ))
+#endif				   
 		return &svgame.edicts[n];
 	return NULL;
 }

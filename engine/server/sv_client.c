@@ -943,7 +943,11 @@ static void SV_Info( netadr_t from, int protocolVersion )
 		Info_SetValueForKey( s, "coop", svgame.globals->coop ? "1" : "0", sizeof( s ));
 		Info_SetValueForKeyf( s, "numcl", sizeof( s ), "%i", count );
 		Info_SetValueForKeyf( s, "maxcl", sizeof( s ), "%i", svs.maxclients );
+#if XASH_DREAMCAST
+		Info_SetValueForKey( s, "gamedir", "valve", sizeof( s ));
+#else
 		Info_SetValueForKey( s, "gamedir", GI->gamefolder, sizeof( s ));
+#endif
 		Info_SetValueForKey( s, "password", SV_HavePassword() ? "1" : "0", sizeof( s ));
 
 		// write host last so we can try to cut off too long hostnames
@@ -1053,7 +1057,11 @@ static void SV_BuildNetAnswer( netadr_t from )
 
 		// should match SV_SourceQuery_Details
 		Info_SetValueForKey( string, "hostname", hostname.string, sizeof( string ));
+#if XASH_DREAMCAST
+		Info_SetValueForKey( string, "gamedir", "valve", sizeof( string ));
+#else
 		Info_SetValueForKey( string, "gamedir", GI->gamefolder, sizeof( string ));
+#endif
 		Info_SetValueForKeyf( string, "current", sizeof( string ), "%i", count );
 		Info_SetValueForKeyf( string, "max", sizeof( string ), "%i", svs.maxclients );
 		Info_SetValueForKey( string, "map", sv.name, sizeof( string ));
@@ -1501,10 +1509,12 @@ static void SV_PutClientInServer( sv_client_t *cl )
 	}
 
 #ifdef HACKS_RELATED_HLMODS
+#if !XASH_DREAMCAST				   
 	// enable dev-mode to prevent crash cheat-protecting from Invasion mod
 	if( FBitSet( ent->v.flags, FL_GODMODE|FL_NOTARGET ) && !Q_stricmp( GI->gamefolder, "invasion" ))
 		SV_ExecuteClientCommand( cl, "test\n" );
 #endif
+#endif // !XASH_DREAMCAST	  
 	// refresh the userinfo and movevars
 	// NOTE: because movevars can be changed during the connection process
 	SetBits( cl->flags, FCL_RESEND_USERINFO|FCL_RESEND_MOVEVARS );
@@ -1625,12 +1635,20 @@ void SV_SendServerdata( sizebuf_t *msg, sv_client_t *cl )
 	MSG_WriteLong( msg, sv.worldmapCRC );
 	MSG_WriteByte( msg, cl - svs.clients );
 	MSG_WriteByte( msg, svs.maxclients );
+#if XASH_DREAMCAST
+	MSG_WriteWord( msg, 600 );
+#else
 	MSG_WriteWord( msg, GI->max_edicts );
+#endif
 	MSG_WriteWord( msg, MAX_MODELS );
 	MSG_WriteString( msg, sv.name );
 	MSG_WriteString( msg, STRING( svgame.edicts->v.message )); // Map Message
 	MSG_WriteOneBit( msg, sv.background ); // tell client about background map
+#if XASH_DREAMCAST
+	MSG_WriteString( msg, "valve" );
+#else
 	MSG_WriteString( msg, GI->gamefolder );
+#endif			   									 
 	MSG_WriteLong( msg, host.features );
 
 	// send the player hulls

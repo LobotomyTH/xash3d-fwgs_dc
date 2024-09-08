@@ -267,10 +267,10 @@ static qboolean SoundList_Parse( char *file )
 				goto cleanup;
 		}
 	}
-
+#if !XASH_DREAMCAST
 	if( host_developer.value >= 2 )
 		SoundList_Print_f();
-
+#endif // this breaks serial output
 	return true;
 
 cleanup:

@@ -1108,8 +1108,9 @@ UI_ShellExecute
 */
 static void GAME_EXPORT UI_ShellExecute( const char *path, const char *parms, int shouldExit )
 {
+#if !XASH_DREAMCAST			
 	Platform_ShellExecute( path, parms );
-
+#endif // !XASH_DREAMCAST
 	if( shouldExit )
 		Sys_Quit();
 }

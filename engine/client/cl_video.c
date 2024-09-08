@@ -70,7 +70,7 @@ qboolean SCR_NextMovie( void )
 
 static void SCR_CreateStartupVids( void )
 {
-	file_t	*f;
+	dc_file_t	*f;
 
 	f = FS_Open( DEFAULT_VIDEOLIST_PATH, "w", false );
 	if( !f ) return;

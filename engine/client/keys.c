@@ -144,7 +144,11 @@ keyname_t keynames[] =
 
 static void OSK_EnableTextInput( qboolean enable, qboolean force );
 static qboolean OSK_KeyEvent( int key, int down );
+#if XASH_DREAMCAST
+static CVAR_DEFINE_AUTO( osk_enable, "1", FCVAR_ARCHIVE|FCVAR_FILTERABLE, "enable built-in on-screen keyboard" );
+#else
 static CVAR_DEFINE_AUTO( osk_enable, "0", FCVAR_ARCHIVE|FCVAR_FILTERABLE, "enable built-in on-screen keyboard" );
+#endif
 static CVAR_DEFINE_AUTO( key_rotate, "0", FCVAR_ARCHIVE|FCVAR_FILTERABLE, "rotate arrow keys (0-3)" );
 
 /*
@@ -448,7 +452,7 @@ Key_WriteBindings
 Writes lines containing "bind key value"
 ============
 */
-void Key_WriteBindings( file_t *f )
+void Key_WriteBindings( dc_file_t *f )
 {
 	int	i;
 	string newCommand;
@@ -703,7 +707,11 @@ void GAME_EXPORT Key_Event( int key, int down )
 	VGui_KeyEvent( key, down );
 
 	// console key is hardcoded, so the user can never unbind it
+#if XASH_DREAMCAST
+	if( key == '`' || key == '~' || key == K_MODE_BUTTON )
+#else
 	if( key == '`' || key == '~' )
+#endif											  
 	{
 		// we are in typing mode, so don't switch to console
 		if( cls.key_dest == key_message || !down )
@@ -714,7 +722,11 @@ void GAME_EXPORT Key_Event( int key, int down )
 	}
 
 	// escape is always handled special
+#if XASH_DREAMCAST
+	if( ( key == K_ESCAPE || key == K_START_BUTTON ) && down )
+#else
 	if( key == K_ESCAPE && down )
+#endif
 	{
 		switch( cls.key_dest )
 		{
@@ -881,7 +893,11 @@ Normal keyboard characters, already shifted / capslocked / etc
 void CL_CharEvent( int key )
 {
 	// the console key should never be used as a char
+#if XASH_DREAMCAST
+	if( key == '`' || key == '~' || key == K_MODE_BUTTON ) return;
+#else
 	if( key == '`' || key == '~' ) return;
+#endif
 
 	if( cls.key_dest == key_console && !Con_Visible( ))
 	{
@@ -1006,7 +1022,11 @@ static qboolean OSK_KeyEvent( int key, int down )
 
 	if( osk.curbutton.val == 0 )
 	{
+#if XASH_DREAMCAST
+		if( key == K_ENTER || key == K_A_BUTTON )
+#else
 		if( key == K_ENTER )
+#endif
 		{
 			osk.curbutton.val = osk_keylayout[osk.curlayout][osk.curbutton.y][osk.curbutton.x];
 			return true;
@@ -1017,6 +1037,9 @@ static qboolean OSK_KeyEvent( int key, int down )
 
 	switch ( key )
 	{
+#if XASH_DREAMCAST
+	case K_A_BUTTON:
+#endif
 	case K_ENTER:
 		switch( osk.curbutton.val )
 		{

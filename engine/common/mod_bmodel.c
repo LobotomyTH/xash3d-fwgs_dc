@@ -3460,7 +3460,7 @@ static qboolean Mod_LoadBmodelLumps( model_t *mod, const byte *mod_base, qboolea
 	return true;
 }
 
-static int Mod_LumpLooksLikeEntitiesFile( file_t *f, const dlump_t *l, int flags, const char *msg )
+static int Mod_LumpLooksLikeEntitiesFile( dc_file_t *f, const dlump_t *l, int flags, const char *msg )
 {
 	char *buf;
 	int ret;
@@ -3495,7 +3495,7 @@ check for possible errors
 return real entities lump (for bshift swapped lumps)
 =================
 */
-qboolean Mod_TestBmodelLumps( file_t *f, const char *name, const byte *mod_base, qboolean silent, dlump_t *entities )
+qboolean Mod_TestBmodelLumps( dc_file_t *f, const char *name, const byte *mod_base, qboolean silent, dlump_t *entities )
 {
 	const dheader_t	*header = (const dheader_t *)mod_base;
 	const dextrahdr_t *extrahdr = (const dextrahdr_t *)( mod_base + sizeof( dheader_t ));
@@ -3619,7 +3619,7 @@ check lump for existing
 */
 int GAME_EXPORT Mod_CheckLump( const char *filename, const int lump, int *lumpsize )
 {
-	file_t		*f = FS_Open( filename, "rb", false );
+	dc_file_t		*f = FS_Open( filename, "rb", false );
 	byte		buffer[sizeof( dheader_t ) + sizeof( dextrahdr_t )];
 	size_t		prefetch_size = sizeof( buffer );
 	dextrahdr_t	*extrahdr;
@@ -3678,7 +3678,7 @@ reading random lump by user request
 */
 int GAME_EXPORT Mod_ReadLump( const char *filename, const int lump, void **lumpdata, int *lumpsize )
 {
-	file_t		*f = FS_Open( filename, "rb", false );
+	dc_file_t		*f = FS_Open( filename, "rb", false );
 	byte		buffer[sizeof( dheader_t ) + sizeof( dextrahdr_t )];
 	size_t		prefetch_size = sizeof( buffer );
 	dextrahdr_t	*extrahdr;
@@ -3765,7 +3765,7 @@ int GAME_EXPORT Mod_SaveLump( const char *filename, const int lump, void *lumpda
 	int		result, dummy = lumpsize;
 	dextrahdr_t	*extrahdr;
 	dheader_t		*header;
-	file_t		*f;
+	dc_file_t		*f;
 
 	if( !lumpdata || lumpsize <= 0 )
 		return LUMP_SAVE_NO_DATA;

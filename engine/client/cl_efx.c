@@ -88,8 +88,11 @@ CL_InitParticles
 void CL_InitParticles( void )
 {
 	int	i;
-
+#if XASH_DREAMCAST
+	cl_particles = Mem_Calloc( cls.mempool, sizeof( particle_t ) * 4096 );
+#else
 	cl_particles = Mem_Calloc( cls.mempool, sizeof( particle_t ) * GI->max_particles );
+#endif
 	CL_ClearParticles ();
 
 	// this is used for EF_BRIGHTFIELD
@@ -121,10 +124,19 @@ void CL_ClearParticles( void )
 	cl_active_particles = NULL;
 	cl_active_tracers = NULL;
 
+#if !XASH_DREAMCAST
+
 	for( i = 0; i < GI->max_particles - 1; i++ )
 		cl_particles[i].next = &cl_particles[i+1];
 
 	cl_particles[GI->max_particles-1].next = NULL;
+#else
+#define GI_MAX_PARTICLES 4096
+	for( i = 0; i < GI_MAX_PARTICLES - 1; i++ )
+		cl_particles[i].next = &cl_particles[i+1];
+
+	cl_particles[GI_MAX_PARTICLES-1].next = NULL;
+#endif
 }
 
 /*
@@ -182,7 +194,11 @@ particle_t * GAME_EXPORT R_AllocParticle( void (*callback)( particle_t*, float )
 		if( cl_lasttimewarn < host.realtime )
 		{
 			// don't spam about overflow
+			#if XASH_DREAMCAST
+			Con_DPrintf( S_ERROR "Overflow %d particles\n", 4096 );
+			#else
 			Con_DPrintf( S_ERROR "Overflow %d particles\n", GI->max_particles );
+			#endif
 			cl_lasttimewarn = host.realtime + 1.0f;
 		}
 		return NULL;
@@ -233,7 +249,11 @@ static particle_t *R_AllocTracer( const vec3_t org, const vec3_t vel, float life
 		if( cl_lasttimewarn < host.realtime )
 		{
 			// don't spam about overflow
+			#if XASH_DREAMCAST
+			Con_DPrintf( S_ERROR "Overflow %d tracers\n", 4096 );
+			#else
 			Con_DPrintf( S_ERROR "Overflow %d tracers\n", GI->max_particles );
+			#endif
 			cl_lasttimewarn = host.realtime + 1.0f;
 		}
 		return NULL;
@@ -250,7 +270,7 @@ static particle_t *R_AllocTracer( const vec3_t org, const vec3_t vel, float life
 	VectorCopy( vel, p->vel );
 	p->die = cl.time + life;
 	p->ramp = tracerlength.value;
-	p->color = TRACER_COLORINDEX_DEFAULT; // select custom color
+	p->color = 4; // select custom color
 	p->packedColor = 255; // alpha
 
 	return p;
@@ -342,7 +362,11 @@ CL_InitViewBeams
 */
 void CL_InitViewBeams( void )
 {
+	#if XASH_DREAMCAST
+	cl_viewbeams = Mem_Calloc( cls.mempool, sizeof( BEAM ) * 128 );
+	#else
 	cl_viewbeams = Mem_Calloc( cls.mempool, sizeof( BEAM ) * GI->max_beams );
+	#endif
 	CL_ClearViewBeams();
 }
 
@@ -362,9 +386,16 @@ void CL_ClearViewBeams( void )
 	cl_free_beams = cl_viewbeams;
 	cl_active_beams = NULL;
 
+#if !XASH_DREAMCAST
 	for( i = 0; i < GI->max_beams - 1; i++ )
 		cl_viewbeams[i].next = &cl_viewbeams[i+1];
 	cl_viewbeams[GI->max_beams - 1].next = NULL;
+#else
+#define GI_MAX_BEAMS 128
+	for( i = 0; i < GI_MAX_BEAMS - 1; i++ )
+		cl_viewbeams[i].next = &cl_viewbeams[i+1];
+	cl_viewbeams[GI_MAX_BEAMS - 1].next = NULL;
+#endif
 }
 
 /*

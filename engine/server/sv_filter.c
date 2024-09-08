@@ -218,7 +218,7 @@ static void SV_RemoveID_f( void )
 
 static void SV_WriteID_f( void )
 {
-	file_t *f = FS_Open( Cvar_VariableString( "bannedcfgfile" ), "w", false );
+	dc_file_t *f = FS_Open( Cvar_VariableString( "bannedcfgfile" ), "w", false );
 	cidfilter_t *filter;
 
 	if( !f )
@@ -515,7 +515,7 @@ static void SV_RemoveIP_f( void )
 
 static void SV_WriteIP_f( void )
 {
-	file_t *fd = FS_Open( Cvar_VariableString( "listipcfgfile" ), "w", true );
+	dc_file_t *fd = FS_Open( Cvar_VariableString( "listipcfgfile" ), "w", true );
 	ipfilter_t *f;
 
 	if( !fd )

@@ -33,7 +33,11 @@ half-life implementation of saverestore system
 #define SAVEGAME_VERSION		0x0071				// Version 0.71 GoldSrc compatible
 #define CLIENT_SAVEGAME_VERSION	0x0067				// Version 0.67
 
+#if XASH_DREAMCAST
+#define SAVE_HEAPSIZE		0x100000				// reserve 1Mb for now
+#else
 #define SAVE_HEAPSIZE		0x400000				// reserve 4Mb for now
+#endif
 #define SAVE_HASHSTRINGS		0xFFF				// 4095 unique strings
 
 // savedata headers
@@ -494,9 +498,13 @@ static void ClearSaveDir( void )
 	int	i;
 
 	// just delete all HL? files
+#if XASH_DREAMCAST
+	t = FS_Search( "/vmu/a1/" "*.HL?", true, true );
+	if( !t ) return; // already empty
+#else
 	t = FS_Search( DEFAULT_SAVE_DIRECTORY "*.HL?", true, true );
 	if( !t ) return; // already empty
-
+#endif
 	for( i = 0; i < t->numfilenames; i++ )
 		FS_Delete( t->filenames[i] );
 
@@ -636,11 +644,11 @@ DirectoryCopy
 put the HL1-HL3 files into .sav file
 =============
 */
-static void DirectoryCopy( const char *pPath, file_t *pFile )
+static void DirectoryCopy( const char *pPath, dc_file_t *pFile )
 {
 	char	szName[MAX_OSPATH];
 	int	i, fileSize;
-	file_t	*pCopy;
+	dc_file_t	*pCopy;
 	search_t	*t;
 
 	t = FS_Search( pPath, true, true );
@@ -668,12 +676,12 @@ DirectoryExtract
 extract the HL1-HL3 files from the .sav file
 =============
 */
-static void DirectoryExtract( file_t *pFile, int fileCount )
+static void DirectoryExtract( dc_file_t *pFile, int fileCount )
 {
 	char	szName[MAX_OSPATH];
 	char	fileName[MAX_OSPATH];
 	int	i, fileSize;
-	file_t	*pCopy;
+	dc_file_t	*pCopy;
 
 	for( i = 0; i < fileCount; i++ )
 	{
@@ -804,7 +812,7 @@ BuildHashTable
 build the stringtable from buffer
 =============
 */
-static void BuildHashTable( SAVERESTOREDATA *pSaveData, file_t *pFile )
+static void BuildHashTable( SAVERESTOREDATA *pSaveData, dc_file_t *pFile )
 {
 	char	*pszTokenList = pSaveData->pBaseData;
 	int	i;
@@ -840,13 +848,18 @@ static int GetClientDataSize( const char *level )
 	int	tokenCount, tokenSize;
 	int	size, id, version;
 	char	name[MAX_QPATH];
-	file_t	*pFile;
+	dc_file_t	*pFile;
+#if XASH_DREAMCAST
+	Q_snprintf( name, sizeof( name ), "/vmu/a1/%s.HL2", level );
 
+	if(( pFile = FS_SysOpen( name, "rb", true )) == NULL )
+		return 0;
+#else
 	Q_snprintf( name, sizeof( name ), DEFAULT_SAVE_DIRECTORY "%s.HL2", level );
 
 	if(( pFile = FS_Open( name, "rb", true )) == NULL )
 		return 0;
-
+#endif
 	FS_Read( pFile, &id, sizeof( id ));
 	if( id != SAVEGAME_HEADER )
 	{
@@ -886,8 +899,18 @@ static SAVERESTOREDATA *LoadSaveData( const char *level )
 	int		clientSize;
 	SAVERESTOREDATA	*pSaveData;
 	int		totalSize;
-	file_t		*pFile;
+	dc_file_t		*pFile;
+#if XASH_DREAMCAST
+	Q_snprintf( name, sizeof( name ), "/vmu/a1/%s.HL1", level );
+	Con_Printf( "Loading game from %s...\n", name );
 
+	if(( pFile = FS_SysOpen( name, "rb", true )) == NULL )
+	{
+		Con_Printf( S_ERROR "Couldn't open save data file %s.\n", name );
+		return NULL;
+	}
+
+#else
 	Q_snprintf( name, sizeof( name ), DEFAULT_SAVE_DIRECTORY "%s.HL1", level );
 	Con_Printf( "Loading game from %s...\n", name );
 
@@ -896,7 +919,7 @@ static SAVERESTOREDATA *LoadSaveData( const char *level )
 		Con_Printf( S_ERROR "Couldn't open save data file %s.\n", name );
 		return NULL;
 	}
-
+#endif
 	// Read the header
 	FS_Read( pFile, &id, sizeof( int ));
 	FS_Read( pFile, &version, sizeof( int ));
@@ -999,13 +1022,19 @@ static void EntityPatchWrite( SAVERESTOREDATA *pSaveData, const char *level )
 {
 	char	name[MAX_QPATH];
 	int	i, size = 0;
-	file_t	*pFile;
+	dc_file_t	*pFile;
 
+#if XASH_DREAMCAST
+	Q_snprintf( name, sizeof( name ), "/vmu/a1/%s.HL3", level );
+
+	if(( pFile = FS_SysOpen( name, "wb", true )) == NULL )
+		return;
+#else
 	Q_snprintf( name, sizeof( name ), DEFAULT_SAVE_DIRECTORY "%s.HL3", level );
 
 	if(( pFile = FS_Open( name, "wb", true )) == NULL )
 		return;
-
+#endif
 	for( i = 0; i < pSaveData->tableCount; i++ )
 	{
 		if( FBitSet( pSaveData->pTable[i].flags, FENTTABLE_REMOVED ))
@@ -1036,13 +1065,19 @@ static void EntityPatchRead( SAVERESTOREDATA *pSaveData, const char *level )
 {
 	char	name[MAX_QPATH];
 	int	i, size, entityId;
-	file_t	*pFile;
+	dc_file_t	*pFile;
 
+#if XASH_DREAMCAST
+	Q_snprintf( name, sizeof( name ), "/vmu/a1/%s.HL3", level );
+
+	if(( pFile = FS_SysOpen( name, "rb", true )) == NULL )
+		return;
+#else
 	Q_snprintf( name, sizeof( name ), DEFAULT_SAVE_DIRECTORY "%s.HL3", level );
 
 	if(( pFile = FS_Open( name, "rb", true )) == NULL )
 		return;
-
+#endif
 	// patch count
 	FS_Read( pFile, &size, sizeof( int ));
 
@@ -1172,7 +1207,7 @@ static void SaveClientState( SAVERESTOREDATA *pSaveData, const char *level, int 
 	char		*pTokenData;
 	decallist_t	*decalList;
 	SAVE_CLIENT	header;
-	file_t		*pFile;
+	dc_file_t		*pFile;
 
 	// clearing the saving buffer to reuse
 	SaveClear( pSaveData );
@@ -1238,12 +1273,18 @@ static void SaveClientState( SAVERESTOREDATA *pSaveData, const char *level, int 
 	// Write entity string token table
 	pTokenData = StoreHashTable( pSaveData );
 
+#if XASH_DREAMCAST
+	Q_snprintf( name, sizeof( name ), "/vmu/a1/%s.HL2", level );
+
+	if(( pFile = FS_SysOpen( name, "wb", true )) == NULL )
+		return; // something bad is happens
+#else
 	Q_snprintf( name, sizeof( name ), DEFAULT_SAVE_DIRECTORY "%s.HL2", level );
 
 	// output to disk
 	if(( pFile = FS_Open( name, "wb", true )) == NULL )
 		return; // something bad is happens
-
+#endif
 	version = CLIENT_SAVEGAME_VERSION;
 	id = SAVEGAME_HEADER;
 
@@ -1275,13 +1316,19 @@ static void LoadClientState( SAVERESTOREDATA *pSaveData, const char *level, qboo
 	soundlist_t	soundEntry;
 	decallist_t	decalEntry;
 	SAVE_CLIENT	header;
-	file_t		*pFile;
+	dc_file_t		*pFile;
 
+#if XASH_DREAMCAST
+	Q_snprintf( name, sizeof( name ), "/vmu/a1/%s.HL2", level );
+
+	if(( pFile = FS_SysOpen( name, "rb", true )) == NULL )
+		return; // something bad is happens
+#else
 	Q_snprintf( name, sizeof( name ), DEFAULT_SAVE_DIRECTORY "%s.HL2", level );
 
 	if(( pFile = FS_Open( name, "rb", true )) == NULL )
 		return; // something bad is happens
-
+#endif
 	FS_Read( pFile, &id, sizeof( id ));
 	if( id != SAVEGAME_HEADER )
 	{
@@ -1455,14 +1502,18 @@ static SAVERESTOREDATA *SaveGameState( int changelevel )
 	ENTITYTABLE	*pTable;
 	SAVE_HEADER	header;
 	SAVE_LIGHTSTYLE	light;
-	file_t		*pFile;
+	dc_file_t		*pFile;
 
 	if( !svgame.dllFuncs.pfnParmsChangeLevel )
 		return NULL;
 
 	pSaveData = SaveInit( SAVE_HEAPSIZE, SAVE_HASHSTRINGS );
 
+#if XASH_DREAMCAST
+	Q_snprintf( name, sizeof( name ), "/vmu/a1/%s.HL1", sv.name );
+#else
 	Q_snprintf( name, sizeof( name ), DEFAULT_SAVE_DIRECTORY "%s.HL1", sv.name );
+#endif
 	COM_FixSlashes( name );
 
 	// initialize entity table to count moved entities
@@ -1553,6 +1604,15 @@ static SAVERESTOREDATA *SaveGameState( int changelevel )
 	// Write entity string token table
 	pTokenData = StoreHashTable( pSaveData );
 
+#if XASH_DREAMCAST
+	// output to disk
+	if(( pFile = FS_SysOpen( name, "wb", true )) == NULL )
+	{
+		// something bad is happens
+		SaveFinish( pSaveData );
+		return NULL;
+	}
+#else
 	// output to disk
 	if(( pFile = FS_Open( name, "wb", true )) == NULL )
 	{
@@ -1560,6 +1620,7 @@ static SAVERESTOREDATA *SaveGameState( int changelevel )
 		SaveFinish( pSaveData );
 		return NULL;
 	}
+#endif
 
 	// Write the header -- THIS SHOULD NEVER CHANGE STRUCTURE, USE SAVE_HEADER FOR NEW HEADER INFORMATION
 	// THIS IS ONLY HERE TO IDENTIFY THE FILE AND GET IT'S SIZE.
@@ -1676,15 +1737,18 @@ static qboolean SaveGameSlot( const char *pSaveName, const char *pSaveComment )
 	char		*pTokenData;
 	SAVERESTOREDATA	*pSaveData;
 	GAME_HEADER	gameHeader;
-	file_t		*pFile;
+	dc_file_t		*pFile;
 
 	pSaveData = SaveGameState( false );
 	if( !pSaveData ) return false;
 
 	SaveFinish( pSaveData );
 	pSaveData = SaveInit( SAVE_HEAPSIZE, SAVE_HASHSTRINGS ); // re-init the buffer
-
+#if XASH_DREAMCAST
+	Q_strncpy( "/vmu/a1/", "*.HL?", sizeof( hlPath ) );
+#else
 	Q_strncpy( hlPath, DEFAULT_SAVE_DIRECTORY "*.HL?", sizeof( hlPath ) );
+#endif																								   
 	Q_strncpy( gameHeader.mapName, sv.name, sizeof( gameHeader.mapName )); // get the name of level where a player
 	Q_strncpy( gameHeader.comment, pSaveComment, sizeof( gameHeader.comment ));
 	gameHeader.mapCount = DirectoryCount( hlPath ); // counting all the adjacency maps
@@ -1697,8 +1761,11 @@ static qboolean SaveGameSlot( const char *pSaveName, const char *pSaveComment )
 
 	// Write entity string token table
 	pTokenData = StoreHashTable( pSaveData );
-
+#if XASH_DREAMCAST
+	Q_snprintf( name, sizeof( name ), "/vmu/a1/" "%s.sav", pSaveName );
+#else
 	Q_snprintf( name, sizeof( name ), DEFAULT_SAVE_DIRECTORY "%s.sav", pSaveName );
+#endif
 	COM_FixSlashes( name );
 
 	// output to disk
@@ -1707,13 +1774,22 @@ static qboolean SaveGameSlot( const char *pSaveName, const char *pSaveComment )
 	else if( !Q_stricmp( pSaveName, "autosave" ))
 		AgeSaveList( pSaveName, GI->autosave_aged_count );
 
+#if XASH_DREAMCAST
 	// output to disk
+	if(( pFile = FS_SysOpen( name, "wb", true )) == NULL )
+	{
+		// something bad is happens
+		SaveFinish( pSaveData );
+		return false;
+	}
+#else
 	if(( pFile = FS_Open( name, "wb", true )) == NULL )
 	{
 		// something bad is happens
 		SaveFinish( pSaveData );
 		return false;
 	}
+#endif
 
 	// pending the preview image for savegame
 	Cbuf_AddTextf( "saveshot \"%s\"\n", pSaveName );
@@ -1746,7 +1822,7 @@ SaveReadHeader
 read header of .sav file
 =============
 */
-static int SaveReadHeader( file_t *pFile, GAME_HEADER *pHeader )
+static int SaveReadHeader( dc_file_t *pFile, GAME_HEADER *pHeader )
 {
 	int		tokenCount, tokenSize;
 	int		size, id, version;
@@ -2073,7 +2149,7 @@ qboolean SV_LoadGame( const char *pPath )
 {
 	qboolean		validload = false;
 	GAME_HEADER	gameHeader;
-	file_t		*pFile;
+	dc_file_t		*pFile;
 	uint		flags;
 
 	if( Host_IsDedicated() )
@@ -2241,7 +2317,7 @@ int GAME_EXPORT SV_GetSaveComment( const char *savename, char *comment )
 	int	i, tag, size, nNumberOfFields, nFieldSize, tokenSize, tokenCount;
 	char	*pData, *pSaveData, *pFieldName, **pTokenList;
 	string	mapName, description;
-	file_t	*f;
+	dc_file_t	*f;
 
 	if(( f = FS_Open( savename, "rb", true )) == NULL )
 	{

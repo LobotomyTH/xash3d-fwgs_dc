@@ -69,9 +69,9 @@ static dllfunc_t cdll_exports[] =
 { "CL_IsThirdPerson", (void **)&clgame.dllFuncs.CL_IsThirdPerson },
 { "CL_CameraOffset", (void **)&clgame.dllFuncs.CL_CameraOffset },	// unused callback. Now camera code is completely moved to the user area
 { "CL_CreateMove", (void **)&clgame.dllFuncs.CL_CreateMove },
-{ "IN_ActivateMouse", (void **)&clgame.dllFuncs.IN_ActivateMouse },
-{ "IN_DeactivateMouse", (void **)&clgame.dllFuncs.IN_DeactivateMouse },
-{ "IN_MouseEvent", (void **)&clgame.dllFuncs.IN_MouseEvent },
+{ "IN__ActivateMouse", (void **)&clgame.dllFuncs.IN_ActivateMouse },
+{ "IN__DeactivateMouse", (void **)&clgame.dllFuncs.IN_DeactivateMouse },
+{ "IN__MouseEvent", (void **)&clgame.dllFuncs.IN_MouseEvent },
 { "IN_Accumulate", (void **)&clgame.dllFuncs.IN_Accumulate },
 { "IN_ClearStates", (void **)&clgame.dllFuncs.IN_ClearStates },
 { "V_CalcRefdef", (void **)&clgame.dllFuncs.pfnCalcRefdef },
@@ -138,7 +138,7 @@ CL_IsThirdPerson
 returns true if thirdperson is enabled
 ====================
 */
-qboolean CL_IsThirdPerson( void )
+qboolean CL__IsThirdPerson( void )
 {
 	cl.local.thirdperson = clgame.dllFuncs.CL_IsThirdPerson();
 
@@ -156,7 +156,7 @@ Create a default valve playlist
 */
 static void CL_CreatePlaylist( const char *filename )
 {
-	file_t	*f;
+	dc_file_t	*f;
 
 	f = FS_Open( filename, "w", false );
 	if( !f ) return;
@@ -1119,7 +1119,9 @@ void CL_InitEdicts( int maxclients )
 		clgame.remap_info = (remap_info_t **)Mem_Calloc( clgame.mempool, sizeof( remap_info_t* ) * clgame.maxRemapInfos );
 	}
 
+
 	ref.dllFuncs.R_ProcessEntData( true, clgame.entities, clgame.maxEntities );
+
 }
 
 void CL_FreeEdicts( void )
@@ -1216,7 +1218,7 @@ static qboolean CL_LoadHudSprite( const char *szSpriteName, model_t *m_pSprite, 
 		ref.dllFuncs.Mod_LoadMapSprite( m_pSprite, buf, size, &loaded );
 	else
 	{
-		Mod_LoadSpriteModel( m_pSprite, buf, &loaded );
+		_Mod_LoadSpriteModel( m_pSprite, buf, &loaded );
 		ref.dllFuncs.Mod_ProcessRenderData( m_pSprite, true, buf );
 	}
 
@@ -2655,8 +2657,11 @@ pfnGetGameDirectory
 static const char *pfnGetGameDirectory( void )
 {
 	static char	szGetGameDir[MAX_SYSPATH];
-
+#if XASH_DREAMCAST
+	Q_strncpy( szGetGameDir, "valve", sizeof( szGetGameDir ));
+#else
 	Q_strncpy( szGetGameDir, GI->gamefolder, sizeof( szGetGameDir ));
+#endif
 	return szGetGameDir;
 }
 
@@ -3201,7 +3206,7 @@ void TriRenderMode( int mode )
 TriColor4f
 =================
 */
-void TriColor4f( float r, float g, float b, float a )
+void __TriColor4f( float r, float g, float b, float a )
 {
 	if( clgame.ds.renderMode == kRenderTransAlpha )
 		ref.dllFuncs.Color4ub( r * 255.9f, g * 255.9f, b * 255.9f, a * 255.0f );
@@ -3218,7 +3223,7 @@ void TriColor4f( float r, float g, float b, float a )
 TriColor4ub
 =============
 */
-void TriColor4ub( byte r, byte g, byte b, byte a )
+void __TriColor4ub( byte r, byte g, byte b, byte a )
 {
 	clgame.ds.triRGBA[0] = r * (1.0f / 255.0f);
 	clgame.ds.triRGBA[1] = g * (1.0f / 255.0f);
@@ -3233,7 +3238,7 @@ void TriColor4ub( byte r, byte g, byte b, byte a )
 TriBrightness
 =============
 */
-void TriBrightness( float brightness )
+void _TriBrightness( float brightness )
 {
 	float	r, g, b;
 
@@ -3249,7 +3254,7 @@ void TriBrightness( float brightness )
 TriCullFace
 =============
 */
-void TriCullFace( TRICULLSTYLE style )
+void _TriCullFace( TRICULLSTYLE style )
 {
 	clgame.ds.cullMode = style;
 	ref.dllFuncs.CullFace( style );
@@ -3261,7 +3266,7 @@ TriWorldToScreen
 convert world coordinates (x,y,z) into screen (x, y)
 =============
 */
-int TriWorldToScreen( const float *world, float *screen )
+int _TriWorldToScreen( const float *world, float *screen )
 {
 	return ref.dllFuncs.WorldToScreen( world, screen );
 }
@@ -3321,7 +3326,7 @@ TriSpriteTexture
 bind current texture
 =============
 */
-int TriSpriteTexture( model_t *pSpriteModel, int frame )
+int _TriSpriteTexture( model_t *pSpriteModel, int frame )
 {
 	int	gl_texturenum;
 
@@ -3437,6 +3442,7 @@ NetAPI_SendRequest
 static void GAME_EXPORT NetAPI_SendRequest( int context, int request, int flags, double timeout, netadr_t *remote_address, net_api_response_func_t response )
 {
 	net_request_t	*nr = NULL;
+	string		req;
 	int		i;
 
 	if( !response )
@@ -3488,7 +3494,8 @@ static void GAME_EXPORT NetAPI_SendRequest( int context, int request, int flags,
 	nr->flags = flags;
 
 	// local servers request
-	Netchan_OutOfBandPrint( NS_CLIENT, nr->resp.remote_address, "netinfo %i %i %i", FBitSet( flags, FNETAPI_LEGACY_PROTOCOL ) ? PROTOCOL_LEGACY_VERSION : PROTOCOL_VERSION, context, request );
+	Q_snprintf( req, sizeof( req ), "netinfo %i %i %i", FBitSet( flags, FNETAPI_LEGACY_PROTOCOL ) ? PROTOCOL_LEGACY_VERSION : PROTOCOL_VERSION, context, request );
+	Netchan_OutOfBandPrint( NS_CLIENT, nr->resp.remote_address, "%s", req );
 }
 
 /*
@@ -3965,14 +3972,14 @@ void CL_UnloadProgs( void )
 	CL_FreeParticles();
 	CL_ClearAllRemaps();
 	Mod_ClearUserData();
-
+#if !XASH_DREAMCAST
 	// NOTE: HLFX 0.5 has strange bug: hanging on exit if no map was loaded
 	if( Q_stricmp( GI->gamefolder, "hlfx" ) || GI->version != 0.5f )
 		clgame.dllFuncs.pfnShutdown();
 
 	if( GI->internal_vgui_support )
 		VGui_Shutdown();
-
+#endif
 	Cvar_FullSet( "cl_background", "0", FCVAR_READ_ONLY );
 	Cvar_FullSet( "host_clientloaded", "0", FCVAR_READ_ONLY );
 
@@ -4019,6 +4026,7 @@ qboolean CL_LoadProgs( const char *name )
 	clgame.client_dll_uses_sdl = true;
 #endif
 
+#if !XASH_DREAMCAST
 	// NOTE: important stuff!
 	// vgui must startup BEFORE loading client.dll to avoid get error ERROR_NOACESS
 	// during LoadLibrary
@@ -4031,18 +4039,24 @@ qboolean CL_LoadProgs( const char *name )
 		// we failed to load vgui_support, but let's probe client.dll for support anyway
 		GI->internal_vgui_support = true;
 	}
-
+#endif
 	clgame.hInstance = COM_LoadLibrary( name, false, false );
 
 	if( !clgame.hInstance )
 		return false;
-
+#if !XASH_DREAMCAST
 	// delayed vgui initialization for internal support
 	if( GI->internal_vgui_support && VGui_LoadProgs( clgame.hInstance ))
 	{
 		VGui_Startup( refState.width, refState.height );
 	}
-
+#else
+	// delayed vgui initialization for internal support
+	if( VGui_LoadProgs( clgame.hInstance ))
+	{
+		VGui_Startup( refState.width, refState.height );
+	}
+#endif
 	// clear exports
 	for( func = cdll_exports; func && func->name; func++ )
 		*func->func = NULL;
@@ -4129,7 +4143,9 @@ qboolean CL_LoadProgs( const char *name )
 	clgame.maxEntities = 2; // world + localclient (have valid entities not in game)
 
 	CL_InitCDAudio( "media/cdaudio.txt" );
+	#if !XASH_DREAMCAST
 	CL_InitTitles( "titles.txt" );
+	#endif // XASH_DREAMCAST titles are broken, needs fixing
 	CL_InitParticles ();
 	CL_InitViewBeams ();
 	CL_InitTempEnts ();

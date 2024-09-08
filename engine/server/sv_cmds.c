@@ -357,7 +357,11 @@ SV_NewGame_f
 static void SV_NewGame_f( void )
 {
 	if( Cmd_Argc() == 1 )
+#if XASH_DREAMCAST
+		COM_NewGame( "c0a0" );
+#else
 		COM_NewGame( GI->startmap );
+#endif // XASH_DREAMCAST						  
 	else if( Cmd_Argc() == 2 )
 		COM_NewGame( Cmd_Argv( 1 ));
 	else
@@ -885,8 +889,13 @@ static void SV_EdictUsage_f( void )
 
 	active = pfnNumberOfEntities();
 	Con_Printf( "%5i edicts is used\n", active );
+#if XASH_DREAMCAST
+	Con_Printf( "%5i edicts is free\n", 600 - active );
+	Con_Printf( "%5i total\n", 600 );
+#else
 	Con_Printf( "%5i edicts is free\n", GI->max_edicts - active );
 	Con_Printf( "%5i total\n", GI->max_edicts );
+#endif
 }
 
 /*

@@ -713,8 +713,11 @@ void SV_DeactivateServer( void )
 			Mem_Free( svs.clients[i].frames );
 		svs.clients[i].frames = NULL;
 	}
-
+#if XASH_DREAMCAST
+	svgame.globals->maxEntities = 600;
+#else
 	svgame.globals->maxEntities = GI->max_edicts;
+#endif
 	svgame.globals->maxClients = svs.maxclients;
 	svgame.numEntities = svs.maxclients + 1; // clients + world
 	svgame.globals->startspot = 0;
@@ -835,7 +838,7 @@ qboolean CRC32_MapFile( dword *crcvalue, const char *filename, qboolean multipla
 	int	i, num_bytes, lumplen;
 	int	version, hdr_size;
 	dheader_t	*header;
-	file_t	*f;
+	dc_file_t	*f;
 
 	if( !crcvalue ) return false;
 
@@ -930,7 +933,7 @@ static void SV_GenerateTestPacket( void )
 {
 	const int maxsize = FRAGMENT_MAX_SIZE;
 	uint32_t crc;
-	file_t *file;
+	dc_file_t *file;
 	byte *filepos;
 	int i;
 
@@ -1061,8 +1064,11 @@ qboolean SV_SpawnServer( const char *mapname, const char *startspot, qboolean ba
 
 	// clearing all the baselines
 	memset( svs.static_entities, 0, sizeof( entity_state_t ) * MAX_STATIC_ENTITIES );
+#if XASH_DREAMCAST
+	memset( svs.baselines, 0, sizeof( entity_state_t ) * 600 );
+#else
 	memset( svs.baselines, 0, sizeof( entity_state_t ) * GI->max_edicts );
-
+#endif
 	// make cvars consistant
 	if( coop.value ) Cvar_SetValue( "deathmatch", 0 );
 	current_skill = Q_rint( skill.value );
@@ -1114,7 +1120,7 @@ qboolean SV_SpawnServer( const char *mapname, const char *startspot, qboolean ba
 
 	if( FBitSet( host.features, ENGINE_QUAKE_COMPATIBLE ) && FS_FileExists( "progs.dat", false ))
 	{
-		file_t *f = FS_Open( "progs.dat", "rb", false );
+		dc_file_t *f = FS_Open( "progs.dat", "rb", false );
 		FS_Seek( f, sizeof( int ), SEEK_SET );
 		FS_Read( f, &sv.progsCRC, sizeof( int ));
 		FS_Close( f );

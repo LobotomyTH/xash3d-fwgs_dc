@@ -65,7 +65,7 @@ static inline void HPAK_ResourceFromCompat( resource_t *dest, dresource_t *src )
 	dest->pNext = dest->pPrev = (void*)0xDEADBEEF;
 }
 
-static void HPAK_AddToQueue( const char *name, resource_t *pResource, void *data, file_t *f )
+static void HPAK_AddToQueue( const char *name, resource_t *pResource, void *data, dc_file_t *f )
 {
 	hash_pack_queue_t	*p;
 
@@ -98,12 +98,12 @@ void HPAK_FlushHostQueue( void )
 	gp_hpak_queue = NULL;
 }
 
-static void HPAK_CreatePak( const char *filename, resource_t *pResource, byte *pData, file_t *fin )
+static void HPAK_CreatePak( const char *filename, resource_t *pResource, byte *pData, dc_file_t *fin )
 {
 	int		filelocation;
 	string		pakname;
 	byte		md5[16];
-	file_t		*fout;
+	dc_file_t		*fout;
 	MD5Context_t	ctx;
 
 	if( !COM_CheckString( filename ))
@@ -205,14 +205,14 @@ static qboolean HPAK_FindResource( hpak_info_t *hpk, byte *hash, resource_t *pRe
 	return false;
 }
 
-void HPAK_AddLump( qboolean bUseQueue, const char *name, resource_t *pResource, byte *pData, file_t *pFile )
+void HPAK_AddLump( qboolean bUseQueue, const char *name, resource_t *pResource, byte *pData, dc_file_t *pFile )
 {
 	int		i, j, position, length;
 	hpak_lump_t	*pCurrentEntry = NULL;
 	string		srcname, dstname;
 	hpak_info_t	srcpak, dstpak;
-	file_t		*file_src;
-	file_t		*file_dst;
+	dc_file_t		*file_src;
+	dc_file_t		*file_dst;
 	byte		md5[16];
 	MD5Context_t	ctx;
 
@@ -382,7 +382,7 @@ void HPAK_AddLump( qboolean bUseQueue, const char *name, resource_t *pResource, 
 
 static qboolean HPAK_Validate( const char *filename, qboolean quiet, qboolean delete )
 {
-	file_t		*f;
+	dc_file_t		*f;
 	hpak_lump_t	*dataDir;
 	hpak_header_t	hdr;
 	byte		*dataPak;
@@ -535,7 +535,7 @@ qboolean HPAK_ResourceForHash( const char *filename, byte *hash, resource_t *pRe
 	hpak_header_t	header;
 	string		pakname;
 	qboolean		bFound;
-	file_t		*f;
+	dc_file_t		*f;
 	hash_pack_queue_t	*p;
 
 	if( !COM_CheckString( filename ))
@@ -757,8 +757,8 @@ void HPAK_RemoveLump( const char *name, resource_t *pResource )
 {
 	string		read_path;
 	string		save_path;
-	file_t		*file_src;
-	file_t		*file_dst;
+	dc_file_t		*file_src;
+	dc_file_t		*file_dst;
 	hpak_info_t	hpak_read;
 	hpak_info_t	hpak_save;
 	int		i, j;
@@ -887,7 +887,7 @@ static void HPAK_List_f( void )
 	string		pakname;
 	const char	*type;
 	const char	*size;
-	file_t		*f;
+	dc_file_t		*f;
 
 	if( Cmd_Argc() != 2 )
 	{
@@ -969,7 +969,7 @@ static void HPAK_Extract_f( void )
 	int		nDataSize;
 	const char	*type;
 	const char	*size;
-	file_t		*f;
+	dc_file_t		*f;
 
 	if( Cmd_Argc() != 3 )
 	{

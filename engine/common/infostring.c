@@ -138,7 +138,7 @@ Info_WriteVars
 
 ==============
 */
-void Info_WriteVars( file_t *f )
+void Info_WriteVars( dc_file_t *f )
 {
 	char	*s = CL_Userinfo();
 	char	pkey[MAX_SERVERINFO_STRING];

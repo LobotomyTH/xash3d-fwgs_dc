@@ -214,7 +214,7 @@ writes button data to config
 returns 0 on success, non-zero on error
 ==========================
 */
-static inline int Touch_ExportButtonToConfig( file_t *f, touch_button_t *button, qboolean keepAspect )
+static inline int Touch_ExportButtonToConfig( dc_file_t *f, touch_button_t *button, qboolean keepAspect )
 {
 	string newCommand;
 	int flags = button->flags;
@@ -254,7 +254,7 @@ Dump config to file
 */
 static qboolean Touch_DumpConfig( const char *name, const char *profilename )
 {
-	file_t *f;
+	dc_file_t *f;
 	touch_button_t *button;
 
 	f = FS_Open( name, "w", true );
@@ -324,7 +324,7 @@ save current touch configuration
 */
 void Touch_WriteConfig( void )
 {
-	file_t	*f;
+	dc_file_t	*f;
 	string newconfigfile, oldconfigfile;
 
 	if( !touch.list_user.first )

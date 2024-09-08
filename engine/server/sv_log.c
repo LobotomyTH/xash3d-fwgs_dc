@@ -22,7 +22,7 @@ void Log_Open( void )
 	struct tm		*today;
 	char		szFileBase[ MAX_OSPATH ];
 	char		szTestFile[ MAX_OSPATH ];
-	file_t		*fp = NULL;
+	dc_file_t		*fp = NULL;
 	const char		*temp;
 	int		i;
 

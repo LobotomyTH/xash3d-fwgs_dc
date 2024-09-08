@@ -153,6 +153,7 @@ we record a demo on this level
 */
 void CL_StartupDemoHeader( void )
 {
+#if !XASH_DREAMCAST	//	sorry, but we cant have demoheader due to low VMU memory   
 	CL_CloseDemoHeader();
 
 	cls.demoheader = FS_Open( "demoheader.tmp", "w+b", true );
@@ -164,6 +165,7 @@ void CL_StartupDemoHeader( void )
 	}
 
 	Con_Printf( "Spooling demo header.\n" );
+#endif // !XASH_DREAMCAST  
 }
 
 /*
@@ -226,7 +228,7 @@ CL_WriteDemoCmdHeader
 Writes the demo command header and time-delta
 ====================
 */
-static void CL_WriteDemoCmdHeader( byte cmd, file_t *file )
+static void CL_WriteDemoCmdHeader( byte cmd, dc_file_t *file )
 {
 	float	dt;
 
@@ -299,7 +301,7 @@ Save state of cls.netchan sequences
 so that we can play the demo correctly.
 ====================
 */
-static void CL_WriteDemoSequence( file_t *file )
+static void CL_WriteDemoSequence( dc_file_t *file )
 {
 	Assert( file != NULL );
 
@@ -321,7 +323,7 @@ Dumps the current net message, prefixed by the length
 */
 void CL_WriteDemoMessage( qboolean startup, int start, sizebuf_t *msg )
 {
-	file_t	*file = startup ? cls.demoheader : cls.demofile;
+	dc_file_t	*file = startup ? cls.demoheader : cls.demofile;
 	int	swlen;
 	byte	c;
 
@@ -1226,7 +1228,7 @@ CL_GetDemoComment
 */
 int GAME_EXPORT CL_GetDemoComment( const char *demoname, char *comment )
 {
-	file_t		*demfile;
+	dc_file_t		*demfile;
 	demoheader_t	demohdr;
 	demodirectory_t	directory;
 	demoentry_t	entry;
@@ -1448,7 +1450,7 @@ void CL_Record_f( void )
 	CL_WriteDemoHeader( demopath );
 }
 
-static qboolean CL_ParseDemoHeader( const char *callee, const char *filename, file_t *f, demoheader_t *hdr, int32_t *numentries )
+static qboolean CL_ParseDemoHeader( const char *callee, const char *filename, dc_file_t *f, demoheader_t *hdr, int32_t *numentries )
 {
 	if( FS_Read( f, hdr, sizeof( *hdr )) != sizeof( *hdr ) || hdr->id != IDEMOHEADER )
 	{
@@ -1707,7 +1709,7 @@ void CL_ListDemo_f( void )
 {
 	demoheader_t hdr;
 	int32_t num_entries;
-	file_t *f;
+	dc_file_t *f;
 	char filename[MAX_QPATH];
 	char demoname[MAX_QPATH];
 	int i;

@@ -188,7 +188,11 @@ intptr_t CL_RenderGetParm( const int parm, const int arg, const qboolean checkRe
 		case PARM_DEV_OVERVIEW:
 			return CL_IsDevOverviewMode();
 		case PARM_THIRDPERSON:
+#if XASH_DREAMCAST
+			return CL__IsThirdPerson();
+#else
 			return CL_IsThirdPerson();
+#endif // XASH_DREAMCAST
 		case PARM_QUAKE_COMPATIBLE:
 			return Host_IsQuakeCompatible();
 		case PARM_CONNSTATE:

@@ -376,7 +376,7 @@ Save master server list to xashcomm.lst, except for default
 */
 void NET_SaveMasters( void )
 {
-	file_t *f;
+	dc_file_t *f;
 	master_t *m;
 
 	if( !ml.modified )

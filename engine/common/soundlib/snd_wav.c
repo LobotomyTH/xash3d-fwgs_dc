@@ -136,7 +136,7 @@ static void FindChunk( const char *filename, const char *name )
 StreamFindNextChunk
 ============
 */
-static qboolean StreamFindNextChunk( file_t *file, const char *name, int *last_chunk )
+static qboolean StreamFindNextChunk( dc_file_t *file, const char *name, int *last_chunk )
 {
 	char	chunkName[4];
 	int	iff_chunk_len;
@@ -347,7 +347,7 @@ stream_t *Stream_OpenWAV( const char *filename )
 	int 	last_chunk = 0;
 	char	chunkName[4];
 	int	iff_data;
-	file_t	*file;
+	dc_file_t	*file;
 	short	t;
 
 	if( !filename || !*filename )

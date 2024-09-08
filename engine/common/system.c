@@ -72,14 +72,13 @@ Sys_DebugBreak
 */
 void Sys_DebugBreak( void )
 {
-#if XASH_SDL
+#if XASH_SDL && !XASH_DREAMCAST
 	int was_grabbed = host.hWnd != NULL && SDL_GetWindowGrab( host.hWnd );
 #endif
 
 	if( !Sys_DebuggerPresent( ))
 		return;
-
-#if XASH_SDL
+#if XASH_SDL && !XASH_DREAMCAST
 	if( was_grabbed ) // so annoying...
 		SDL_SetWindowGrab( host.hWnd, SDL_FALSE );
 #endif // XASH_SDL
@@ -91,7 +90,7 @@ void Sys_DebugBreak( void )
 	INLINE_NANOSLEEP1(); // sometimes signal comes with delay, let it interrupt nanosleep
 #endif // !_MSC_VER
 
-#if XASH_SDL
+#if XASH_SDL && !XASH_DREAMCAST
 	if( was_grabbed )
 		SDL_SetWindowGrab( host.hWnd, SDL_TRUE );
 #endif
@@ -153,7 +152,7 @@ const char *Sys_GetCurrentUser( void )
 	sceAppUtilSystemParamGetString( SCE_SYSTEM_PARAM_ID_USERNAME, username, sizeof( username ) - 1 );
 	if( COM_CheckStringEmpty( username ))
 		return username;
-#elif XASH_POSIX && !XASH_ANDROID && !XASH_NSWITCH
+#elif XASH_POSIX && !XASH_ANDROID && !XASH_NSWITCH && !XASH_DREAMCAST
 	uid_t uid = geteuid();
 	struct passwd *pw = getpwuid( uid );
 
@@ -620,7 +619,9 @@ qboolean Sys_NewInstance( const char *gamedir )
 	// under normal circumstances it's always going to be the same path
 	exe = strdup( "app0:/eboot.bin" );
 	Host_Shutdown( );
-	sceAppMgrLoadExec( exe, newargs, NULL );
+	sceAppMgrLoadExec( exe, newargs, NULL );										 
+#elif XASH_DREAMCAST
+	Host_Shutdown();				
 #else
 	exelen = wai_getExecutablePath( NULL, 0, NULL );
 	exe = malloc( exelen + 1 );

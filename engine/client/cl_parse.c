@@ -2196,6 +2196,7 @@ void CL_ParseUserMessage( sizebuf_t *msg, int svc_num )
 		clgame.msg[i].func( clgame.msg[i].name, iSize, pbuf );
 
 #ifdef HACKS_RELATED_HLMODS
+#if !XASH_DREAMCAST				   
 		// run final credits for Half-Life because hl1 doesn't have call END_SECTION
 		if( !Q_stricmp( clgame.msg[i].name, "HudText" ) && !Q_stricmp( GI->gamefolder, "valve" ))
 		{
@@ -2203,7 +2204,8 @@ void CL_ParseUserMessage( sizebuf_t *msg, int svc_num )
 			if( !Q_strcmp( (char *)pbuf, "END3" ))
 				Host_Credits();
 		}
-#endif
+#endif 
+#endif 
 	}
 	else
 	{

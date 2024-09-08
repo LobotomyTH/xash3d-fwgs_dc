@@ -266,7 +266,7 @@ finish:
 
 static void CSCR_WriteVariableToFile( scrvardef_t *var, void *file )
 {
-	file_t   *cfg  = (file_t*)file;
+	dc_file_t   *cfg  = (dc_file_t*)file;
 	convar_t *cvar = Cvar_FindVar( var->name );
 
 	if( cvar && !FBitSet( cvar->flags, FCVAR_SERVER|FCVAR_ARCHIVE ))
@@ -285,7 +285,7 @@ CSCR_WriteGameCVars
 Print all cvars declared in script to game.cfg file
 ======================
 */
-int CSCR_WriteGameCVars( file_t *cfg, const char *scriptfilename )
+int CSCR_WriteGameCVars( dc_file_t *cfg, const char *scriptfilename )
 {
 	return CSCR_ParseFile( scriptfilename, CSCR_WriteVariableToFile, cfg );
 }

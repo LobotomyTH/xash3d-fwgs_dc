@@ -1372,7 +1372,7 @@ static void Con_HistoryAppend( con_history_t *self, field_t *from )
 static void Con_LoadHistory( con_history_t *self )
 {
 	field_t *f;
-	file_t *fd;
+	dc_file_t *fd;
 	int i;
 
 	fd = FS_Open( "console_history.txt", "rb", true );
@@ -1422,7 +1422,7 @@ static void Con_LoadHistory( con_history_t *self )
 static void Con_SaveHistory( con_history_t *self )
 {
 	int historyStart = self->next - CON_HISTORY, i;
-	file_t *f;
+	dc_file_t *f;
 
 	// do not save history if nothing was executed
 	if( self->next == 0 )
@@ -2184,7 +2184,7 @@ void Con_VidInit( void )
 	Con_LoadConchars();
 	Con_CheckResize();
 
-#if XASH_LOW_MEMORY
+#if XASH_LOW_MEMORY && !XASH_DREAMCAST
 	con.background = R_GetBuiltinTexture( REF_GRAY_TEXTURE );
 #else
 	// loading console image

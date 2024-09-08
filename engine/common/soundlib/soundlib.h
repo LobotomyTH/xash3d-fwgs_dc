@@ -65,7 +65,7 @@ struct stream_s
 	const streamfmt_t	*format;	// streamformat to operate
 
 	// stream info
-	file_t		*file;	// stream file
+	dc_file_t		*file;	// stream file
 	int		width;	// resolution - num bits divided by 8 (8 bit is 1, 16 bit is 2)
 	int		rate;	// stream rate
 	int		channels;	// stream channels

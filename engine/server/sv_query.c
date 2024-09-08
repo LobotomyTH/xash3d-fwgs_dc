@@ -46,7 +46,11 @@ static void SV_SourceQuery_Details( netadr_t from )
 
 	MSG_WriteString( &buf, hostname.string );
 	MSG_WriteString( &buf, sv.name );
+#if XASH_DREAMCAST
+	MSG_WriteString( &buf, "valve" );
+#else
 	MSG_WriteString( &buf, GI->gamefolder );
+#endif
 	MSG_WriteString( &buf, svgame.dllFuncs.pfnGetGameDescription( ));
 
 	MSG_WriteShort( &buf, 0 );
@@ -66,7 +70,11 @@ static void SV_SourceQuery_Details( netadr_t from )
 	if( SV_HavePassword( ))
 		MSG_WriteByte( &buf, 1 );
 	else MSG_WriteByte( &buf, 0 );
+#if XASH_DREAMCAST
+	MSG_WriteByte( &buf, "secure" );
+#else
 	MSG_WriteByte( &buf, GI->secure );
+#endif
 	MSG_WriteString( &buf, XASH_VERSION );
 
 	Netchan_OutOfBand( NS_SERVER, from, MSG_GetNumBytesWritten( &buf ), MSG_GetData( &buf ));

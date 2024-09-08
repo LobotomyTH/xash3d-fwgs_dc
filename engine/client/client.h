@@ -626,8 +626,8 @@ typedef struct
 	double		demotime;			// recording time
 	qboolean		set_lastdemo;		// store name of last played demo into the cvar
 
-	file_t		*demofile;
-	file_t		*demoheader;		// contain demo startup info in case we record a demo on this level
+	dc_file_t		*demofile;
+	dc_file_t		*demoheader;		// contain demo startup info in case we record a demo on this level
 	qboolean internetservers_wait;	// internetservers is waiting for dns request
 	qboolean internetservers_pending; // if true, clean master server pings
 	uint32_t internetservers_key;       // compare key to validate master server reply
@@ -1151,7 +1151,7 @@ void CL_PlayVideo_f( void );
 int Key_IsDown( int keynum );
 void Key_Event( int key, int down );
 void Key_Init( void );
-void Key_WriteBindings( file_t *f );
+void Key_WriteBindings( dc_file_t *f );
 const char *Key_GetBinding( int keynum );
 void Key_SetBinding( int keynum, const char *binding );
 void Key_ClearStates( void );

@@ -146,7 +146,7 @@ write net_message into buffer.dat for debugging
 static void CL_WriteErrorMessage( int current_count, sizebuf_t *msg )
 {
 	const char	*buffer_file = "buffer.dat";
-	file_t		*fp;
+	dc_file_t		*fp;
 
 	fp = FS_Open( buffer_file, "wb", false );
 	if( !fp ) return;

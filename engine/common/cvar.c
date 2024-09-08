@@ -1074,7 +1074,7 @@ Writes lines containing "variable value" for all variables
 with the specified flag set to true.
 ============
 */
-void Cvar_WriteVariables( file_t *f, int group )
+void Cvar_WriteVariables( dc_file_t *f, int group )
 {
 	convar_t	*var;
 

@@ -58,7 +58,7 @@ Cmd_ListMaps
 int Cmd_ListMaps( search_t *t, char *lastmapname, size_t len )
 {
 	byte   buf[MAX_SYSPATH]; // 1 kb
-	file_t *f;
+	dc_file_t *f;
 	int i, nummaps;
 	string mapname, message, compiler, generator;
 
@@ -860,7 +860,7 @@ static qboolean Cmd_CheckMapsList_R( qboolean fRefresh, qboolean onlyingamedir )
 	string	result;
 	int	i, size;
 	search_t	*t;
-	file_t	*f;
+	dc_file_t	*f;
 
 	if( FS_FileSize( "maps.lst", onlyingamedir ) > 0 && !fRefresh )
 		return true; // exist
@@ -1357,13 +1357,13 @@ static void Cmd_WriteHelp(const char *name, const char *unused, const char *desc
 	if( length == 0 ) FS_Printf( f, "%s \"%s\"\n", name, desc );
 }
 
-static void Cmd_WriteOpenGLVariables( file_t *f )
+static void Cmd_WriteOpenGLVariables( dc_file_t *f )
 {
 	Cvar_LookupVars( FCVAR_GLCONFIG, NULL, f, (setpair_t)Cmd_WriteOpenGLCvar );
 }
 
 #if !XASH_DEDICATED
-static void Host_FinalizeConfig( file_t *f, const char *config )
+static void Host_FinalizeConfig( dc_file_t *f, const char *config )
 {
 	string backup, newcfg;
 
@@ -1388,7 +1388,7 @@ void Host_WriteConfig( void )
 {
 	kbutton_t	*mlook = NULL;
 	kbutton_t	*jlook = NULL;
-	file_t	*f;
+	dc_file_t	*f;
 
 	if( !clgame.hInstance || Sys_CheckParm( "-nowriteconfig" ) ) return;
 
@@ -1435,7 +1435,7 @@ save serverinfo variables into server.cfg (using for dedicated server too)
 */
 void GAME_EXPORT Host_WriteServerConfig( const char *name )
 {
-	file_t	*f;
+	dc_file_t	*f;
 	string newconfigfile;
 
 	Q_snprintf( newconfigfile, MAX_STRING, "%s.new", name );
@@ -1468,7 +1468,7 @@ save opengl variables into opengl.cfg
 void Host_WriteOpenGLConfig( void )
 {
 	string name;
-	file_t	*f;
+	dc_file_t	*f;
 
 	if( Sys_CheckParm( "-nowriteconfig" ) )
 		return;
@@ -1501,7 +1501,7 @@ save render variables into video.cfg
 */
 void Host_WriteVideoConfig( void )
 {
-	file_t	*f;
+	dc_file_t	*f;
 
 	if( Sys_CheckParm( "-nowriteconfig" ) )
 		return;
@@ -1523,7 +1523,7 @@ void Host_WriteVideoConfig( void )
 
 void Key_EnumCmds_f( void )
 {
-	file_t	*f;
+	dc_file_t	*f;
 
 	FS_AllowDirectPaths( true );
 	if( FS_FileExists( "../help.txt", false ))

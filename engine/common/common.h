@@ -629,7 +629,7 @@ int COM_SizeofResourceList( resource_t *pList, resourceinfo_t *ri );
 // cfgscript.c
 //
 int CSCR_LoadDefaultCVars( const char *scriptfilename );
-int CSCR_WriteGameCVars( file_t *cfg, const char *scriptfilename );
+int CSCR_WriteGameCVars( dc_file_t *cfg, const char *scriptfilename );
 
 //
 // hpak.c
@@ -637,7 +637,7 @@ int CSCR_WriteGameCVars( file_t *cfg, const char *scriptfilename );
 void HPAK_Init( void );
 qboolean HPAK_GetDataPointer( const char *filename, struct resource_s *pRes, byte **buffer, int *size );
 qboolean HPAK_ResourceForHash( const char *filename, byte *hash, struct resource_s *pRes );
-void HPAK_AddLump( qboolean queue, const char *filename, struct resource_s *pRes, byte *data, file_t *f );
+void HPAK_AddLump( qboolean queue, const char *filename, struct resource_s *pRes, byte *data, dc_file_t *f );
 void HPAK_RemoveLump( const char *name, resource_t *resource );
 void HPAK_CheckIntegrity( const char *filename );
 void HPAK_CheckSize( const char *filename );
@@ -660,7 +660,11 @@ struct sv_client_s;
 typedef struct sizebuf_s sizebuf_t;
 qboolean CL_IsInGame( void );
 qboolean CL_IsInConsole( void );
+#if XASH_DREAMCAST
+qboolean CL__IsThirdPerson( void );
+#else
 qboolean CL_IsThirdPerson( void );
+#endif // XASH_DREAMCAST
 qboolean CL_IsIntermission( void );
 qboolean CL_Initialized( void );
 char *CL_Userinfo( void );
@@ -727,7 +731,7 @@ qboolean Info_SetValueForKey( char *s, const char *key, const char *value, int m
 qboolean Info_SetValueForKeyf( char *s, const char *key, int maxsize, const char *format, ... ) _format( 4 );
 qboolean Info_SetValueForStarKey( char *s, const char *key, const char *value, int maxsize );
 qboolean Info_IsValid( const char *s );
-void Info_WriteVars( file_t *f );
+void Info_WriteVars( dc_file_t *f );
 void Info_Print( const char *s );
 int Cmd_CheckMapsList( int fRefresh );
 void COM_SetRandomSeed( int lSeed );

@@ -17,7 +17,11 @@
 #define SPRITE_H
 
 #include "build.h"
+#if XASH_DREAMCAST
+#include <stdint.h>
+#else
 #include STDINT_H
+#endif
 #include "synctype.h"
 
 /*

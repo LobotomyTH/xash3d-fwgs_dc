@@ -457,6 +457,31 @@ static void R_UnloadProgs( void )
 	memset( &ref.dllFuncs, 0, sizeof( ref.dllFuncs ));
 }
 
+#if XASH_DREAMCAST
+static void CL_FillTriAPIFromRef( triangleapi_t *dst, const ref_interface_t *src )
+{
+	dst->version           = TRI_API_VERSION;
+	dst->Begin             = src->Begin;
+	dst->RenderMode        = TriRenderMode;
+	dst->End               = src->End;
+	dst->Color4f           = __TriColor4f;
+	dst->Color4ub          = __TriColor4ub;
+	dst->TexCoord2f        = src->TexCoord2f;
+	dst->Vertex3f          = src->Vertex3f;
+	dst->Vertex3fv         = src->Vertex3fv;
+	dst->Brightness        = _TriBrightness;
+	dst->CullFace          = _TriCullFace;
+	dst->SpriteTexture     = _TriSpriteTexture;
+	dst->WorldToScreen     = _TriWorldToScreen;
+	dst->Fog               = src->Fog;
+	dst->ScreenToWorld     = src->ScreenToWorld;
+	dst->GetMatrix         = src->GetMatrix;
+	dst->BoxInPVS          = TriBoxInPVS;
+	dst->LightAtPoint      = TriLightAtPoint;
+	dst->Color4fRendermode = TriColor4fRendermode;
+	dst->FogParams         = src->FogParams;
+}
+#else
 static void CL_FillTriAPIFromRef( triangleapi_t *dst, const ref_interface_t *src )
 {
 	dst->version           = TRI_API_VERSION;
@@ -480,7 +505,7 @@ static void CL_FillTriAPIFromRef( triangleapi_t *dst, const ref_interface_t *src
 	dst->Color4fRendermode = TriColor4fRendermode;
 	dst->FogParams         = src->FogParams;
 }
-
+#endif // XASH_DREAMCAST
 static qboolean R_LoadProgs( const char *name )
 {
 	static ref_api_t gpEngfuncs;

@@ -45,8 +45,11 @@ qboolean SV_CheckEdict( const edict_t *e, const char *file, const int line )
 	if( !e ) return false; // may be NULL
 
 	n = ((int)((edict_t *)(e) - svgame.edicts));
-
+#if XASH_DREAMCAST
+	if(( n >= 0 ) && ( n < 600 ))
+#else
 	if(( n >= 0 ) && ( n < GI->max_edicts ))
+#endif	  
 		return !e->free;
 	Con_Printf( "bad entity %i (called at %s:%i)\n", n, file, line );
 
@@ -56,7 +59,11 @@ qboolean SV_CheckEdict( const edict_t *e, const char *file, const int line )
 
 static edict_t *SV_PEntityOfEntIndex( const int iEntIndex, const qboolean allentities )
 {
+#if XASH_DREAMCAST
+	if( iEntIndex >= 0 && iEntIndex < 600 )
+#else
 	if( iEntIndex >= 0 && iEntIndex < GI->max_edicts )
+#endif  
 	{
 		edict_t *pEdict = EDICT_NUM( iEntIndex );
 		qboolean player = allentities ? iEntIndex <= svs.maxclients : iEntIndex < svs.maxclients;
@@ -877,7 +884,7 @@ static char *SV_ReadEntityScript( const char *filename, int *flags )
 	char		*ents = NULL;
 	dlump_t entities;
 	size_t		ft1, ft2;
-	file_t		*f;
+	dc_file_t		*f;
 
 	*flags = 0;
 
@@ -1085,9 +1092,12 @@ edict_t *GAME_EXPORT SV_AllocEdict( void )
 			return e;
 		}
 	}
-
+#if XASH_DREAMCAST
+	if( i >= 600 )
+#else
 	if( i >= GI->max_edicts )
-		Host_Error( "%s: no free edicts (max is %d)\n", __func__, GI->max_edicts );
+#endif
+		Host_Error( "%s: no free edicts (max is %d)\n", __func__, 600 );
 
 	svgame.numEntities++;
 	e = EDICT_NUM( i );
@@ -3415,7 +3425,11 @@ int GAME_EXPORT pfnIndexOfEdict( const edict_t *pEdict )
 	if( !pEdict ) return 0; // world ?
 
 	number = NUM_FOR_EDICT( pEdict );
+#if XASH_DREAMCAST
+	if( number < 0 || number > 600 )
+#else
 	if( number < 0 || number > GI->max_edicts )
+#endif
 		Host_Error( "bad entity number %d\n", number );
 	return number;
 }
@@ -3457,8 +3471,11 @@ static edict_t *GAME_EXPORT pfnFindEntityByVars( entvars_t *pvars )
 
 	// don't pass invalid arguments
 	if( !pvars ) return NULL;
-
+#if XASH_DREAMCAST
+	for( i = 0; i < 600; i++ )
+#else
 	for( i = 0; i < GI->max_edicts; i++ )
+#endif
 	{
 		pEdict = EDICT_NUM( i );
 
@@ -4945,6 +4962,7 @@ static qboolean SV_ParseEdict( char **pfile, edict_t *ent )
 	}
 
 #ifdef HACKS_RELATED_HLMODS
+#if !XASH_DREAMCAST				   
 	// chemical existence have broked changelevels
 	if( !Q_stricmp( GI->gamefolder, "ce" ))
 	{
@@ -4952,6 +4970,7 @@ static qboolean SV_ParseEdict( char **pfile, edict_t *ent )
 			adjust_origin = true;
 	}
 #endif
+#endif	  
 
 	for( i = 0; i < numpairs; i++ )
 	{
@@ -5103,12 +5122,15 @@ void SV_SpawnEntities( const char *mapname )
 	ent->v.solid = SOLID_BSP;
 	ent->v.movetype = MOVETYPE_PUSH;
 	svgame.movevars.fog_settings = 0;
-
+#if XASH_DREAMCAST
+	svgame.globals->maxEntities = 600;
+#else
 	svgame.globals->maxEntities = GI->max_edicts;
+#endif
 	svgame.globals->mapname = MAKE_STRING( sv.name );
 	svgame.globals->startspot = MAKE_STRING( sv.startspot );
 	svgame.globals->time = sv.time;
-
+													   
 	// spawn the rest of the entities on the map
 	SV_LoadFromFile( mapname, sv.worldmodel->entities );
 }
@@ -5283,7 +5305,16 @@ qboolean SV_LoadProgs( const char *name )
 	SV_InitSaveRestore ();
 
 	svgame.globals->pStringBase = ""; // setup string base
+#if XASH_DREAMCAST
+	svgame.globals->maxEntities = 600;
+	svgame.globals->maxClients = svs.maxclients;
+	svgame.edicts = Mem_Calloc( svgame.mempool, sizeof( edict_t ) * 600 );
+	svs.static_entities = Z_Calloc( sizeof( entity_state_t ) * MAX_STATIC_ENTITIES );
+	svs.baselines = Z_Calloc( sizeof( entity_state_t ) * 600 );
+	svgame.numEntities = svs.maxclients + 1; // clients + world
 
+	for( i = 0, e = svgame.edicts; i < 600; i++, e++ )
+#else
 	svgame.globals->maxEntities = GI->max_edicts;
 	svgame.globals->maxClients = svs.maxclients;
 	svgame.edicts = Mem_Calloc( svgame.mempool, sizeof( edict_t ) * GI->max_edicts );
@@ -5292,6 +5323,7 @@ qboolean SV_LoadProgs( const char *name )
 	svgame.numEntities = svs.maxclients + 1; // clients + world
 
 	for( i = 0, e = svgame.edicts; i < GI->max_edicts; i++, e++ )
+#endif
 		e->free = true; // mark all edicts as freed
 
 	Cvar_FullSet( "host_gameloaded", "1", FCVAR_READ_ONLY );

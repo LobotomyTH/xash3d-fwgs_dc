@@ -1800,7 +1800,11 @@ void MSG_WriteDeltaEntity( entity_state_t *from, entity_state_t *to, sizebuf_t *
 
 	startBit = msg->iCurBit;
 
+#if XASH_DREAMCAST
+	if( to->number < 0 || to->number >= 600 )
+#else
 	if( to->number < 0 || to->number >= GI->max_edicts )
+#endif // XASH_DREAMCAST
 		Host_Error( "%s: Bad entity number: %i\n", __func__, to->number );
 
 	MSG_WriteUBitLong( msg, to->number, MAX_ENTITY_BITS );

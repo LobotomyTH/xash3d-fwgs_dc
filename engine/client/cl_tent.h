@@ -101,7 +101,19 @@ struct beam_s *R_BeamRing( int startEnt, int endEnt, int modelIndex, float life,
 struct beam_s *R_BeamFollow( int startEnt, int modelIndex, float life, float width, float r, float g, float b, float brightness );
 void R_BeamKill( int deadEntity );
 
-
+#if XASH_DREAMCAST
+// TriAPI
+void TriRenderMode( int mode );
+void __TriColor4f( float r, float g, float b, float a );
+void __TriColor4ub( byte r, byte g, byte b, byte a );
+void _TriBrightness( float brightness );
+void _TriCullFace( TRICULLSTYLE mode );
+int _TriWorldToScreen( const float *world, float *screen );
+int TriBoxInPVS( float *mins, float *maxs );
+void TriLightAtPoint( float *pos, float *value );
+void TriColor4fRendermode( float r, float g, float b, float a, int rendermode );
+int _TriSpriteTexture( model_t *pSpriteModel, int frame );
+#else
 // TriAPI
 void TriRenderMode( int mode );
 void TriColor4f( float r, float g, float b, float a );
@@ -113,7 +125,7 @@ int TriBoxInPVS( float *mins, float *maxs );
 void TriLightAtPoint( float *pos, float *value );
 void TriColor4fRendermode( float r, float g, float b, float a, int rendermode );
 int TriSpriteTexture( model_t *pSpriteModel, int frame );
-
+#endif // XASH_DREAMCAST
 extern model_t	*cl_sprite_dot;
 extern model_t	*cl_sprite_shell;
 

@@ -758,7 +758,11 @@ void SV_AddToMaster( netadr_t from, sizebuf_t *msg )
 	Info_SetValueForKeyf( s, "players", len, "%d", clients ); // current player number, without bots
 	Info_SetValueForKeyf( s, "max", len, "%d", svs.maxclients ); // max_players
 	Info_SetValueForKeyf( s, "bots", len, "%d", bots ); // bot count
+#if XASH_DREAMCAST
+	Info_SetValueForKey( s, "gamedir", "valve", len ); // gamedir
+#else
 	Info_SetValueForKey( s, "gamedir", GI->gamefolder, len ); // gamedir
+#endif
 	Info_SetValueForKey( s, "map", sv.name, len ); // current map
 	Info_SetValueForKey( s, "type", (Host_IsDedicated()) ? "d" : "l", len ); // dedicated or local
 	Info_SetValueForKey( s, "password", "0", len ); // is password set
@@ -767,7 +771,11 @@ void SV_AddToMaster( netadr_t from, sizebuf_t *msg )
 	Info_SetValueForKey( s, "lan", "0", len ); // LAN servers doesn't send info to master
 	Info_SetValueForKey( s, "version", XASH_VERSION, len ); // server region. 255 -- all regions
 	Info_SetValueForKey( s, "region", "255", len ); // server region. 255 -- all regions
+#if XASH_DREAMCAST
+	Info_SetValueForKey( s, "product", "valve", len ); // product? Where is the difference with gamedir?
+#else
 	Info_SetValueForKey( s, "product", GI->gamefolder, len ); // product? Where is the difference with gamedir?
+#endif
 	Info_SetValueForKey( s, "nat", sv_nat.string, len ); // Server running under NAT, use reverse connection
 
 	NET_SendPacket( NS_SERVER, Q_strlen( s ), s, from );
@@ -849,7 +857,11 @@ void SV_Init( void )
 	Cvar_Getf( "protocol", FCVAR_READ_ONLY, "displays server protocol version", "%i", PROTOCOL_VERSION );
 	Cvar_Get( "suitvolume", "0.25", FCVAR_ARCHIVE, "HEV suit volume" );
 	Cvar_Get( "sv_background", "0", FCVAR_READ_ONLY, "indicate what background map is running" );
+#if XASH_DREAMCAST
+	Cvar_Get( "gamedir", "valve", FCVAR_READ_ONLY, "game folder" );
+#else
 	Cvar_Get( "gamedir", GI->gamefolder, FCVAR_READ_ONLY, "game folder" );
+#endif	   
 	Cvar_Get( "sv_alltalk", "1", 0, "allow to talking for all players (legacy, unused)" );
 	Cvar_Get( "sv_allow_PhysX", "1", FCVAR_ARCHIVE, "allow XashXT to usage PhysX engine" );			// XashXT cvar
 	Cvar_Get( "sv_precache_meshes", "1", FCVAR_ARCHIVE, "cache SOLID_CUSTOM meshes before level loading" );	// Paranoia 2 cvar
@@ -927,7 +939,11 @@ void SV_Init( void )
 	Cvar_RegisterVariable( &sv_downloadurl );
 	Cvar_RegisterVariable( &sv_novis );
 	Cvar_RegisterVariable( &sv_hostmap );
+#if XASH_DREAMCAST
+	Cvar_DirectSet( &sv_hostmap, "c0a0" );
+#else
 	Cvar_DirectSet( &sv_hostmap, GI->startmap );
+#endif
 	Cvar_RegisterVariable( &sv_password );
 	Cvar_RegisterVariable( &sv_lan );
 	Cvar_RegisterVariable( &sv_nat );

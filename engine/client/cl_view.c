@@ -551,7 +551,9 @@ void V_PostRender( void )
 		S_ExtraUpdate();
 	}
 
+#if !XASH_DREAMCAST			
 	SCR_MakeScreenShot();
+#endif // XASH_DREAMCAST no screenshot on DC	   
 	ref.dllFuncs.R_AllowFog( true );
 	Platform_SetTimer( 0.0f );
 	ref.dllFuncs.R_EndFrame();

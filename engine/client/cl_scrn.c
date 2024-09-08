@@ -319,7 +319,7 @@ static void VID_WriteOverviewScript( void )
 {
 	ref_overview_t	*ov = &clgame.overView;
 	string		filename;
-	file_t		*f;
+	dc_file_t		*f;
 
 	Q_snprintf( filename, sizeof( filename ), "overviews/%s.txt", clgame.mapname );
 

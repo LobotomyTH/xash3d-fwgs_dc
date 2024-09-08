@@ -178,11 +178,16 @@ CL_InitTempents
 */
 void CL_InitTempEnts( void )
 {
+#if !XASH_DREAMCAST
 	cl_tempents = Mem_Calloc( cls.mempool, sizeof( TEMPENTITY ) * GI->max_tents );
+#else
+	cl_tempents = Mem_Calloc( cls.mempool, sizeof( TEMPENTITY ) * 300 );
+#endif
 	CL_ClearTempEnts();
 
 	// load tempent sprites (glowshell, muzzleflashes etc)
 	CL_LoadClientSprites ();
+
 }
 
 /*
@@ -197,6 +202,8 @@ void CL_ClearTempEnts( void )
 
 	if( !cl_tempents ) return;
 
+#if !XASH_DREAMCAST
+
 	for( i = 0; i < GI->max_tents - 1; i++ )
 	{
 		cl_tempents[i].next = &cl_tempents[i+1];
@@ -206,6 +213,19 @@ void CL_ClearTempEnts( void )
 	cl_tempents[GI->max_tents-1].next = NULL;
 	cl_free_tents = cl_tempents;
 	cl_active_tents = NULL;
+#else
+#define GI_MAX_TENTS 300
+	for( i = 0; i < GI_MAX_TENTS - 1; i++ )
+	{
+		cl_tempents[i].next = &cl_tempents[i+1];
+		cl_tempents[i].entity.trivial_accept = INVALID_HANDLE;
+	}
+
+	cl_tempents[GI_MAX_TENTS-1].next = NULL;
+	cl_free_tents = cl_tempents;
+	cl_active_tents = NULL;
+#endif
+
 }
 
 /*
@@ -448,7 +468,11 @@ TEMPENTITY *CL_TempEntAlloc( const vec3_t org, model_t *pmodel )
 
 	if( !cl_free_tents )
 	{
+		#if XASH_DREAMCAST
+		Con_DPrintf( "Overflow %d temporary ents!\n", 300 );
+		#else
 		Con_DPrintf( "Overflow %d temporary ents!\n", GI->max_tents );
+		#endif
 		return NULL;
 	}
 
@@ -780,7 +804,11 @@ void GAME_EXPORT R_KillAttachedTents( int client )
 	if( client <= 0 || client > cl.maxclients )
 		return;
 
+#if XASH_DREAMCAST
+	for( i = 0; i < 300; i++ )
+#else
 	for( i = 0; i < GI->max_tents; i++ )
+#endif	  
 	{
 		TEMPENTITY *pTemp = &cl_tempents[i];
 

@@ -300,7 +300,11 @@ model_t *Mod_LoadModel( model_t *mod, qboolean crash )
 		Mod_LoadStudioModel( mod, buf, &loaded );
 		break;
 	case IDSPRITEHEADER:
+#if XASH_DREAMCAST
+		_Mod_LoadSpriteModel( mod, buf, &loaded );
+#else
 		Mod_LoadSpriteModel( mod, buf, &loaded );
+#endif
 		break;
 	case IDALIASHEADER:
 		Mod_LoadAliasModel( mod, buf, &loaded );
