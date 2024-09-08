@@ -88,6 +88,7 @@ static qboolean CheckSkybox( const char *name, char out[SKYBOX_MAX_SIDES][MAX_ST
 
 void R_SetupSky( const char *name )
 {
+#if !XASH_DREAMCAST
 	string loadname;
 	char sidenames[SKYBOX_MAX_SIDES][MAX_STRING];
 	int skyboxTextures[SKYBOX_MAX_SIDES] = { 0 };
@@ -128,7 +129,7 @@ void R_SetupSky( const char *name )
 		if( !skyboxTextures[i] )
 			break;
 
-		Con_DPrintf( "%s%s%s", name, r_skyBoxSuffix[i], i != 5 ? ", " : ". " );
+		Con_DPrintf( "%s%s%s", name, r_skyBoxSuffix[i], i != 5 ? " " : " " );
 	}
 
 	if( i == SKYBOX_MAX_SIDES )
@@ -138,13 +139,17 @@ void R_SetupSky( const char *name )
 		ref.dllFuncs.R_SetupSky( skyboxTextures );
 		return; // loaded
 	}
-
+#if XASH_DREAMCAST
+	Con_DPrintf( "failed\n" );
+#else
 	Con_DPrintf( "^2failed\n" );
+#endif
 	for( i = 0; i < SKYBOX_MAX_SIDES; i++ )
 	{
 		if( skyboxTextures[i] )
 			ref.dllFuncs.GL_FreeTexture( skyboxTextures[i] );
 	}
+#endif
 }
 
 void GAME_EXPORT GL_FreeImage( const char *name )
