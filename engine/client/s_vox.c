@@ -22,8 +22,11 @@ GNU General Public License for more details.
 #define TRIM_SAMPLES_BELOW_8 2
 #define TRIM_SAMPLES_BELOW_16 512 // 65k * 2 / 256
 
+#if XASH_DREAMCAST
+#define CVOXFILESENTENCEMAX 1536
+#else
 #define CVOXFILESENTENCEMAX 4096
-
+#endif // XASH_DREAMCAST
 static int cszrawsentences = 0;
 static char *rgpszrawsentence[CVOXFILESENTENCEMAX];
 static const char *voxperiod = "_period", *voxcomma = "_comma";
@@ -463,8 +466,15 @@ void VOX_LoadSound( channel_t *ch, const char *pszin )
 	memset( buffer, 0, sizeof( buffer ));
 	memset( rgpparseword, 0, sizeof( rgpparseword ));
 
+#if XASH_DREAMCAST && XASH_LOW_MEMORY == 2
+	if( pszin[0] == '#' )
+	    psz = VOX_LookupString( pszin + 1 );
+	else
+	    psz = VOX_LookupString( pszin );
+#else
 	psz = VOX_LookupString( pszin );
-
+#endif  
+															  
 	if( !psz )
 	{
 		Con_Printf( "%s: no sentence named %s\n", __func__, pszin );
