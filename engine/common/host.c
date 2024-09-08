@@ -252,11 +252,11 @@ void Host_ValidateEngineFeatures( uint32_t features )
 
 	// don't allow unsupported bits
 	features &= mask;
-
+#if !XASH_DREAMCAST
 	// force bits for some games
 	if( !Q_stricmp( GI->gamefolder, "cstrike" ) || !Q_stricmp( GI->gamefolder, "czero" ))
 		SetBits( features, ENGINE_STEP_POSHISTORY_LERP );
-
+#endif // !XASH_DREAMCAST
 	// print requested first
 	Host_PrintFeatures( features, "EXT", engine_features, ARRAYSIZE( engine_features ));
 
@@ -1055,8 +1055,12 @@ static void Host_InitCommon( int argc, char **argv, const char *progname, qboole
 	Cvar_Init();
 
 	// share developer level across all dlls
+#if XASH_DREAMCAST
+	Cvar_DirectSet( &host_developer, 2 );
+#else
 	Q_snprintf( dev_level, sizeof( dev_level ), "%i", developer );
 	Cvar_DirectSet( &host_developer, dev_level );
+#endif
 	Cvar_RegisterVariable( &sys_ticrate );
 
 	if( Sys_GetParmFromCmdLine( "-sys_ticrate", ticrate ))
