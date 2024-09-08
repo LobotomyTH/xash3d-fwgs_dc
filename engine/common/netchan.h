@@ -86,7 +86,18 @@ GNU General Public License for more details.
 #define NETSPLIT_BACKUP_MASK (NETSPLIT_BACKUP - 1)
 #define NETSPLIT_HEADER_SIZE 18
 
-#if XASH_LOW_MEMORY == 2
+#if XASH_DREAMCAST
+	#undef MULTIPLAYER_BACKUP
+	#undef SINGLEPLAYER_BACKUP
+	#undef NUM_PACKET_ENTITIES
+	#undef MAX_CUSTOM_BASELINES
+	#undef NET_MAX_FRAGMENT
+	#define MULTIPLAYER_BACKUP		4	// breaks protocol in legacy mode, new protocol status unknown
+	#define SINGLEPLAYER_BACKUP		4
+	#define NUM_PACKET_ENTITIES		16
+	#define MAX_CUSTOM_BASELINES		4
+	#define NET_MAX_FRAGMENT		32768	
+#elif XASH_LOW_MEMORY == 2
 	#undef MULTIPLAYER_BACKUP
 	#undef SINGLEPLAYER_BACKUP
 	#undef NUM_PACKET_ENTITIES

@@ -36,8 +36,9 @@ typedef enum
 // Max length of a multicast message
 #define MAX_MULTICAST		8192	// some mods spamming for rain effect
 
-
-#if !XASH_LOW_MEMORY
+#if XASH_DREAMCAST
+#define MAX_INIT_MSG		0x5000 
+#elif !XASH_LOW_MEMORY
 #define MAX_INIT_MSG		0x30000	// max length of possible message
 #else
 #define MAX_INIT_MSG		0x8000
