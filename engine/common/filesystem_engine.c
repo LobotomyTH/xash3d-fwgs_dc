@@ -22,7 +22,9 @@ GNU General Public License for more details.
 #include "platform/platform.h"
 
 fs_api_t g_fsapi;
+#if !XASH_DREAMCAST
 fs_globals_t *FI;
+#endif
 
 static pfnCreateInterface_t fs_pfnCreateInterface;
 static HINSTANCE fs_hInstance;
@@ -130,8 +132,12 @@ static qboolean FS_LoadProgs( void )
 
 static qboolean FS_DetermineRootDirectory( char *out, size_t size )
 {
+#if XASH_DREAMCAST
+	const char *path = "/vmu/a1/";
+#else
 	const char *path = getenv( "XASH3D_BASEDIR" );
-
+#endif
+	
 	if( COM_CheckString( path ))
 	{
 		Q_strncpy( out, path, size );
@@ -183,7 +189,11 @@ static qboolean FS_DetermineRootDirectory( char *out, size_t size )
 
 static qboolean FS_DetermineReadOnlyRootDirectory( char *out, size_t size )
 {
+#if XASH_DREAMCAST
+	const char *env_rodir = "/cd/";
+#else
 	const char *env_rodir = getenv( "XASH3D_RODIR" );
+#endif							  
 
 	if( _Sys_GetParmFromCmdLine( "-rodir", out, size ))
 		return true;
