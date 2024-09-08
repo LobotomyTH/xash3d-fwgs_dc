@@ -1046,10 +1046,10 @@ static void Host_InitCommon( int argc, char **argv, const char *progname, qboole
 
 	// init host state machine
 	COM_InitHostState();
-
+#if !XASH_DREAMCAST
 	// init hashed commands
 	BaseCmd_Init();
-
+#endif
 	// startup cmds and cvars subsystem
 	Cmd_Init();
 	Cvar_Init();

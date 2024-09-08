@@ -840,8 +840,9 @@ void SCR_Init( void )
 	SCR_RegisterTextures ();
 	SCR_InstallParticlePalette ();
 	SCR_InitCinematic();
+	#if !XASH_DREAMCAST
 	CL_InitNetgraph();
-
+	#endif
 	if( host.allow_console && Sys_CheckParm( "-toconsole" ))
 		Cbuf_AddText( "toggleconsole\n" );
 	else UI_SetActiveMenu( true );

@@ -535,7 +535,9 @@ void V_PostRender( void )
 		SCR_NetSpeeds();
 		SCR_DrawPos();
 		SCR_DrawEnts();
+		#if !XASH_DREAMCAST
 		SCR_DrawNetGraph();
+		#endif
 		SV_DrawOrthoTriangles();
 		CL_DrawDemoRecording();
 		CL_DrawHUD( CL_CHANGELEVEL );

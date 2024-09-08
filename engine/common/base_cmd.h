@@ -16,9 +16,9 @@ GNU General Public License for more details.
 #pragma once
 #ifndef BASE_CMD_H
 #define BASE_CMD_H
-
+#if !XASH_DREAMCAST
 #define XASH_HASHED_VARS
-
+#endif
 #ifdef XASH_HASHED_VARS
 
 typedef enum base_command_type

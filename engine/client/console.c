@@ -2004,10 +2004,13 @@ void Con_DrawVersion( void )
 	int	stringLen, charH = 0;
 	int	start, height = refState.height;
 	string	curbuild;
-
+#if XASH_DREAMCAST
+	if( !scr_drawversion.value || CL_IsDevOverviewMode() == 2 )
+		return;
+#else
 	if( !scr_drawversion.value || CL_IsDevOverviewMode() == 2 || net_graph.value )
 		return;
-
+#endif
 	if( cls.key_dest == key_menu )
 	{
 		Q_snprintf( curbuild, sizeof( curbuild ),

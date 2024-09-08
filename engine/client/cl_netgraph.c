@@ -17,6 +17,7 @@ GNU General Public License for more details.
 #include "client.h"
 #include "kbutton.h"
 
+#if !XASH_DREAMCAST
 #if XASH_LOW_MEMORY == 0
 #define NET_TIMINGS			1024
 #elif XASH_LOW_MEMORY == 1
@@ -707,3 +708,5 @@ void CL_InitNetgraph( void )
 
 	NetGraph_InitColors();
 }
+
+#endif // !XASH_DREAMCAST

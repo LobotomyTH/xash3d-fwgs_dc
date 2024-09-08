@@ -18,7 +18,7 @@ GNU General Public License for more details.
 #include "cdll_int.h"
 
 #define HASH_SIZE 128 // 128 * 4 * 4 == 2048 bytes
-
+#if !XASH_DREAMCAST
 typedef struct base_command_hashmap_s base_command_hashmap_t;
 
 struct base_command_hashmap_s
@@ -296,3 +296,4 @@ void BaseCmd_Test_f( void )
 
 	BaseCmd_Stats_f();
 }
+#endif
