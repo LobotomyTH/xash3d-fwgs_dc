@@ -99,8 +99,10 @@ Cvar_BuildAutoDescription
 build cvar auto description that based on the setup flags
 ============
 */
+
 const char *Cvar_BuildAutoDescription( const char *szName, int flags )
 {
+	#if !XASH_DREAMCAST
 	static char	desc[256];
 
 	if( FBitSet( flags, FCVAR_GLCONFIG ))
@@ -136,6 +138,9 @@ const char *Cvar_BuildAutoDescription( const char *szName, int flags )
 	Q_strncat( desc, "cvar", sizeof( desc ));
 
 	return desc;
+#else 
+	return NULL;
+#endif
 }
 
 /*
@@ -319,7 +324,9 @@ static int Cvar_UnlinkVar( const char *var_name, int group )
 		{
 			freestring( var->name );
 			freestring( var->def_string );
+#if !XASH_DREAMCAST
 			freestring( var->desc );
+#endif
 			Mem_Free( var );
 		}
 		count++;
@@ -380,10 +387,14 @@ void Cvar_LookupVars( int checkbit, void *buffer, void *ptr, setpair_t callback 
 		}
 		else
 		{
+			#if XASH_DREAMCAST
+			callback( var->name, var->string, "", ptr );
+			#else
 			// NOTE: dlls cvars doesn't have description
 			if( FBitSet( var->flags, FCVAR_ALLOCATED|FCVAR_EXTENDED ))
 				callback( var->name, var->string, var->desc, ptr );
 			else callback( var->name, var->string, "", ptr );
+			#endif
 		}
 	}
 }
@@ -413,6 +424,10 @@ convar_t *Cvar_Get( const char *name, const char *value, int flags, const char *
 
 	if( var )
 	{
+#if XASH_DREAMCAST
+			SetBits( var->flags, flags );
+			Cvar_DirectSet( var, value );
+#else
 		// already existed?
 		if( FBitSet( flags, FCVAR_GLCONFIG ))
 		{
@@ -446,7 +461,7 @@ convar_t *Cvar_Get( const char *name, const char *value, int flags, const char *
 			freestring( var->desc );
 			var->desc = copystring( var_desc );
 		}
-
+#endif
 		return var;
 	}
 
@@ -455,7 +470,9 @@ convar_t *Cvar_Get( const char *name, const char *value, int flags, const char *
 	var->name = copystring( name );
 	var->string = copystring( value );
 	var->def_string = copystring( value );
+#if !XASH_DREAMCAST
 	var->desc = copystring( var_desc );
+#endif
 	var->value = Q_atof( var->string );
 	var->flags = flags|FCVAR_ALLOCATED;
 
@@ -1206,11 +1223,13 @@ static void Cvar_List_f( void )
 		if( Q_colorstr( var->string ))
 			Q_snprintf( value, sizeof( value ), "\"%s\"", var->string );
 		else Q_snprintf( value, sizeof( value ), "\"^2%s^7\"", var->string );
-
+#if XASH_DREAMCAST
+		Con_Printf( " %-*s %s ^3%s^7\n", 32, var->name, value);
+#else
 		if( FBitSet( var->flags, FCVAR_EXTENDED|FCVAR_ALLOCATED ))
 			Con_Printf( " %-*s %s ^3%s^7\n", 32, var->name, value, var->desc );
 		else Con_Printf( " %-*s %s ^3%s^7\n", 32, var->name, value, Cvar_BuildAutoDescription( var->name, var->flags ));
-
+#endif
 		count++;
 	}
 

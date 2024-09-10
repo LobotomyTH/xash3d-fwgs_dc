@@ -1283,8 +1283,10 @@ static void Cmd_Apropos_f( void )
 
 	for( var = (convar_t*)Cvar_GetList(); var; var = var->next )
 	{
+		#if !XASH_DREAMCAST
 		if( !matchpattern_with_separator( var->name, partial, true, "", false ) )
 		{
+			
 			const char *desc;
 
 			if( var->flags & FCVAR_EXTENDED )
@@ -1297,13 +1299,19 @@ static void Cmd_Apropos_f( void )
 			if( !matchpattern_with_separator( desc, partial, true, "", false ))
 				continue;
 		}
-
+		#endif
 		// TODO: maybe add flags output like cvarlist, also
 		// fix inconsistencies in output from different commands
+		#if XASH_DREAMCAST
+		Msg( "cvar ^3%s^7 is \"%s\" [\"%s\"] \n",
+			var->name, var->string,
+			( var->flags & FCVAR_EXTENDED ) ? var->def_string : "");
+		#else
 		Msg( "cvar ^3%s^7 is \"%s\" [\"%s\"] %s\n",
 			var->name, var->string,
 			( var->flags & FCVAR_EXTENDED ) ? var->def_string : "",
 			( var->flags & FCVAR_EXTENDED ) ? var->desc : "game cvar");
+		#endif
 		count++;
 	}
 
@@ -1311,12 +1319,18 @@ static void Cmd_Apropos_f( void )
 	{
 		if( cmd->name[0] == '@' )
 			continue;	// never show system cmds
+		#if XASH_DREAMCAST
+		if( !matchpattern_with_separator( cmd->name, partial, true, "", false ))
+			continue;
 
+		Msg( "command ^2%s\n", cmd->name);
+		#else
 		if( !matchpattern_with_separator( cmd->name, partial, true, "", false ) &&
 			!matchpattern_with_separator( cmd->desc, partial, true, "", false ))
 			continue;
 
 		Msg( "command ^2%s^7: %s\n", cmd->name, cmd->desc );
+		#endif
 		count++;
 	}
 
