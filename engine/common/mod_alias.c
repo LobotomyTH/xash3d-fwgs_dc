@@ -21,7 +21,7 @@ GNU General Public License for more details.
 #endif // XASH_DEDICATED
 #include "mod_local.h"
 #include "xash3d_mathlib.h"
-
+#if !XASH_DREAMCAST
 static int g_posenum = 0;
 static const trivertex_t *g_poseverts[MAXALIASFRAMES];
 
@@ -239,3 +239,4 @@ void Mod_LoadAliasModel( model_t *mod, const void *buffer, qboolean *loaded )
 
 	if( loaded ) *loaded = true;	// done
 }
+#endif

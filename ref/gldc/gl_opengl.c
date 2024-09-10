@@ -1103,7 +1103,9 @@ qboolean R_Init( void )
 	R_InitImages();
 	R_SpriteInit();
 	R_StudioInit();
+	#if !XASH_DREAMCAST
 	R_AliasInit();
+	#endif
 	R_ClearDecals();
 	R_ClearScene();
 

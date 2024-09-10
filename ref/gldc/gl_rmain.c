@@ -841,7 +841,9 @@ static void R_DrawEntitiesOnList( void )
 			R_DrawBrushModel( RI.currententity );
 			break;
 		case mod_alias:
+		#if !XASH_DREAMCAST
 			R_DrawAliasModel( RI.currententity );
+		#endif
 			break;
 		case mod_studio:
 			R_DrawStudioModel( RI.currententity );
@@ -908,7 +910,9 @@ static void R_DrawEntitiesOnList( void )
 			R_DrawBrushModel( RI.currententity );
 			break;
 		case mod_alias:
+		#if !XASH_DREAMCAST
 			R_DrawAliasModel( RI.currententity );
+		#endif
 			break;
 		case mod_studio:
 			R_DrawStudioModel( RI.currententity );

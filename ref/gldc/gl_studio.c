@@ -3717,7 +3717,9 @@ void R_DrawViewModel( void )
 	switch( RI.currententity->model->type )
 	{
 	case mod_alias:
+		#if !XASH_DREAMCAST
 		R_DrawAliasModel( RI.currententity );
+		#endif
 		break;
 	case mod_studio:
 		R_StudioSetupTimings();

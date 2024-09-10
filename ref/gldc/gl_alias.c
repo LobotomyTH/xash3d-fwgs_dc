@@ -21,6 +21,7 @@ GNU General Public License for more details.
 #include "pm_local.h"
 #include "pmtrace.h"
 
+#if !XASH_DREAMCAST
 extern cvar_t r_shadows;
 
 typedef struct
@@ -1308,5 +1309,5 @@ void R_DrawAliasModel( cl_entity_t *e )
 	// restore original angles
 	VectorCopy( angles, e->angles );
 }
-
+#endif
 //==================================================================================

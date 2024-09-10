@@ -307,7 +307,10 @@ model_t *Mod_LoadModel( model_t *mod, qboolean crash )
 #endif
 		break;
 	case IDALIASHEADER:
+	#if !XASH_DREAMCAST
 		Mod_LoadAliasModel( mod, buf, &loaded );
+		return NULL;
+	#endif
 		break;
 	case Q1BSP_VERSION:
 	case HLBSP_VERSION:
@@ -341,14 +344,14 @@ model_t *Mod_LoadModel( model_t *mod, qboolean crash )
 		}
 #endif
 	}
-
+#if !XASH_DREAMCAST
 	if( mod->type == mod_alias )
 	{
 		aliashdr_t *hdr = mod->cache.data;
 		if( hdr ) // clean up temporary pointer after passing the alias model to the renderer
 			hdr->pposeverts = NULL;
 	}
-
+#endif
 	if( !loaded )
 	{
 		Mod_FreeModel( mod );
@@ -556,13 +559,14 @@ Mod_AliasExtradata
 
 ===============
 */
+#if !XASH_DREAMCAST
 void *Mod_AliasExtradata( model_t *mod )
 {
 	if( mod && mod->type == mod_alias )
 		return mod->cache.data;
 	return NULL;
 }
-
+#endif
 /*
 ===============
 Mod_StudioExtradata

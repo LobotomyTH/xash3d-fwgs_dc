@@ -120,7 +120,9 @@ static void Mod_UnloadTextures( model_t *mod )
 		Mod_StudioUnloadTextures( mod->cache.data );
 		break;
 	case mod_alias:
+	#if !XASH_DREAMCAST
 		Mod_AliasUnloadTextures( mod->cache.data );
+	#endif
 		break;
 	case mod_brush:
 		Mod_BrushUnloadTextures( mod );
@@ -153,7 +155,9 @@ static qboolean Mod_ProcessRenderData( model_t *mod, qboolean create, const byte
 			#endif
 				break;
 			case mod_alias:
+			#if !XASH_DREAMCAST
 				_Mod_LoadAliasModel( mod, buf, &loaded );
+			#endif
 				break;
 			case mod_brush:
 				// Mod_LoadBrushModel( mod, buf, loaded );

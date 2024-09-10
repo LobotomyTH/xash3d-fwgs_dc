@@ -391,6 +391,7 @@ static void CL_AllocRemapInfo( cl_entity_t *entity, model_t *model, int topcolor
 				CL_DuplicateTexture( entity, model, &dst[i], topcolor, bottomcolor );
 		}
 	}
+#if !XASH_DREAMCAST
 	else if( model->type == mod_alias )
 	{
 		ahdr = (aliashdr_t *)Mod_AliasExtradata( model );
@@ -415,6 +416,7 @@ static void CL_AllocRemapInfo( cl_entity_t *entity, model_t *model, int topcolor
 		// alias remapping is easy
 		CL_UpdateRemapInfo( entity, topcolor, bottomcolor );
 	}
+#endif
 	else
 	{
 		// only alias & studio models are supposed for remapping
