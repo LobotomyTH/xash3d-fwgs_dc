@@ -121,28 +121,12 @@ R_DrawStretchRaw
 */
 void R_DrawStretchRaw( float x, float y, float w, float h, int cols, int rows, const byte *data, qboolean dirty )
 {
+
 	byte		*raw = NULL;
 	gl_texture_t	*tex;
 
-	if( !GL_Support( GL_ARB_TEXTURE_NPOT_EXT ))
-	{
-		int	width = 1, height = 1;
-
-		// check the dimensions
-		width = NearestPOW( cols, true );
-		height = NearestPOW( rows, false );
-
-		if( cols != width || rows != height )
-		{
-			raw = GL_ResampleTexture( data, cols, rows, width, height, false );
-			cols = width;
-			rows = height;
-		}
-	}
-	else
-	{
+	
 		raw = (byte *)data;
-	}
 
 	if( cols > glConfig.max_2d_texture_size )
 		gEngfuncs_gl.Host_Error( "%s: size %i exceeds hardware limits\n", __func__, cols );
@@ -184,6 +168,7 @@ void R_DrawStretchRaw( float x, float y, float w, float h, int cols, int rows, c
 	glTexCoord2f( 0, 1 );
 	glVertex2f( x, y + h );
 	glEnd();
+
 }
 
 /*
@@ -193,32 +178,14 @@ R_UploadStretchRaw
 */
 void R_UploadStretchRaw( int texture, int cols, int rows, int width, int height, const byte *data )
 {
+
 	byte		*raw = NULL;
 	gl_texture_t	*tex;
 
-	if( !GL_Support( GL_ARB_TEXTURE_NPOT_EXT ))
-	{
-		// check the dimensions
-		width = NearestPOW( width, true );
-		height = NearestPOW( height, false );
-	}
-	else
-	{
-		width = bound( 128, width, glConfig.max_2d_texture_size );
-		height = bound( 128, height, glConfig.max_2d_texture_size );
-	}
+	
 
-	if( cols != width || rows != height )
-	{
-		raw = GL_ResampleTexture( data, cols, rows, width, height, false );
-		cols = width;
-		rows = height;
-	}
-	else
-	{
 		raw = (byte *)data;
-	}
-
+	
 	if( cols > glConfig.max_2d_texture_size )
 		gEngfuncs_gl.Host_Error( "%s: size %i exceeds hardware limits\n", __func__, cols );
 	if( rows > glConfig.max_2d_texture_size )
@@ -230,6 +197,7 @@ void R_UploadStretchRaw( int texture, int cols, int rows, int width, int height,
 	tex->height = rows;
 	glTexImage2D( GL_TEXTURE_2D, 0, tex->format, cols, rows, 0, GL_BGRA, GL_UNSIGNED_BYTE, raw );
 	GL_ApplyTextureParams( tex );
+
 }
 
 /*

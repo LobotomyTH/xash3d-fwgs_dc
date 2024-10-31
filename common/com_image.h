@@ -8,7 +8,7 @@ typically expanded to rgba buffer
 NOTE: number at end of pixelformat name it's a total bitscount e.g. PF_RGB_24 == PF_RGB_888
 ========================================================================
 */
-#define ImageRAW( type )	(type == PF_RGBA_32 || type == PF_BGRA_32 || type == PF_RGB_24 || type == PF_BGR_24 || type == PF_LUMINANCE)
+#define ImageRAW( type )	(type == PF_RGBA_32 || type == PF_BGRA_32 || type == PF_RGB_24 || type == PF_BGR_24 || type == PF_LUMINANCE || type == PF_PVR_RAW || type == PF_ARGB_4444 || type == PF_ARGB_1555 || type == PF_RGB_5650 )
 #define ImageCompressed( type ) \
 	(  type == PF_DXT1 \
 	|| type == PF_DXT3 \
@@ -22,6 +22,11 @@ NOTE: number at end of pixelformat name it's a total bitscount e.g. PF_RGB_24 ==
 	|| type == PF_BC6H_UNSIGNED \
 	|| type == PF_BC7_UNORM \
 	|| type == PF_BC7_SRGB \
+	|| type == PF_PVR_TWID \
+	|| type == PF_PVR_VQ \
+	|| type == PF_VQ_ARGB_4444 \
+	|| type == PF_VQ_ARGB_1555 \
+	|| type == PF_VQ_RGB_5650 \
 	|| type == PF_KTX2_RAW )
 
 typedef enum
@@ -47,6 +52,20 @@ typedef enum
 	PF_BC7_UNORM,			// bptc BC7 format
 	PF_BC7_SRGB,
 	PF_KTX2_RAW, // Raw KTX2 data, used for yet unsupported KTX2 subformats
+#if XASH_DREAMCAST
+	PF_PVR_TWID,
+	PF_PVR_VQ,
+	PF_PVR_RAW, 
+	PF_ARGB_4444, 
+	PF_VQ_ARGB_4444,	// 16-bit A4 R4 G4 B4 VQ compressed
+	PF_ARGB_1555,
+	PF_VQ_ARGB_1555,	// 16-bit A1 R5 G5 B5 VQ compressed
+	PF_RGB_332,		// 8-bit  R3 G3 B2
+	PF_RGB_5650,	// 8-bit R5 G6 B5
+	PF_VQ_RGB_5650,	// 8-bit R5 G6 B5 VQ coMPRESSED
+	PF_RGBA_5551,	// 16-bit R5 G5 B5 A1
+	PF_RGBA_4444,	// 16-bit R4 G4 B4 A4
+#endif
 	PF_TOTALCOUNT,	// must be last
 } pixformat_t;
 
@@ -115,6 +134,7 @@ typedef enum
 	IMAGE_QUANTIZE	= BIT(25),	// make indexed image from 24 or 32- bit image
 	IMAGE_LIGHTGAMMA	= BIT(26),	// apply gamma for image
 	IMAGE_REMAP	= BIT(27),	// interpret width and height as top and bottom color
+	IMAGE_PVR_FORMAT = BIT(28)
 } imgFlags_t;
 
 typedef struct rgbdata_s

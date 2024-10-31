@@ -78,15 +78,31 @@ extern poolhandle_t r_temppool;
 #define MAX_DRAW_STACK	2		// normal view and menu view
 
 
-#if XASH_LOW_MEMORY
+#if XASH_DREAMCAST
 	#undef BLOCK_SIZE_MAX
 	#undef MAX_TEXTURES
 	#undef MAX_DETAILTEXTURES
 	#undef MAX_DECAL_SURFS
+	#undef MAX_LIGHTMAPS
+	#define MAX_LIGHTMAPS 64
 	#define BLOCK_SIZE_MAX 128
 	#define MAX_TEXTURES 1536
-	#define MAX_DECAL_SURFS 64
-	#define MAX_DETAILTEXTURES 32		
+	#define MAX_DECAL_SURFS 256
+	#define MAX_DETAILTEXTURES 64		
+#endif
+
+#define LIGHTMAP_BPP	4 //1 2 3 4
+
+#if LIGHTMAP_BPP == 1
+#define LIGHTMAP_FORMAT	PF_RGB_332
+#elif LIGHTMAP_BPP == 2
+#define LIGHTMAP_FORMAT	PF_RGB_5650
+#elif LIGHTMAP_BPP == 3
+#define LIGHTMAP_FORMAT	PF_RGB_24
+#elif LIGHTMAP_BPP == 4
+#define LIGHTMAP_FORMAT	PF_RGBA_32
+#else
+#error (1 > LIGHTMAP_BPP > 4)
 #endif
 
 #define SHADEDOT_QUANT 	16		// precalculated dot products for quantized angles
@@ -621,7 +637,7 @@ enum
 	GL_ARB_MULTITEXTURE,
 	GL_TEXTURE_CUBEMAP_EXT,
 	GL_ANISOTROPY_EXT,
-	//GL_TEXTURE_LOD_BIAS,
+	GL_TEXTURE_LOD_BIAS,
 	GL_TEXTURE_COMPRESSION_EXT,
 	GL_SHADER_GLSL100_EXT,
 	GL_TEXTURE_2D_RECT_EXT,

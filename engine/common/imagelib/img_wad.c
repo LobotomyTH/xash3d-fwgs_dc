@@ -19,7 +19,9 @@ GNU General Public License for more details.
 #include "studio.h"
 #include "sprite.h"
 #include "qfont.h"
-
+#if XASH_DREAMCAST
+#include "img_pvr.h"
+#endif
 /*
 ============
 Image_LoadPAL
@@ -142,6 +144,28 @@ void Image_SetMDLPointer( byte *p )
 	g_mdltexdata = p;
 }
 
+
+
+qboolean Image_AddPVRImageToPack(const byte *in, int width, int height)
+{
+    // Calculate the size for RGB565 texture
+    int mipsize = (width * height); 
+    image.size = mipsize; // Set the image size accordingly
+    
+    // Allocate memory for the RGB565 texture
+    image.rgba = Mem_Malloc(host.imagepool, image.size);
+    if (!image.rgba) {
+        return false; // Allocation failed
+    }
+
+    // Copy the RGB565 data directly into the allocated memory
+    memcpy(image.rgba, in, mipsize);
+
+    // Set the image type to indicate RGB565 format
+    image.type = PF_VQ_RGB_5650; 
+
+    return true; // Successfully added the PVR image to the pack
+}
 /*
 ============
 Image_LoadMDL
@@ -150,7 +174,9 @@ Image_LoadMDL
 qboolean Image_LoadMDL( const char *name, const byte *buffer, fs_offset_t filesize )
 {
 	byte		*fin;
+	byte		*textureData;
 	size_t		pixels;
+	gbix_t	header;
 	mstudiotexture_t	*pin;
 	int		flags;
 
@@ -171,25 +197,38 @@ qboolean Image_LoadMDL( const char *name, const byte *buffer, fs_offset_t filesi
 	{
 		if( filesize < ( sizeof( *pin ) + pixels + 768 ))
 			return false;
+			// check for PVR texture
+		if (fin[0] == 'G' && fin[1] == 'B' && fin[2] == 'I' && fin[3] == 'X')
+		{
+			Con_Printf("%s is loading mdl: %s.pvr with PVR format \n", __func__, name);
+			textureData = &fin[sizeof(header)];
+			image.flags |= IL_KEEP_8BIT;
 
 		if( FBitSet( flags, STUDIO_NF_MASKED ))
 		{
-			byte	*pal = fin + pixels;
+			byte	*pal = textureData + pixels;
 
 			Image_GetPaletteLMP( pal, LUMP_MASKED );
-			image.flags |= IMAGE_HAS_ALPHA|IMAGE_ONEBIT_ALPHA;
+			//image.flags |= IMAGE_HAS_ALPHA|IMAGE_ONEBIT_ALPHA;
+			
 		}
-		else Image_GetPaletteLMP( fin + pixels, LUMP_NORMAL );
+		else Image_GetPaletteLMP( textureData + pixels, LUMP_NORMAL );
 	}
 	else
 	{
 		return false; // unknown or unsupported mode rejected
 	}
 
+#if XASH_DREAMCAST
+	image.type = PF_VQ_RGB_5650; // VQ compressed textures
+#else
 	image.type = PF_INDEXED_32;	// 32-bit palete
+#endif
 	image.depth = 1;
 
-	return Image_AddIndexedImageToPack( fin, image.width, image.height );
+	return Image_AddIndexedImageToPack( textureData, image.width, image.height );
+
+}
 }
 
 /*
