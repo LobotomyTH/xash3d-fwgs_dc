@@ -115,6 +115,7 @@ enum
 	LUMP_HALFLIFE,   // get predefined half-life palette
 	LUMP_QUAKE1,     // get predefined quake palette
 	LUMP_TEXGAMMA,   // apply texgamma on top of palette, for half-life mips
+	LUMP_VQ, // vq compressed image	
 };
 
 enum

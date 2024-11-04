@@ -19,7 +19,6 @@ GNU General Public License for more details.
 
 #define LERPBYTE( i )	r = resamplerow1[i]; out[i] = (byte)(((( resamplerow2[i] - r ) * lerp)>>16 ) + r )
 #define FILTER_SIZE		5
-#define RGB565(r, g, b)  (((r & 0xF8) << 8) | ((g & 0xFC) << 3) | (b >> 3))
 
 
 uint d_8toQ1table[256];
@@ -380,27 +379,6 @@ void Image_CopyPalette32bit( void )
 	image.palette = Mem_Malloc( host.imagepool, 1024 );
 	memcpy( image.palette, image.d_currentpal, 1024 );
 }
-void Image_CopyPalette8bit(	void )
-{
-	if( image.palette ) return; // already created ?
-	image.palette = Mem_Malloc( host.imagepool, 512 );
-	 // Convert and copy the 32-bit palette to 8-bit format
-    for (int i = 0; i < 1024; i++) {
-         uint32_t color = image.d_currentpal[i];
-
-        // Extract RGB components from ARGB format
-        uint8_t r = (color >> 16) & 0xFF; // Red
-        uint8_t g = (color >> 8) & 0xFF;  // Green
-        uint8_t b = color & 0xFF;         // Blue
-
-        // Convert to RGB565
-        uint16_t rgb565 = ((r & 0xF8) << 8) | ((g & 0xFC) << 3) | (b >> 3);
-
-        // Store the RGB565 value in the palette
-        ((uint16_t *)image.palette)[i] = rgb565; // Store as a 16-bit value
-    }
-}
-
 
 void Image_CheckPaletteQ1( void )
 {
@@ -465,6 +443,13 @@ void Image_GetPaletteLMP( const byte *pal, int rendermode )
 {
 	image.d_rendermode = rendermode;
 
+	if (rendermode == LUMP_VQ)
+	{
+		 // Set direct color mode for PVR
+        image.d_currentpal = NULL;
+        SetBits(image.flags, IMAGE_HAS_COLOR);
+        return;
+	}
 	if( pal )
 	{
 		Image_SetPalette( pal, d_8to24table );
@@ -616,6 +601,8 @@ void Image_CopyParms( rgbdata_t *src )
 
 	memcpy( image.fogParams, src->fogParams, sizeof( image.fogParams ));
 }
+
+
 
 /*
 ============
@@ -1236,35 +1223,10 @@ static byte *Image_MakeLuma( byte *fin, int width, int height, int type, int fla
 
 	return image.tempbuffer;
 }
-qboolean Image_ProcessPVR(const byte *in, int width, int height)
-{
-	int	mipsize = width * height;
-	qboolean	expand_to_rgba = false;
-
-	if( Image_CheckFlag( IL_KEEP_8BIT ))
-		expand_to_rgba = false;
-	else if( FBitSet( image.flags, IMAGE_HAS_LUMA|IMAGE_QUAKESKY ))
-		expand_to_rgba = false;
-
-	image.size = mipsize;
-
-	if( expand_to_rgba ) image.size *= 4;
-	else Image_CopyPalette8bit();
-
-	// reallocate image buffer
-	image.rgba = Mem_Malloc( host.imagepool, image.size );
-	if( !expand_to_rgba ) memcpy( image.rgba, in, image.size );
-	else if( !Image_Copy8bitRGBA( in, image.rgba, mipsize ))
-		return false; // probably pallette not installed
-
-	return true;
-
-
-}
 qboolean Image_AddIndexedImageToPack( const byte *in, int width, int height )
 {
 	int	mipsize = width * height;
-	qboolean	expand_to_rgba = false;
+	qboolean	expand_to_rgba = true;
 
 	if( Image_CheckFlag( IL_KEEP_8BIT ))
 		expand_to_rgba = false;
@@ -1284,9 +1246,6 @@ qboolean Image_AddIndexedImageToPack( const byte *in, int width, int height )
 
 	return true;
 }
-
-
-
 
 /*
 =============
@@ -1333,15 +1292,6 @@ static qboolean Image_Decompress( const byte *data )
 		}
 		break;
 	case PF_RGB_24:
-		for (i = 0; i < image.width * image.height; i++ )
-		{
-			fout[(i<<2)+0] = fin[i*3+0];
-			fout[(i<<2)+1] = fin[i*3+1];
-			fout[(i<<2)+2] = fin[i*3+2];
-			fout[(i<<2)+3] = 255;
-		}
-		break;
-	case PF_VQ_RGB_5650:
 		for (i = 0; i < image.width * image.height; i++ )
 		{
 			fout[(i<<2)+0] = fin[i*3+0];

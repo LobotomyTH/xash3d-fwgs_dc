@@ -145,27 +145,6 @@ void Image_SetMDLPointer( byte *p )
 }
 
 
-
-qboolean Image_AddPVRImageToPack(const byte *in, int width, int height)
-{
-    // Calculate the size for RGB565 texture
-    int mipsize = (width * height); 
-    image.size = mipsize; // Set the image size accordingly
-    
-    // Allocate memory for the RGB565 texture
-    image.rgba = Mem_Malloc(host.imagepool, image.size);
-    if (!image.rgba) {
-        return false; // Allocation failed
-    }
-
-    // Copy the RGB565 data directly into the allocated memory
-    memcpy(image.rgba, in, mipsize);
-
-    // Set the image type to indicate RGB565 format
-    image.type = PF_VQ_RGB_5650; 
-
-    return true; // Successfully added the PVR image to the pack
-}
 /*
 ============
 Image_LoadMDL
@@ -174,9 +153,7 @@ Image_LoadMDL
 qboolean Image_LoadMDL( const char *name, const byte *buffer, fs_offset_t filesize )
 {
 	byte		*fin;
-	byte		*textureData;
 	size_t		pixels;
-	gbix_t	header;
 	mstudiotexture_t	*pin;
 	int		flags;
 
@@ -190,46 +167,81 @@ qboolean Image_LoadMDL( const char *name, const byte *buffer, fs_offset_t filesi
 	ASSERT(fin);
 	g_mdltexdata = NULL;
 
-	if( !Image_ValidSize( name ))
-		return false;
+	 // Check for PVR texture by looking for GBIX signature
+    if (*(uint32_t*)fin == GBIXHEADER)
+    {
+        gbix_t *gbix = (gbix_t*)fin;
+        byte *texture_data = fin + sizeof(gbix_t) + gbix->nextTagOffset;
 
-	if( image.hint == IL_HINT_HL )
-	{
-		if( filesize < ( sizeof( *pin ) + pixels + 768 ))
+		image.width = pin->width;
+		image.height = pin->height;
+
+		if (!Image_ValidSize(name))
 			return false;
-			// check for PVR texture
-		if (fin[0] == 'G' && fin[1] == 'B' && fin[2] == 'I' && fin[3] == 'X')
-		{
-			Con_Printf("%s is loading mdl: %s.pvr with PVR format \n", __func__, name);
-			textureData = &fin[sizeof(header)];
-			image.flags |= IL_KEEP_8BIT;
 
-		if( FBitSet( flags, STUDIO_NF_MASKED ))
-		{
-			byte	*pal = textureData + pixels;
+		uint32_t format = *(uint32_t*)texture_data;
+	
+		
+		uint8_t texture_format = (format >> 8) & 0xFF;
+		uint8_t color_format = format & 0xFF;
 
-			Image_GetPaletteLMP( pal, LUMP_MASKED );
-			//image.flags |= IMAGE_HAS_ALPHA|IMAGE_ONEBIT_ALPHA;
+		if (texture_format == PVR_RECT || texture_format == PVR_TWIDDLE || texture_format == PVR_VQ)
+		{
+			if (texture_format == PVR_VQ)
+			{
+				texture_data += 8; // Skip format header for VQ
+
 			
+    			image.size = 2048 + ((image.width * image.height) / 4);
+				image.type = PF_VQ_RGB_5650;
+				
+			}
+			else
+			{
+				image.type = PF_RGB_5650;
+				image.size = image.width * image.height;
+			}
+
+			Image_GetPaletteLMP(NULL, LUMP_VQ);
+			image.rgba = Mem_Malloc(host.imagepool, image.size);
+			memcpy(image.rgba, texture_data, image.size);
+
+
 		}
-		else Image_GetPaletteLMP( textureData + pixels, LUMP_NORMAL );
-	}
-	else
-	{
-		return false; // unknown or unsupported mode rejected
-	}
+    }
+    else
+    {
+        // Original indexed texture loading code...
+        if (image.hint == IL_HINT_HL)
+        {
+            size_t pixels = image.width * image.height;
+            if (filesize < (sizeof(*pin) + pixels + 768))
+                return false;
 
-#if XASH_DREAMCAST
-	image.type = PF_VQ_RGB_5650; // VQ compressed textures
-#else
-	image.type = PF_INDEXED_32;	// 32-bit palete
-#endif
-	image.depth = 1;
+            if (FBitSet(pin->flags, STUDIO_NF_MASKED))
+            {
+                byte *pal = fin + pixels;
+                Image_GetPaletteLMP(pal, LUMP_MASKED);
+                image.flags |= IMAGE_HAS_ALPHA|IMAGE_ONEBIT_ALPHA;
+            }
+            else Image_GetPaletteLMP(fin + pixels, LUMP_NORMAL);
+        }
+        else
+        {
+            return false;
+        }
 
-	return Image_AddIndexedImageToPack( textureData, image.width, image.height );
+        image.type = PF_INDEXED_32;
+        image.depth = 1;
+
+        return Image_AddIndexedImageToPack(fin, image.width, image.height);
+    }
 
 }
-}
+
+
+
+
 
 /*
 ============
@@ -422,8 +434,13 @@ qboolean Image_LoadMIP( const char *name, const byte *buffer, fs_offset_t filesi
 		numcolors = *(short *)pal;
 		if( numcolors != 256 ) pal = NULL; // corrupted mip ?
 		else pal += sizeof( short ); // skip colorsize
-
+		if (buffer[0] == 'G' && buffer[1] == 'B' && buffer[2] == 'I' && buffer[3] == 'X')
+		{
+			Con_Printf("%s is loading mip: %s.bmp with PVR format \n", __func__, name);
+			image.flags |= IL_KEEP_8BIT;
+		}
 		hl_texture = true;
+
 
 		// setup rendermode
 		if( Q_strrchr( name, '{' ))
@@ -572,8 +589,11 @@ qboolean Image_LoadMIP( const char *name, const byte *buffer, fs_offset_t filesi
 			VectorDivide( reflectivity, 256, image.fogParams );
 		}
 	}
+	if (fin[0] == 'G' && fin[1] == 'B' && fin[2] == 'I' && fin[3] == 'X')
+		image.type = PF_ARGB_4444;
+	else
+		image.type = PF_INDEXED_32;	// 32-bit palete
 
-	image.type = PF_INDEXED_32;	// 32-bit palete
 	image.depth = 1;
 
 	return Image_AddIndexedImageToPack( fin, image.width, image.height );
