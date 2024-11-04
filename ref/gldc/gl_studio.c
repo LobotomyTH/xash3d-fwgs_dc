@@ -21,6 +21,7 @@ GNU General Public License for more details.
 #include "studio.h"
 #include "pm_local.h"
 #include "pmtrace.h"
+#include "img_pvr.h"
 
 #define EVENT_CLIENT	5000	// less than this value it's a server-side studio events
 #define MAX_LOCALLIGHTS	4
@@ -3827,7 +3828,24 @@ static void R_StudioLoadTexture( model_t *mod, studiohdr_t *phdr, mstudiotexture
 	{
 		// NOTE: replace index with pointer to start of imagebuffer, ImageLib expected it
 		gEngfuncs_gl.Image_SetMDLPointer((byte *)phdr + ptexture->index);
-		size = sizeof( mstudiotexture_t ) + ptexture->width * ptexture->height + 768;
+		if (*(uint32_t*)((byte *)phdr + ptexture->index) == GBIXHEADER)
+		{
+			// Skip GBIX header to get format
+			gbix_t *gbix = (gbix_t*)((byte *)phdr + ptexture->index);
+			byte *texture_data = (byte*)gbix + sizeof(gbix_t) + gbix->nextTagOffset;
+			uint32_t format = *(uint32_t*)texture_data;
+			uint8_t texture_format = (format >> 8) & 0xFF;
+
+			// PVR texture case
+			if (texture_format == 0x03) // PVR_VQ = 0x03
+			{
+				size = sizeof(mstudiotexture_t) + 2048 + ((ptexture->width * ptexture->height) / 4);
+			}
+			else
+			{
+				size = sizeof(mstudiotexture_t) + (ptexture->width * ptexture->height * 2);
+			}
+		}
 
 		// build the texname
 		Q_snprintf( texname, sizeof( texname ), "#%s/%s.mdl", mdlname, name );

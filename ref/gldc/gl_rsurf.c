@@ -3509,7 +3509,7 @@ R_DrawTriangleOutlines
 */
 static void R_DrawTriangleOutlines( void )
 {
-#if !XASH_DREAMCAST
+
 	int		i, j;
 	msurface_t	*surf;
 	glpoly2_t		*p;
@@ -3558,7 +3558,7 @@ static void R_DrawTriangleOutlines( void )
 	glPolygonMode( GL_FRONT_AND_BACK, GL_FILL );
 	glEnable( GL_DEPTH_TEST );
 	glEnable( GL_TEXTURE_2D );
-#endif
+
 }
 
 /*
