@@ -231,7 +231,6 @@ static mip_t *Mod_GetMipTexForTexture( dbspmodel_t *bmod, int i )
 
 	return (mip_t *)((byte *)bmod->textures + bmod->textures->dataofs[i] );
 }
-
 // Returns index of WAD that texture was found in, or -1 if not found.
 static int Mod_FindTextureInWadList( wadlist_t *list, const char *name, char *dst, size_t size )
 {
@@ -1783,6 +1782,8 @@ static void Mod_LoadSubmodels( model_t *mod, dbspmodel_t *bmod )
 	}
 }
 
+
+
 /*
 =================
 Mod_LoadEntities
@@ -1795,7 +1796,9 @@ static void Mod_LoadEntities( model_t *mod, dbspmodel_t *bmod )
 	char	wadstring[MAX_TOKEN];
 	string	keyname;
 	char	*pfile;
-
+#if XASH_DREAMCAST
+	char mapname[MAX_QPATH];
+#endif
 	if( bmod->isworld )
 	{
 		char	entfilename[MAX_QPATH];
@@ -1837,6 +1840,27 @@ static void Mod_LoadEntities( model_t *mod, dbspmodel_t *bmod )
 	world.message[0] = '\0';
 	bmod->wadlist.count = 0;
 
+#if XASH_DREAMCAST // hacky stuff
+	//force separate wads in to parsing, since HLDC bsp doesn't contain them in bsp header
+	COM_FileBase(mod->name, mapname, sizeof(mapname));
+	COM_StripExtension(mapname); // Remove .bsp
+		// Try to load numbered WADs
+		for(int i = 1; i <= 6; i++)
+		{
+			char dcwad[MAX_QPATH];
+			Q_snprintf(dcwad, sizeof(dcwad), "%d_%s", i, mapname);
+			
+			Con_Printf("Checking Dreamcast WAD: %s\n", dcwad);
+			
+			if(FS_FileExists(va("%s.wad", dcwad), false))
+			{
+				int num = bmod->wadlist.count++;
+				Q_strncpy(bmod->wadlist.wadnames[num], dcwad, sizeof(bmod->wadlist.wadnames[0]));
+				bmod->wadlist.wadusage[num] = 0;
+				Con_Printf("Added Dreamcast WAD to list: %s (index: %d)\n", dcwad, num);
+			}
+		}
+#endif
 	// parse all the wads for loading textures in right ordering
 	while(( pfile = COM_ParseFile( pfile, token, sizeof( token ))) != NULL )
 	{
@@ -2282,14 +2306,14 @@ static void Mod_LoadTextureData( model_t *mod, dbspmodel_t *bmod, int textureInd
 	texture = mod->textures[textureIndex];
 	mipTex = Mod_GetMipTexForTexture( bmod, textureIndex );
 	usesCustomPalette = Mod_CalcMipTexUsesCustomPalette( mod, bmod, textureIndex );
-
+#if !XASH_DREAMCAST
 	// check for multi-layered sky texture (quake1 specific)
 	if( bmod->isworld && Q_strncmp( mipTex->name, "sky", 3 ) == 0 && ( mipTex->width / mipTex->height ) == 2 )
 	{
 		Mod_InitSkyClouds( mod, mipTex, texture, usesCustomPalette ); // load quake sky
 		return;
 	}
-
+#endif
 	if( FBitSet( host.features, ENGINE_IMPROVED_LINETRACE ) && mipTex->name[0] == '{' )
 		SetBits( txFlags, TF_KEEP_SOURCE ); // Paranoia2 texture alpha-tracing
 
