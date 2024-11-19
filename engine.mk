@@ -74,6 +74,7 @@ XASH_OBJS = \
 	engine/common/imagelib/img_tga.o \
 	engine/common/imagelib/img_utils.o \
 	engine/common/imagelib/img_wad.o \
+	engine/common/imagelib/img_pvr.o \
 	engine/common/infostring.o \
 	engine/common/ipv6text.o \
 	engine/common/launcher.o \
@@ -138,12 +139,14 @@ XASH_SERVER_OBJS =	\
 	
 XASH_PLATFORM_OBJS = \
 	engine/platform/misc/lib_static.o \
-	engine/platform/sdl/in_sdl.o \
 	engine/platform/sdl/s_sdl.o \
 	engine/platform/sdl/sys_sdl.o \
 	engine/platform/posix/sys_posix.o \
+	engine/platform/sdl/vid_sdl.o \
+	engine/platform/sdl/in_sdl.o \
 	engine/platform/sdl/events.o \
-	engine/platform/sdl/vid_sdl.o 
+
+
 
 INCLUDE = -Icommon \
 -Iengine/server \
@@ -157,11 +160,12 @@ INCLUDE = -Icommon \
 -Ipublic \
 -Ipm_shared \
 -Iengine/platform \
--ISDL \
+-Iengine/platform/dreamcast \
+-I$(KOS_BASE)/addons/include/SDL \
 -I$(KOS_PORTS)/include/opus \
--I$(KOS_PORTS)/include/GL
+-I$(KOS_PORTS)/include/GL \
 
-DEFINES = -DNDEBUG -DENGINE_DLL -D_KOS_ -D_SH4_ -DXASH_BUILD_COMMIT="64726f13-dirty" -DXASH_BUILD_BRANCH="master" -DXASH_STATIC_LIBS=1 -DXASH_LOW_MEMORY=1 -DXASH_ENABLE_MAIN=1 -DDBGHELP=1 -DPSAPI_VERSION=1 -DXASH_REF_SOFT_ENABLED=0 -DXASH_REF_GL_ENABLED=1 -D_CRT_SILENCE_NONCONFORMING_TGMATH_H=1 -DHAVE_TGMATH_H=0 -DHAVE_STRNICMP=1 -DHAVE_STRICMP=1 -D_snprintf=snprintf -DXASH_SDL=12
-FLAGS = -Wall -Wextra -Wformat=0 -Wno-missing-field-initializers -Wdouble-promotion  -fsingle-precision-constant -Xlinker -Map=output.map -std=gnu11 -Os -ffast-math -mdiv=inv -maccumulate-outgoing-args -mpretend-cmove -Wl,--gc-sections 
-CFLAGS +=  $(INCLUDE) $(DEFINES) $(FLAGS)
-CXXFLAGS += $(INCLUDE) $(DEFINES) $(CFLAGS) -fno-exceptions -std=gnu++11 -fpermissive  -MMD -MP
+
+DEFINES = -DDEBUG -DENGINE_DLL -D_KOS_ -D_SH4_ -DXASH_BUILD_COMMIT="64726f13-dirty" -DXASH_BUILD_BRANCH="master" -DFRAME_POINTERS=1 -DXASH_STATIC_LIBS=1 -DXASH_LOW_MEMORY=2 -DXASH_ENABLE_MAIN=1 -DXASH_REF_SOFT_ENABLED=0  -DXASH_REF_GL_ENABLED=1 -DHAVE_TGMATH_H=0 -DHAVE_STRNICMP=1 -DHAVE_STRICMP=1 -D_snprintf=snprintf -DXASH_SDL=12
+FLAGS = -O3 -ffast-math -fomit-frame-pointer -fno-common -fno-builtin -fno-strict-aliasing -fno-stack-protector -mrelax -ffunction-sections -fdata-sections -fno-exceptions
+CFLAGS +=  $(INCLUDE) $(DEFINES) $(FLAGS)  

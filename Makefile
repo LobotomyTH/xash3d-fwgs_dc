@@ -3,33 +3,80 @@
 # Copyright (C)2001-2004 Megan Potter
 #   
 
+
 # Put the filename of the output binary here
 PROJECT_NAME = xash
 TARGET = xash.elf
 
 include engine.mk
 
+# Module paths and lib names
+FILESYSTEM_DIR = filesystem
+GLDC_DIR = ref/gldc
+MAINUI_DIR = mainui
+CL_DLL_DIR = ../hlsdk-portable_dc/cl_dll
+SV_DLL_DIR = ../hlsdk-portable_dc/dlls
+
+FILESYSTEM_LIB = $(FILESYSTEM_DIR)/libfilesystem_stdio.a
+GLDC_LIB = $(GLDC_DIR)/libref_gldc.a
+CL_DLL_LIB = $(CL_DLL_DIR)/libcl_dll.a
+SV_DLL_LIB =  $(SV_DLL_DIR)/lib_hl.a
+
 OBJS =  $(XASH_CLIENT_OBJS) $(XASH_OBJS) $(XASH_SERVER_OBJS) $(XASH_PLATFORM_OBJS)
-LIBS = -L../hlsdk-portable_dc/dlls -L../hlsdk-portable_dc/cl_dll -Lfilesystem -L$(KOS_BASE)/addons/lib/$(KOS_ARCH) -L$(KOS_PORTS)/lib -Lref/gldc -lSDL_gl -lm  -lfilesystem_stdio -lhl -lcl_dll -lref_gldc -l:libGL.a 
+# Libraries
+LIBS = -L$(SV_DLL_DIR) \
+       -L$(CL_DLL_DIR) \
+       -L$(KOS_BASE)/addons/lib/$(KOS_ARCH) \
+       -L$(KOS_PORTS)/lib \
+       -L$(FILESYSTEM_DIR) \
+       -L$(GLDC_DIR) \
+       -L$(MAINUI_DIR) \
+       -lSDL_gl \
+       -lfilesystem_stdio \
+       -lhl \
+       -lcl_dll \
+       -lref_gldc \
+       -l:libGL.a
+
+# Build module libraries
+$(FILESYSTEM_LIB):
+	$(MAKE) -C $(FILESYSTEM_DIR)
+
+$(GLDC_LIB):
+	$(MAKE) -C $(GLDC_DIR)
+
+$(SV_DLL_LIB):
+	$(MAKE) -C $(SV_DLL_DIR)
+
+$(CL_DLL_LIB):
+	$(MAKE) -C $(CL_DLL_DIR)
+
+
+# -l:libGL.a 
 #-l:libGL.a
 # The rm-elf step is to remove the target before building, to force the
 # re-creation of the rom disk.
-all: $(TARGET) 
+all: $(FILESYSTEM_LIB) $(GLDC_LIB) $(SV_DLL_LIB) $(CL_DLL_LIB) $(TARGET) 1ST_READ.BIN IP.BIN cdi
 
 include $(KOS_BASE)/Makefile.rules
 
 clean:
 	-rm -f $(OBJS) 
 	-rm -f $(TARGET)
+	$(MAKE) -C $(FILESYSTEM_DIR) clean
+	$(MAKE) -C $(GLDC_DIR) clean
+	$(MAKE) -C $(SV_DLL_DIR) clean
+	$(MAKE) -C $(CL_DLL_DIR) clean
 	-rm -f $(TARGET).bin
 	-rm -f $(PROJECT_NAME).cdi
 	-rm -f 1ST_READ.BIN
 	-rm -f IP.BIN
 	-rm -f $(PROJECT_NAME).iso
 	-rm -f $(PROJECT_NAME).cdi
+	
 
-$(TARGET): $(OBJS)
-	kos-c++ -o $(TARGET) $(OBJS) $(LIBS) -Wl,--allow-multiple-definition
+$(TARGET): $(OBJS) $(FILESYSTEM_LIB) $(GLDC_LIB) $(SV_DLL_LIB) $(CL_DLL_LIB)
+	kos-c++ -o $(TARGET) $(OBJS) $(LIBS)  -Wl,--allow-multiple-definition -Wl,--gc-sections -fwhole-program -s -Wl,--build-id=none
 
 run: $(TARGET)
 	$(KOS_LOADER) $(TARGET)
@@ -45,9 +92,14 @@ IP.BIN:
 	makeip -v build/IP.BIN
 
 $(PROJECT_NAME).iso: IP.BIN 1ST_READ.BIN
-	mkisofs -C 0,11702 -V $(PROJECT_NAME) -G IP.BIN -r -J -l -o $(PROJECT_NAME).iso build
+	mkisofs -C 0,11702 -V $(PROJECT_NAME) -G build/IP.BIN -r -J -l -o $(PROJECT_NAME).iso build
 
 $(PROJECT_NAME).cdi: $(PROJECT_NAME).iso
-	cdi4dc $(PROJECT_NAME).iso $(PROJECT_NAME).cdi > cdi.log
+	makedisc $(PROJECT_NAME).cdi build build/IP.BIN $(TARGET) 
 
 cdi: $(PROJECT_NAME).cdi
+	makedisc $(PROJECT_NAME).cdi build build/IP.BIN $(TARGET) 
+
+.PHONY: all clean 1ST_READ.BIN IP.BIN cdi
+
+
