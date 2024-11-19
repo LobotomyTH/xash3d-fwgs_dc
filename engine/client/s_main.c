@@ -1225,7 +1225,7 @@ void S_StreamAviSamples( void *Avi, int entnum, float fvol, float attn, float sy
 		return;
 
 #if XASH_DREAMCAST
-	if( entnum < 0 || entnum >= 600 )
+	if( entnum < 0 || entnum >= 900 )
 #else
 	if( entnum < 0 || entnum >= GI->max_edicts )
 		return;
@@ -1365,7 +1365,7 @@ static void S_SpatializeRawChannels( void )
 		}
 #if XASH_DREAMCAST
 		// spatialization
-		if( !S_IsClient( ch->entnum ) && ch->dist_mult && ch->entnum >= 0 && ch->entnum < 600 )
+		if( !S_IsClient( ch->entnum ) && ch->dist_mult && ch->entnum >= 0 && ch->entnum < 900 )
 #else
 		// spatialization
 		if( !S_IsClient( ch->entnum ) && ch->dist_mult && ch->entnum >= 0 && ch->entnum < GI->max_edicts )
@@ -1792,6 +1792,59 @@ static void S_SayReliable_f( void )
 S_Music_f
 =================
 */
+#if XASH_DREAMCAST
+static void S_Music_f(void)
+{
+    int c = Cmd_Argc();
+
+    if(c == 1)
+    {
+        S_StopBackgroundTrack();
+    }
+    else if(c == 2)
+    {
+        string intro, main, track;
+        char fullpath[MAX_VA_STRING];
+        const char *ext = "wav";  // Dreamcast uses WAV
+
+        Q_strncpy(track, Cmd_Argv(1), sizeof(track));
+        Q_snprintf(intro, sizeof(intro), "%s_intro", Cmd_Argv(1));
+        Q_snprintf(main, sizeof(main), "%s_main", Cmd_Argv(1));
+
+        // Try sound/music paths with full path specification
+        Q_snprintf(fullpath, sizeof(fullpath), "sound/music/%s.%s", track, ext);
+        Con_DPrintf("S_Music_f: Trying track: %s\n", fullpath);
+
+        if(FS_FileExists(fullpath, false))
+        {
+            S_StartBackgroundTrack(fullpath, NULL, 0, true);  // true = use full path
+            return;
+        }
+
+        // Try intro/main combination
+        char intro_path[MAX_VA_STRING];
+        char main_path[MAX_VA_STRING];
+        
+        Q_snprintf(intro_path, sizeof(intro_path), "sound/music/%s.%s", intro, ext);
+        Q_snprintf(main_path, sizeof(main_path), "sound/music/%s.%s", main, ext);
+
+        if(FS_FileExists(intro_path, false) && FS_FileExists(main_path, false))
+        {
+            S_StartBackgroundTrack(intro_path, main_path, 0, true);
+            return;
+        }
+    }
+    else if(c == 3)
+    {
+        S_StartBackgroundTrack(Cmd_Argv(1), Cmd_Argv(2), 0, false);
+    }
+    else if(c == 4 && Q_atoi(Cmd_Argv(3)) != 0)
+    {
+        S_StartBackgroundTrack(Cmd_Argv(1), Cmd_Argv(2), Q_atoi(Cmd_Argv(3)), false);
+    }
+    else Con_Printf(S_USAGE "music <musicfile> [loopfile]\n");
+}
+#else
 static void S_Music_f( void )
 {
 	int	c = Cmd_Argc();
@@ -1850,7 +1903,7 @@ static void S_Music_f( void )
 	}
 	else Con_Printf( S_USAGE "music <musicfile> [loopfile]\n" );
 }
-
+#endif
 /*
 =================
 S_StopSound_f

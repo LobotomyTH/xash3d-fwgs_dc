@@ -154,6 +154,53 @@ CL_CreatePlaylist
 Create a default valve playlist
 ====================
 */
+#if XASH_DREAMCAST
+static void CL_CreatePlaylist(const char *filename)
+{
+    dc_file_t *f;
+    char rampath[256];
+
+    Q_snprintf(rampath, sizeof(rampath), "/ram/%s", COM_FileWithoutPath(filename));
+    f = FS_SysOpen(rampath, "w");
+    if(!f) return;
+
+    Con_DPrintf("Creating playlist at %s\n", rampath);
+
+    // make standard cdaudio playlist with .wav extension
+    FS_Print(f, "blank\n");            // #1
+    FS_Print(f, "Half-Life01.wav\n");  // #2
+    FS_Print(f, "Prospero01.wav\n");   // #3
+    FS_Print(f, "Half-Life12.wav\n");  // #4
+    FS_Print(f, "Half-Life07.wav\n");  // #5
+    FS_Print(f, "Half-Life10.wav\n");  // #6
+    FS_Print(f, "Suspense01.wav\n");   // #7
+    FS_Print(f, "Suspense03.wav\n");   // #8
+    FS_Print(f, "Half-Life09.wav\n");  // #9
+    FS_Print(f, "Half-Life02.wav\n");  // #10
+    FS_Print(f, "Half-Life13.wav\n");  // #11
+    FS_Print(f, "Half-Life04.wav\n");  // #12
+    FS_Print(f, "Half-Life15.wav\n");  // #13
+    FS_Print(f, "Half-Life14.wav\n");  // #14
+    FS_Print(f, "Half-Life16.wav\n");  // #15
+    FS_Print(f, "Suspense02.wav\n");   // #16
+    FS_Print(f, "Half-Life03.wav\n");  // #17
+    FS_Print(f, "Half-Life08.wav\n");  // #18
+    FS_Print(f, "Prospero02.wav\n");   // #19
+    FS_Print(f, "Half-Life05.wav\n");  // #20
+    FS_Print(f, "Prospero04.wav\n");   // #21
+    FS_Print(f, "Half-Life11.wav\n");  // #22
+    FS_Print(f, "Half-Life06.wav\n");  // #23
+    FS_Print(f, "Prospero03.wav\n");   // #24
+    FS_Print(f, "Half-Life17.wav\n");  // #25
+    FS_Print(f, "Prospero05.wav\n");   // #26
+    FS_Print(f, "Suspense05.wav\n");   // #27
+    FS_Print(f, "Suspense07.wav\n");   // #28
+    FS_Close(f);
+
+    Con_DPrintf("Playlist created successfully\n");
+}
+
+#else
 static void CL_CreatePlaylist( const char *filename )
 {
 	dc_file_t	*f;
@@ -192,7 +239,7 @@ static void CL_CreatePlaylist( const char *filename )
 	FS_Print( f, "Suspense07.mp3\n" );	// #28
 	FS_Close( f );
 }
-
+#endif
 /*
 ====================
 CL_InitCDAudio
@@ -200,6 +247,61 @@ CL_InitCDAudio
 Initialize CD playlist
 ====================
 */
+#if XASH_DREAMCAST
+static void CL_InitCDAudio(const char *filename)
+{
+    byte *afile;
+    char *pfile;
+    string token;
+    char rampath[256];
+    int c = 0;
+
+    Q_snprintf(rampath, sizeof(rampath), "/ram/%s", COM_FileWithoutPath(filename));
+    Con_DPrintf("Loading playlist from: %s\n", rampath);
+
+    if(!FS_FileExists(rampath, false))
+    {
+        Con_DPrintf("Playlist not found, creating default\n");
+        CL_CreatePlaylist(filename);
+    }
+
+    afile = FS_LoadDirectFile(rampath, NULL);
+    if(!afile) 
+    {
+        Con_DPrintf("Failed to load playlist file\n");
+        return;
+    }
+
+    Con_DPrintf("Parsing playlist tracks:\n");
+    pfile = (char *)afile;
+
+    // format: trackname\n [num]
+    while((pfile = COM_ParseFile(pfile, token, sizeof(token))) != NULL)
+    {
+        // In CL_InitCDAudio:
+		if(!Q_stricmp(token, "blank"))
+		{
+			clgame.cdtracks[c][0] = '\0';
+			Con_DPrintf("Track %d: blank\n", c + 1);
+		}
+		else
+		{
+			Q_snprintf(clgame.cdtracks[c], sizeof(clgame.cdtracks[c]),
+				"sound/music/%s", token);
+			Con_DPrintf("Track %d: %s\n", c + 1, clgame.cdtracks[c]);
+		}
+
+        if(++c > MAX_CDTRACKS - 1)
+        {
+            Con_Reportf(S_WARN "%s: too many tracks %i in %s\n", __func__, MAX_CDTRACKS, rampath);
+            break;
+        }
+    }
+
+    Con_DPrintf("Loaded %d tracks total\n", c);
+    Mem_Free(afile);
+}
+#else
 static void CL_InitCDAudio( const char *filename )
 {
 	byte *afile;
@@ -238,7 +340,7 @@ static void CL_InitCDAudio( const char *filename )
 
 	Mem_Free( afile );
 }
-
+#endif
 /*
 =============
 CL_AdjustXPos
@@ -972,6 +1074,7 @@ static void CL_DrawCrosshair( void )
 	pfnSPR_DrawHoles( 0, x, y, &clgame.ds.rcCrosshair );
 }
 
+
 /*
 =============
 CL_DrawLoading
@@ -994,6 +1097,7 @@ static void CL_DrawLoadingOrPaused( int tex )
 	ref.dllFuncs.Color4ub( 255, 255, 255, 255 );
 	ref.dllFuncs.GL_SetRenderMode( kRenderTransTexture );
 	ref.dllFuncs.R_DrawStretchPic( x, y, width, height, 0, 0, 1, 1, tex );
+
 }
 
 void CL_DrawHUD( int state )
@@ -1123,6 +1227,7 @@ void CL_InitEdicts( int maxclients )
 	ref.dllFuncs.R_ProcessEntData( true, clgame.entities, clgame.maxEntities );
 
 }
+
 
 void CL_FreeEdicts( void )
 {
@@ -4143,13 +4248,8 @@ qboolean CL_LoadProgs( const char *name )
 	clgame.maxEntities = 2; // world + localclient (have valid entities not in game)
 
 	CL_InitCDAudio( "media/cdaudio.txt" );
-	#if !XASH_DREAMCAST
 	CL_InitTitles( "titles.txt" );
-	#endif // XASH_DREAMCAST titles are broken, needs fixing
-	CL_InitParticles ();
-	CL_InitViewBeams ();
-	CL_InitTempEnts ();
-
+	
 	if( !R_InitRenderAPI())	// Xash3D extension
 		Con_Reportf( S_WARN "%s: couldn't get render API\n", __func__ );
 
@@ -4158,6 +4258,11 @@ qboolean CL_LoadProgs( const char *name )
 
 	CL_InitEdicts( cl.maxclients );		// initailize local player and world
 	CL_InitClientMove();	// initialize pm_shared
+
+	CL_InitParticles ();
+	CL_InitViewBeams ();
+	CL_InitTempEnts ();
+
 
 	// initialize game
 	clgame.dllFuncs.pfnInit();

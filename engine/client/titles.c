@@ -301,8 +301,9 @@ void CL_TextMessageParse( byte *pMemFile, int fileSize )
 			break;
 		}
 	}
-
+#if !XASH_DREAMCAST
 	Con_Reportf( "%s: parsed %d text messages\n", __func__, messageCount );
+#endif
 	nameHeapSize = lastNamePos;
 	textHeapSize = 0;
 
