@@ -361,7 +361,7 @@ static qboolean NET_GetHostByName( const char *hostname, int family, struct sock
 #endif
 }
 
-#if !XASH_EMSCRIPTEN && !XASH_DOS4GW && !XASH_DREAMCAST && !defined XASH_NO_ASYNC_NS_RESOLVE
+#if !XASH_EMSCRIPTEN && !XASH_DOS4GW && !defined XASH_NO_ASYNC_NS_RESOLVE
 #define CAN_ASYNC_NS_RESOLVE
 #endif // !XASH_EMSCRIPTEN && !XASH_DOS4GW && !defined XASH_NO_ASYNC_NS_RESOLVE
 

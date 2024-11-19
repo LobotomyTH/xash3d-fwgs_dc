@@ -414,6 +414,8 @@ void _Mem_Check( const char *filename, int fileline );
 qboolean Mem_IsAllocatedExt( poolhandle_t poolptr, void *data );
 void Mem_PrintList( size_t minallocationsize );
 void Mem_PrintStats( void );
+// Memory defragmentation
+void _Mem_Defrag( poolhandle_t poolptr, const char *filename, int fileline );
 
 #define Mem_Malloc( pool, size ) _Mem_Alloc( pool, size, false, __FILE__, __LINE__ )
 #define Mem_Calloc( pool, size ) _Mem_Alloc( pool, size, true, __FILE__, __LINE__ )
@@ -424,6 +426,7 @@ void Mem_PrintStats( void );
 #define Mem_EmptyPool( pool ) _Mem_EmptyPool( pool, __FILE__, __LINE__ )
 #define Mem_IsAllocated( mem ) Mem_IsAllocatedExt( NULL, mem )
 #define Mem_Check() _Mem_Check( __FILE__, __LINE__ )
+#define Mem_Defrag( pool ) _Mem_Defrag( pool, __FILE__, __LINE__ )
 
 //
 // imagelib
@@ -460,6 +463,7 @@ typedef enum
 	WF_UNKNOWN = 0,
 	WF_PCMDATA,
 	WF_MPGDATA,
+	WF_ADPCMDATA,
 	WF_TOTALCOUNT,	// must be last
 } sndformat_t;
 

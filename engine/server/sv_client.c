@@ -1636,7 +1636,7 @@ void SV_SendServerdata( sizebuf_t *msg, sv_client_t *cl )
 	MSG_WriteByte( msg, cl - svs.clients );
 	MSG_WriteByte( msg, svs.maxclients );
 #if XASH_DREAMCAST
-	MSG_WriteWord( msg, 600 );
+	MSG_WriteWord( msg, 900 );
 #else
 	MSG_WriteWord( msg, GI->max_edicts );
 #endif

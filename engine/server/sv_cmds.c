@@ -406,8 +406,11 @@ static void SV_Load_f( void )
 		Con_Printf( S_USAGE "load <savename>\n" );
 		return;
 	}
-
+#if XASH_DREAMCAST
+	Q_snprintf( path, sizeof( path ), "/vmu/a1/%s.sav");
+#else
 	Q_snprintf( path, sizeof( path ), DEFAULT_SAVE_DIRECTORY "%s.sav", Cmd_Argv( 1 ));
+#endif
 	SV_LoadGame( path );
 }
 
@@ -487,6 +490,7 @@ SV_AutoSave_f
 */
 static void SV_AutoSave_f( void )
 {
+#if !XASH_DREAMCAST
 	if( Cmd_Argc() != 1 )
 	{
 		Con_Printf( S_USAGE "autosave\n" );
@@ -495,6 +499,7 @@ static void SV_AutoSave_f( void )
 
 	if( sv_autosave.value )
 		SV_SaveGame( "autosave" );
+#endif
 }
 
 /*
@@ -890,8 +895,8 @@ static void SV_EdictUsage_f( void )
 	active = pfnNumberOfEntities();
 	Con_Printf( "%5i edicts is used\n", active );
 #if XASH_DREAMCAST
-	Con_Printf( "%5i edicts is free\n", 600 - active );
-	Con_Printf( "%5i total\n", 600 );
+	Con_Printf( "%5i edicts is free\n", 900 - active );
+	Con_Printf( "%5i total\n", 900 );
 #else
 	Con_Printf( "%5i edicts is free\n", GI->max_edicts - active );
 	Con_Printf( "%5i total\n", GI->max_edicts );

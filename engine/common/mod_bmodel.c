@@ -1461,6 +1461,7 @@ static void Mod_CalcSurfaceBounds( model_t *mod, msurface_t *surf )
 Mod_CreateFaceBevels
 =================
 */
+
 static void Mod_CreateFaceBevels( model_t *mod, msurface_t *surf )
 {
 	vec3_t		delta, edgevec;
@@ -1739,6 +1740,7 @@ static qboolean Mod_LoadColoredLighting( model_t *mod, dbspmodel_t *bmod )
 	Mem_Free( in );
 
 	return true;
+
 }
 
 /*
@@ -2021,23 +2023,25 @@ static void Mod_LoadEntities( model_t *mod, dbspmodel_t *bmod )
 	bmod->wadlist.count = 0;
 
 #if XASH_DREAMCAST // hacky stuff
+	// Unrolled WAD loading loop for better performance
+    static const char *wadNumbers[] = {"1_", "2_", "3_", "4_", "5_", "6_", "7_"};
+    char wadname[MAX_QPATH];
 	//force separate wads in to parsing, since HLDC bsp doesn't contain them in bsp header
 	COM_FileBase(mod->name, mapname, sizeof(mapname));
 	COM_StripExtension(mapname); // Remove .bsp
 		// Try to load numbered WADs
-		for(int i = 1; i <= 7; i++)
+		for(int i = 0; i <= 7; i++)
 		{
-			char dcwad[MAX_QPATH];
-			Q_snprintf(dcwad, sizeof(dcwad), "%d_%s", i, mapname);
+			Q_snprintf(wadname, sizeof(wadname), "%s%s", wadNumbers[i], mapname);
 			
-			Con_Printf("Checking HLDC WADs: %s\n", dcwad);
+			Con_Printf("Checking HLDC WADs: %s\n", wadname);
 			
-			if(FS_FileExists(va("%s.wad", dcwad), false))
+			if(FS_FileExists(va("%s.wad", wadname), false))
 			{
 				int num = bmod->wadlist.count++;
-				Q_strncpy(bmod->wadlist.wadnames[num], dcwad, sizeof(bmod->wadlist.wadnames[0]));
+				Q_strncpy(bmod->wadlist.wadnames[num], wadname, sizeof(bmod->wadlist.wadnames[0]));
 				bmod->wadlist.wadusage[num] = 0;
-				Con_Printf("Added DHLDC WADs to list: %s (index: %d)\n", dcwad, num);
+				Con_Printf("Added HLDC WADs to list: %s (index: %d)\n", wadname, num);
 			}
 		}
 #endif
@@ -2798,7 +2802,7 @@ static void Mod_LoadTextures( model_t *mod, dbspmodel_t *bmod )
 {
 	dmiptexlump_t *lump;
 
-#if !XASH_DEDICATED
+#if !XASH_DEDICATED && !XASH_DREAMCAST
 	// release old sky layers first
 	if( !Host_IsDedicated() && bmod->isworld )
 	{
@@ -3531,6 +3535,13 @@ static qboolean Mod_LoadBmodelLumps( model_t *mod, const byte *mod_base, qboolea
 	int		i, ret, flags = 0;
 	qboolean wadlist_warn = false;
 
+	// At the start of the loading function:
+	uint32_t start_time, end_time;
+	#define PROFILE_START() start_time = timer_ms_gettime64()
+	#define PROFILE_END(name) \
+    end_time = timer_ms_gettime64(); \
+    Con_DPrintf("BSP: %s took %lums\n", name, end_time - start_time)
+
 	// always reset the intermediate struct
 	memset( bmod, 0, sizeof( dbspmodel_t ));
 	memset( &loadstat, 0, sizeof( loadstat_t ));
@@ -3599,27 +3610,75 @@ static qboolean Mod_LoadBmodelLumps( model_t *mod, const byte *mod_base, qboolea
 	else if( !bmod->isworld && loadstat.numwarnings )
 		Con_DPrintf( "Mod_Load%s: %i warning(s)\n", isworld ? "World" : "Brush", loadstat.numwarnings );
 
-	// load into heap
-	Mod_LoadEntities( mod, bmod );
-	Mod_LoadPlanes( mod, bmod );
-	Mod_LoadSubmodels( mod, bmod );
-	Mod_LoadVertexes( mod, bmod );
-	Mod_LoadEdges( mod, bmod );
-	Mod_LoadSurfEdges( mod, bmod );
-	Mod_LoadTextures( mod, bmod );
-	Mod_LoadVisibility( mod, bmod );
-	Mod_LoadTexInfo( mod, bmod );
-	Mod_LoadSurfaces( mod, bmod );
-	Mod_LoadLighting( mod, bmod );
-	Mod_LoadMarkSurfaces( mod, bmod );
-	Mod_LoadLeafs( mod, bmod );
-	Mod_LoadNodes( mod, bmod );
-	Mod_LoadClipnodes( mod, bmod );
+	// Modified loading sequence
+		PROFILE_START();
+		Mod_LoadEntities(mod, bmod);
+		PROFILE_END("Entities");
 
-	// preform some post-initalization
-	Mod_MakeHull0( mod );
-	Mod_SetupSubmodels( mod, bmod );
+		PROFILE_START();
+		Mod_LoadPlanes(mod, bmod);
+		PROFILE_END("Planes");
 
+		PROFILE_START();
+		Mod_LoadSubmodels(mod, bmod);
+		PROFILE_END("Submodels");
+
+		PROFILE_START();
+		Mod_LoadVertexes(mod, bmod);
+		PROFILE_END("Vertexes");
+
+		PROFILE_START();
+		Mod_LoadEdges(mod, bmod);
+		PROFILE_END("Edges");
+
+		PROFILE_START();
+		Mod_LoadSurfEdges(mod, bmod);
+		PROFILE_END("SurfEdges");
+
+		PROFILE_START();
+		Mod_LoadTextures(mod, bmod);
+		PROFILE_END("Textures");
+
+		PROFILE_START();
+		Mod_LoadVisibility(mod, bmod);
+		PROFILE_END("Visibility");
+
+		PROFILE_START();
+		Mod_LoadTexInfo(mod, bmod);
+		PROFILE_END("TexInfo");
+
+		PROFILE_START();
+		Mod_LoadSurfaces(mod, bmod);
+		PROFILE_END("Surfaces");
+
+		PROFILE_START();
+		Mod_LoadLighting(mod, bmod);
+		PROFILE_END("Lighting");
+
+		PROFILE_START();
+		Mod_LoadMarkSurfaces(mod, bmod);
+		PROFILE_END("MarkSurfaces");
+
+		PROFILE_START();
+		Mod_LoadLeafs(mod, bmod);
+		PROFILE_END("Leafs");
+
+		PROFILE_START();
+		Mod_LoadNodes(mod, bmod);
+		PROFILE_END("Nodes");
+
+		PROFILE_START();
+		Mod_LoadClipnodes(mod, bmod);
+		PROFILE_END("Clipnodes");
+
+		// Post-initialization profiling
+		PROFILE_START();
+		Mod_MakeHull0(mod);
+		PROFILE_END("Hull0");
+
+		PROFILE_START();
+		Mod_SetupSubmodels(mod, bmod);
+		PROFILE_END("SetupSubmodels");
 	if( isworld )
 	{
 		world.version = bmod->version;

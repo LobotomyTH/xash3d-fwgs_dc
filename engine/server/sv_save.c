@@ -499,7 +499,7 @@ static void ClearSaveDir( void )
 
 	// just delete all HL? files
 #if XASH_DREAMCAST
-	t = FS_Search( "/vmu/a1/" "*.HL?", true, true );
+	t = FS_Search( "/ram/" "*.HL?", true, true );
 	if( !t ) return; // already empty
 #else
 	t = FS_Search( DEFAULT_SAVE_DIRECTORY "*.HL?", true, true );
@@ -850,7 +850,7 @@ static int GetClientDataSize( const char *level )
 	char	name[MAX_QPATH];
 	dc_file_t	*pFile;
 #if XASH_DREAMCAST
-	Q_snprintf( name, sizeof( name ), "/vmu/a1/%s.HL2", level );
+	Q_snprintf( name, sizeof( name ), "/ram/%s.HL2", level );
 
 	if(( pFile = FS_SysOpen( name, "rb", true )) == NULL )
 		return 0;
@@ -901,7 +901,7 @@ static SAVERESTOREDATA *LoadSaveData( const char *level )
 	int		totalSize;
 	dc_file_t		*pFile;
 #if XASH_DREAMCAST
-	Q_snprintf( name, sizeof( name ), "/vmu/a1/%s.HL1", level );
+	Q_snprintf( name, sizeof( name ), "/ram/%s.HL1", level );
 	Con_Printf( "Loading game from %s...\n", name );
 
 	if(( pFile = FS_SysOpen( name, "rb", true )) == NULL )
@@ -1025,7 +1025,7 @@ static void EntityPatchWrite( SAVERESTOREDATA *pSaveData, const char *level )
 	dc_file_t	*pFile;
 
 #if XASH_DREAMCAST
-	Q_snprintf( name, sizeof( name ), "/vmu/a1/%s.HL3", level );
+	Q_snprintf( name, sizeof( name ), "/ram/%s.HL3", level );
 
 	if(( pFile = FS_SysOpen( name, "wb", true )) == NULL )
 		return;
@@ -1068,7 +1068,7 @@ static void EntityPatchRead( SAVERESTOREDATA *pSaveData, const char *level )
 	dc_file_t	*pFile;
 
 #if XASH_DREAMCAST
-	Q_snprintf( name, sizeof( name ), "/vmu/a1/%s.HL3", level );
+	Q_snprintf( name, sizeof( name ), "/ram/%s.HL3", level );
 
 	if(( pFile = FS_SysOpen( name, "rb", true )) == NULL )
 		return;
@@ -1274,7 +1274,7 @@ static void SaveClientState( SAVERESTOREDATA *pSaveData, const char *level, int 
 	pTokenData = StoreHashTable( pSaveData );
 
 #if XASH_DREAMCAST
-	Q_snprintf( name, sizeof( name ), "/vmu/a1/%s.HL2", level );
+	Q_snprintf( name, sizeof( name ), "/ram/%s.HL2", level );
 
 	if(( pFile = FS_SysOpen( name, "wb", true )) == NULL )
 		return; // something bad is happens
@@ -1319,7 +1319,7 @@ static void LoadClientState( SAVERESTOREDATA *pSaveData, const char *level, qboo
 	dc_file_t		*pFile;
 
 #if XASH_DREAMCAST
-	Q_snprintf( name, sizeof( name ), "/vmu/a1/%s.HL2", level );
+	Q_snprintf( name, sizeof( name ), "/ram/%s.HL2", level );
 
 	if(( pFile = FS_SysOpen( name, "rb", true )) == NULL )
 		return; // something bad is happens
@@ -1510,7 +1510,7 @@ static SAVERESTOREDATA *SaveGameState( int changelevel )
 	pSaveData = SaveInit( SAVE_HEAPSIZE, SAVE_HASHSTRINGS );
 
 #if XASH_DREAMCAST
-	Q_snprintf( name, sizeof( name ), "/vmu/a1/%s.HL1", sv.name );
+	Q_snprintf( name, sizeof( name ), "/ram/%s.HL1", sv.name );
 #else
 	Q_snprintf( name, sizeof( name ), DEFAULT_SAVE_DIRECTORY "%s.HL1", sv.name );
 #endif
@@ -1745,7 +1745,7 @@ static qboolean SaveGameSlot( const char *pSaveName, const char *pSaveComment )
 	SaveFinish( pSaveData );
 	pSaveData = SaveInit( SAVE_HEAPSIZE, SAVE_HASHSTRINGS ); // re-init the buffer
 #if XASH_DREAMCAST
-	Q_strncpy( "/vmu/a1/", "*.HL?", sizeof( hlPath ) );
+	Q_strncpy( "/ram/", "*.HL?", sizeof( hlPath ) );
 #else
 	Q_strncpy( hlPath, DEFAULT_SAVE_DIRECTORY "*.HL?", sizeof( hlPath ) );
 #endif																								   
@@ -1762,7 +1762,7 @@ static qboolean SaveGameSlot( const char *pSaveName, const char *pSaveComment )
 	// Write entity string token table
 	pTokenData = StoreHashTable( pSaveData );
 #if XASH_DREAMCAST
-	Q_snprintf( name, sizeof( name ), "/vmu/a1/" "%s.sav", pSaveName );
+	Q_snprintf( name, sizeof( name ), "/vmu/a1/%s.sav", pSaveName );
 #else
 	Q_snprintf( name, sizeof( name ), DEFAULT_SAVE_DIRECTORY "%s.sav", pSaveName );
 #endif
@@ -2160,18 +2160,21 @@ qboolean SV_LoadGame( const char *pPath )
 
 	if( !COM_CheckString( pPath ))
 		return false;
-
+#if !XASH_DREAMCAST
 	// silently ignore if missed
 	if( !FS_FileExists( pPath, true ))
 		return false;
-
+#endif
 	// initialize game if needs
 	if( !SV_InitGame( ))
 		return false;
 
 	svs.initialized = true;
+#if XASH_DREAMCAST
+	pFile = FS_SysOpen( pPath, "rb", true );
+#else
 	pFile = FS_Open( pPath, "rb", true );
-
+#endif
 	if( pFile )
 	{
 		SV_ClearGameState();
@@ -2277,10 +2280,13 @@ const char *SV_GetLatestSave( void )
 	int		newest = 0, ft;
 	int		i, found = 0;
 	search_t		*t;
-
-	if(( t = FS_Search( DEFAULT_SAVE_DIRECTORY "*.sav" , true, true )) == NULL )
+#if XASH_DREAMCAST
+	if(( t = FS_Search( "/vmu/a1/" "*.sav" , true, true )) == NULL )
 		return NULL;
-
+#else
+	if(( t = FS_Search( "DEFAULT_SAVE_DIRECTORY" "*.sav" , true, true )) == NULL )
+		return NULL;
+#endif
 	for( i = 0; i < t->numfilenames; i++ )
 	{
 		ft = FS_FileTime( t->filenames[i], true );
