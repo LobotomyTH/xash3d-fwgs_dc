@@ -17,6 +17,5 @@ Xash3D FWGS is a heavily modified fork of an original [Xash3D Engine](https://ww
 Currently it runs only on 32MB modded Dreamcast, 16 MB RAM support will come later.
 
 0) Build GPFTroy/SDL1.2 and GLDC by Kazade, replace at GLDC's texture.c:1700  FASTCPY(targetData, conversionBuffer, destBytes); to memcpy;
-1) Build filesystem `cd filesystem && make` and ref_gldc `cd ref/gldc && make`
-2) Compile engine at root dir: `make 1ST_READ.BIN`
+2) Compile engine at root dir: with `make all` this will build all xash libs and hlsdk-portable_dc and will make CDI, be sure to put Half-Life Dreamcast valve folder data to build/valve
 
