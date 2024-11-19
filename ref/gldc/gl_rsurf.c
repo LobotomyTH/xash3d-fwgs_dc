@@ -1255,11 +1255,12 @@ static qboolean R_CheckLightMap( msurface_t *fa )
 	if( fa->dlightframe == tr.framecount )
 	{
 dynamic:
+
 		// NOTE: at this point we have only valid textures
 		if( r_dynamic->value )
 			is_dynamic = true;
 	}
-
+#if !XASH_DREAMCAST
 	if( is_dynamic )
 	{
 		const int style = fa->styles[maps];
@@ -1295,6 +1296,7 @@ dynamic:
 		else
 			return true; // add to dynamic chain
 	}
+#endif
 	return false; // updated
 }
 

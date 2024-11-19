@@ -634,9 +634,9 @@ static void GL_SetTextureFormat( gl_texture_t *tex, pixformat_t format, int chan
 			case PF_RGB_5650: tex->format = GL_RGB565_KOS; break;
 			case PF_INDEXED_24:
 			case PF_INDEXED_32:
-			case PF_RGBA_32: tex->format = GL_RGBA4; break;
+			case PF_RGBA_32: tex->format = GL_RGBA; break;
 			case PF_BGRA_32: tex->format = GL_BGRA; break;
-			case PF_RGB_24: tex->format = GL_RGB4; break;
+			case PF_RGB_24: tex->format = GL_RGB; break;
 			case PF_BGR_24: tex->format = GL_BGR; break;
 
 			default:
