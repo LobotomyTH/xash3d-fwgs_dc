@@ -162,41 +162,46 @@ W_FindLump
 Serach for already existed lump
 ===========
 */
-static dlumpinfo_t *W_FindLump( wfile_t *wad, const char *name, const signed char matchtype )
+static dlumpinfo_t *W_FindLump(wfile_t *wad, const char *name, const signed char matchtype)
 {
-	int	left, right;
+    int left, right;
 
-	if( !wad || !wad->lumps || matchtype == TYP_NONE )
+   	if( !wad || !wad->lumps || matchtype == TYP_NONE )
 		return NULL;
 
-	// look for the file (binary search)
-	left = 0;
-	right = wad->numlumps - 1;
+    left = 0;
+    right = wad->numlumps - 1;
 
-	while( left <= right )
-	{
-		int	middle = (left + right) / 2;
-		int	diff = Q_stricmp( wad->lumps[middle].name, name );
+    while(left <= right)
+    {
+        int middle = (left + right) / 2;
+        int diff = Q_stricmp(wad->lumps[middle].name, name);
 
-		if( !diff )
-		{
-			if(( matchtype == TYP_ANY ) || ( matchtype == wad->lumps[middle].type ))
-				return &wad->lumps[middle]; // found
-			else if( wad->lumps[middle].type < matchtype )
-				diff = 1;
-			else if( wad->lumps[middle].type > matchtype )
-				diff = -1;
-			else break; // not found
-		}
+        if(!diff)
+        {
+            if((matchtype == TYP_ANY) ||
+                (matchtype == wad->lumps[middle].type) ||
+                 ((matchtype == 67 || matchtype == 66 || matchtype == 71) && 
+                    (wad->lumps[middle].type == 71 ||
+                     wad->lumps[middle].type == 70 ||
+                     wad->lumps[middle].type == 66)))
+            {
+                return &wad->lumps[middle];
+            }
+            else if(wad->lumps[middle].type < matchtype)
+                diff = 1;
+            else if(wad->lumps[middle].type > matchtype)
+                diff = -1;
+            else break;
+        }
 
-		// if we're too far in the list
+        // if we're too far in the list
 		if( diff > 0 ) right = middle - 1;
 		else left = middle + 1;
-	}
+    }
 
-	return NULL;
+    return NULL;
 }
-
 /*
 ====================
 W_AddFileToWad
@@ -482,7 +487,6 @@ static int FS_FindFile_WAD( searchpath_t *search, const char *path, char *fixedn
 
 	return -1;
 }
-
 /*
 ===========
 FS_Search_WAD
