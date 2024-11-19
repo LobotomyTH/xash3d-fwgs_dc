@@ -85,6 +85,10 @@ const bpc_desc_t PFDesc[] =
 { PF_DXT3,	"DXT 3",	0x83F2, 4 },
 { PF_DXT5,	"DXT 5",	0x83F3, 4 },
 { PF_ATI2,	"ATI 2",	0x8837, 4 },
+ // Dreamcast formats
+{ PF_RGB_5650,       "RGB 565",  0xEF40, 3 },
+{ PF_VQ_RGB_5650,    "VQ 565",   0xEEE4, 3 },
+{ PF_VQ_MIPMAP_RGB_5650, "VQ 565 MIPMAP ",0xEEEC, 3 },
 };
 
 void Image_Reset( void )

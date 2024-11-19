@@ -185,6 +185,7 @@ qboolean Image_LoadMDL( const char *name, const byte *buffer, fs_offset_t filesi
 		uint8_t texture_format = (format >> 8) & 0xFF;
 		uint8_t color_format = format & 0xFF;
 
+
 		if (texture_format == PVR_RECT || texture_format == PVR_TWIDDLE || texture_format == PVR_VQ)
 		{
 			if (texture_format == PVR_VQ)
@@ -196,10 +197,16 @@ qboolean Image_LoadMDL( const char *name, const byte *buffer, fs_offset_t filesi
 				image.type = PF_VQ_RGB_5650;
 				
 			}
-			else
+			else if (texture_format == PVR_RECT)
 			{
 				image.type = PF_RGB_5650;
-				image.size = image.width * image.height;
+				image.size = image.width * image.height * 2;
+				SetBits(image.flags, TF_KEEP_SOURCE);
+			}
+			else 
+			{	
+				Con_DPrintf("Unsupported PVR format: 0x%X\n", texture_format);	
+				return false;
 			}
 
 			Image_GetPaletteLMP(NULL, LUMP_VQ);
@@ -211,8 +218,7 @@ qboolean Image_LoadMDL( const char *name, const byte *buffer, fs_offset_t filesi
     }
     else
     {
-        // Original indexed texture loading code...
-        if (image.hint == IL_HINT_HL)
+	if (image.hint == IL_HINT_HL)
         {
             size_t pixels = image.width * image.height;
             if (filesize < (sizeof(*pin) + pixels + 768))
@@ -417,6 +423,67 @@ qboolean Image_LoadMIP( const char *name, const byte *buffer, fs_offset_t filesi
 		return false;
 
 	memcpy( &mip, buffer, sizeof( mip ));
+	fin = (byte *)buffer;  // Start from beginning for PVR textures
+    // Check if this is a PVR texture
+    if(!Q_strncmp(mip.name, "GBIX", 4))
+    {
+		char basename[MAX_QPATH];
+        gbix_t *gbix = (gbix_t*)fin;
+    
+        byte *texture_data = fin + sizeof(gbix_t) + gbix->nextTagOffset;
+
+        // Get format info and dimensions
+        uint8_t color_format = texture_data[0];
+        uint8_t image_format = texture_data[1];
+        image.width = texture_data[6] | (texture_data[7] << 8);
+        image.height = texture_data[4] | (texture_data[5] << 8);
+
+		mip.width = image.width;
+		mip.height = image.height;
+		COM_FileBase(name, basename, sizeof(basename));
+		COM_StripExtension(basename);
+		Q_strncpy(mip.name, basename, sizeof(mip.name));
+
+        switch(image_format)
+        {
+            case PVR_VQ:
+                image.type = PF_VQ_RGB_5650;
+                image.size = 2048 + ((image.width * image.height) / 4);
+                texture_data += 8;
+
+                break;
+			case PVR_VQ_MIPMAP:
+				 // Base size for codebook (2048) + main texture size + mipmap sizes
+				int main_size = (image.width * image.height) / 4;
+				int mip1_size = (main_size) / 4;  // 1/4 of main size
+				int mip2_size = mip1_size / 4;    // 1/16 of main size
+				int mip3_size = mip2_size / 4;    // 1/64 of main size
+				image.type = PF_VQ_MIPMAP_RGB_5650;
+				image.size = 2048 + main_size + mip1_size + mip2_size + mip3_size;
+				texture_data += 8;
+			//	Con_Printf("VQ_MIPMAP texture detected, size: %d\n", image.size);
+                break;
+            case PVR_RECT:
+                image.type = PF_RGB_5650;
+				#if 0
+				image.size = ((image.width + 3) & ~3) * ((image.height + 3) & ~3) * 2;
+				#else
+                image.size = image.width * image.height * 2;
+				#endif
+				break;
+            case PVR_TWIDDLE:
+                return false;
+            default:
+                return false;
+        }
+
+        image.rgba = Mem_Malloc(host.imagepool, image.size);
+        memcpy(image.rgba, texture_data, image.size);
+       
+    } 
+	else
+	{
+
 	image.width = mip.width;
 	image.height = mip.height;
 
@@ -434,11 +501,6 @@ qboolean Image_LoadMIP( const char *name, const byte *buffer, fs_offset_t filesi
 		numcolors = *(short *)pal;
 		if( numcolors != 256 ) pal = NULL; // corrupted mip ?
 		else pal += sizeof( short ); // skip colorsize
-		if (buffer[0] == 'G' && buffer[1] == 'B' && buffer[2] == 'I' && buffer[3] == 'X')
-		{
-			Con_Printf("%s is loading mip: %s.bmp with PVR format \n", __func__, name);
-			image.flags |= IL_KEEP_8BIT;
-		}
 		hl_texture = true;
 
 
@@ -589,12 +651,12 @@ qboolean Image_LoadMIP( const char *name, const byte *buffer, fs_offset_t filesi
 			VectorDivide( reflectivity, 256, image.fogParams );
 		}
 	}
-	if (fin[0] == 'G' && fin[1] == 'B' && fin[2] == 'I' && fin[3] == 'X')
-		image.type = PF_ARGB_4444;
-	else
-		image.type = PF_INDEXED_32;	// 32-bit palete
+	
+	image.type = PF_INDEXED_32;	// 32-bit palete
 
 	image.depth = 1;
 
 	return Image_AddIndexedImageToPack( fin, image.width, image.height );
+
+	}
 }

@@ -29,6 +29,7 @@ GNU General Public License for more details.
 #define PVR_TWIDDLE	0x01
 #define PVR_VQ		0x03
 #define PVR_RECT	0x09
+#define PVR_VQ_MIPMAP 0x04
 
 
 
