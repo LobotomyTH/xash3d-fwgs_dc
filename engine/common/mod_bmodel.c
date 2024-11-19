@@ -2022,29 +2022,6 @@ static void Mod_LoadEntities( model_t *mod, dbspmodel_t *bmod )
 	world.message[0] = '\0';
 	bmod->wadlist.count = 0;
 
-#if XASH_DREAMCAST // hacky stuff
-	// Unrolled WAD loading loop for better performance
-    static const char *wadNumbers[] = {"1_", "2_", "3_", "4_", "5_", "6_", "7_"};
-    char wadname[MAX_QPATH];
-	//force separate wads in to parsing, since HLDC bsp doesn't contain them in bsp header
-	COM_FileBase(mod->name, mapname, sizeof(mapname));
-	COM_StripExtension(mapname); // Remove .bsp
-		// Try to load numbered WADs
-		for(int i = 0; i <= 7; i++)
-		{
-			Q_snprintf(wadname, sizeof(wadname), "%s%s", wadNumbers[i], mapname);
-			
-			Con_Printf("Checking HLDC WADs: %s\n", wadname);
-			
-			if(FS_FileExists(va("%s.wad", wadname), false))
-			{
-				int num = bmod->wadlist.count++;
-				Q_strncpy(bmod->wadlist.wadnames[num], wadname, sizeof(bmod->wadlist.wadnames[0]));
-				bmod->wadlist.wadusage[num] = 0;
-				Con_Printf("Added HLDC WADs to list: %s (index: %d)\n", wadname, num);
-			}
-		}
-#endif
 	// parse all the wads for loading textures in right ordering
 	while(( pfile = COM_ParseFile( pfile, token, sizeof( token ))) != NULL )
 	{
@@ -2071,6 +2048,57 @@ static void Mod_LoadEntities( model_t *mod, dbspmodel_t *bmod )
 			{
 				char	*pszWadFile;
 
+#if XASH_DREAMCAST
+			static const char *wadNumbers[] = {"1_", "2_", "3_", "4_", "5_", "6_", "7_"};
+			static const char *systemWads[] = {"decals", "spraypaint", "xeno", "liquids"};
+			char wadname[MAX_QPATH];
+			char mapname[MAX_QPATH];
+			qboolean found_numbered_wads = false;
+
+			// Clear existing WAD list
+			bmod->wadlist.count = 0;
+
+			// First load system WADs
+			for(int i = 0; i < sizeof(systemWads)/sizeof(systemWads[0]); i++)
+			{
+				if(FS_FileExists(va("%s.wad", systemWads[i]), false))
+				{
+					int num = bmod->wadlist.count++;
+					Q_strncpy(bmod->wadlist.wadnames[num], systemWads[i], sizeof(bmod->wadlist.wadnames[0]));
+					bmod->wadlist.wadusage[num] = 0;
+					Con_Printf("Added system WAD: %s (index: %d)\n", systemWads[i], num);
+				}
+			}
+
+			// Then try numbered map WADs
+			COM_FileBase(mod->name, mapname, sizeof(mapname));
+			COM_StripExtension(mapname);
+
+			for(int i = 0; i < 7; i++)
+			{
+				Q_snprintf(wadname, sizeof(wadname), "%s%s", wadNumbers[i], mapname);
+				
+				if(FS_FileExists(va("%s.wad", wadname), false))
+				{
+					int num = bmod->wadlist.count++;
+					Q_strncpy(bmod->wadlist.wadnames[num], wadname, sizeof(bmod->wadlist.wadnames[0]));
+					bmod->wadlist.wadusage[num] = 0;
+					Con_Printf("Added map WAD: %s (index: %d)\n", wadname, num);
+					found_numbered_wads = true;
+				}
+			}
+
+			// If no numbered WADs found, use halflife.wad
+			if(!found_numbered_wads)
+			{
+				int num = bmod->wadlist.count++;
+				Q_strncpy(bmod->wadlist.wadnames[num], "halflife", sizeof(bmod->wadlist.wadnames[0]));
+				bmod->wadlist.wadusage[num] = 0;
+				Con_Printf("Using halflife.wad for map textures\n");
+			}
+			return;
+#else
+
 				Q_strncpy( wadstring, token, sizeof( wadstring ) - 2 );
 				wadstring[sizeof( wadstring ) - 2] = 0;
 
@@ -2094,6 +2122,7 @@ static void Mod_LoadEntities( model_t *mod, dbspmodel_t *bmod )
 					if( bmod->wadlist.count >= MAX_MAP_WADS )
 						break; // too many wads...
 				}
+#endif
 			}
 			else if( !Q_stricmp( keyname, "message" ))
 				Q_strncpy( world.message, token, sizeof( world.message ));

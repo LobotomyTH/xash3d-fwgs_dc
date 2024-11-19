@@ -29,6 +29,7 @@ static int iff_chunkLen;
 static const int aica_step_table[8] = {
     230, 230, 230, 230, 307, 409, 512, 614
 };
+#include "xash3d_mathlib.h"
 
 typedef struct {
     int16_t step_size;
@@ -881,42 +882,55 @@ int Stream_ReadWAV(stream_t *stream, int bytes, void *buffer)
         .history = 0
     };
 
-    if(!stream->file) return 0;
+    // Validate input parameters
+    if(!stream || !stream->file || !buffer || bytes <= 0)
+        return 0;
 
+    // Calculate remaining bytes in stream
     remaining = stream->size - stream->pos;
-    if(remaining <= 0) return 0;
-    if(bytes > remaining) bytes = remaining;
+    if(remaining <= 0)
+        return 0;
+    
+    // Clamp read size to remaining data
+    bytes = Q_min(bytes, remaining);
 
     if(stream->type == WF_ADPCMDATA)
-    {
-        int total_samples = bytes / sizeof(int16_t);
-        uint32_t dataSize = (total_samples + 1) / 2;
-        
-        byte *src = Mem_Malloc(host.soundpool, dataSize);
-        if(!src) return 0;
-        
-        int bytesRead = FS_Read(stream->file, src, dataSize);
-        if(bytesRead <= 0)
-        {
-            Mem_Free(src);
-            return 0;
-        }
-        
-        int16_t *dst = (int16_t *)buffer;
-        aica_decode_stream(src, dst, total_samples, &decoder_state);
-        
-        Mem_Free(src);
-        bytes = total_samples * sizeof(int16_t);
-    }
+	{
+		// Adjust bytes to account for ADPCM expansion ratio (4-bit to 16-bit)
+		int total_samples = bytes / sizeof(int16_t);
+		// Each ADPCM byte contains two 4-bit samples
+		uint32_t dataSize = (total_samples + 1) / 2;
+		
+		byte *src = Mem_Malloc(host.soundpool, dataSize);
+		if(!src)
+			return 0;
+		
+		int bytesRead = FS_Read(stream->file, src, dataSize);
+		if(bytesRead > 0)
+		{
+			int16_t *dst = (int16_t *)buffer;
+			aica_decode_stream(src, dst, total_samples, &decoder_state);
+			// Track actual decoded size
+			bytes = total_samples * sizeof(int16_t);
+			// Update position based on raw ADPCM data read
+			stream->pos += bytesRead;
+		}
+		
+		Mem_Free(src);
+	}
     else
     {
+        // Direct PCM read
         bytes = FS_Read(stream->file, buffer, bytes);
-        if(bytes <= 0) return 0;
+        if(bytes > 0)
+        {
+            stream->pos += bytes;
+        }
     }
 
-    stream->pos += bytes;
     return bytes;
 }
+
 
 #else
 int Stream_ReadWAV( stream_t *stream, int bytes, void *buffer )

@@ -181,7 +181,7 @@ void CL_InitTempEnts( void )
 #if !XASH_DREAMCAST
 	cl_tempents = Mem_Calloc( cls.mempool, sizeof( TEMPENTITY ) * GI->max_tents );
 #else
-	cl_tempents = Mem_Calloc( cls.mempool, sizeof( TEMPENTITY ) * 300 );
+	cl_tempents = Mem_Calloc( cls.mempool, sizeof( TEMPENTITY ) * 256 );
 #endif
 	CL_ClearTempEnts();
 
@@ -214,7 +214,7 @@ void CL_ClearTempEnts( void )
 	cl_free_tents = cl_tempents;
 	cl_active_tents = NULL;
 #else
-#define GI_MAX_TENTS 300
+#define GI_MAX_TENTS 256
 	for( i = 0; i < GI_MAX_TENTS - 1; i++ )
 	{
 		cl_tempents[i].next = &cl_tempents[i+1];
@@ -805,7 +805,7 @@ void GAME_EXPORT R_KillAttachedTents( int client )
 		return;
 
 #if XASH_DREAMCAST
-	for( i = 0; i < 300; i++ )
+	for( i = 0; i < 256; i++ )
 #else
 	for( i = 0; i < GI->max_tents; i++ )
 #endif	  
