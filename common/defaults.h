@@ -77,6 +77,12 @@ SETUP BACKENDS DEFINITIONS
 
 		// usually only 10-20 fds availiable
 		#define XASH_REDUCE_FD
+	#elif XASH_DREAMCAST
+
+		// usually only 10-20 fds availiable
+		#define XASH_REDUCE_FD
+
+
 	#endif
 
 #endif // XASH_DEDICATED
@@ -89,6 +95,8 @@ SETUP BACKENDS DEFINITIONS
 		#define XASH_MESSAGEBOX MSGBOX_WIN32
 	#elif XASH_NSWITCH
 		#define XASH_MESSAGEBOX MSGBOX_NSWITCH
+	#elif XASH_DREAMCAST
+		#define XASH_MESSAGEBOX MSGBOX_DREAMCAST
 	#else // !XASH_WIN32
 		#define XASH_MESSAGEBOX MSGBOX_STDERR
 	#endif // !XASH_WIN32

@@ -124,13 +124,16 @@ static void Sys_FlushLogfile( void )
 void Sys_InitLog( void )
 {
 	const char	*mode;
-
+#if XASH_DREAMCAST
+	s_ld.log_active = true;
+	Q_strncpy( s_ld.log_path, "/vmu/a1/engine.log", sizeof( s_ld.log_path ));
+#else
 	if( Sys_CheckParm( "-log" ) && host.allow_console != 0 )
 	{
 		s_ld.log_active = true;
 		Q_strncpy( s_ld.log_path, "engine.log", sizeof( s_ld.log_path ));
 	}
-
+#endif
 	if( host.change_game && host.type != HOST_DEDICATED )
 		mode = "a";
 	else mode = "w";
@@ -360,10 +363,10 @@ Con_Printf
 void GAME_EXPORT Con_Printf( const char *szFmt, ... )
 {
 	va_list args;
-
+#if !XASH_DREAMCAST
 	if( !host.allow_console )
 		return;
-
+#endif
 	va_start( args, szFmt );
 	Con_Printfv( false, szFmt, args );
 	va_end( args );
@@ -378,10 +381,10 @@ Con_DPrintf
 void GAME_EXPORT Con_DPrintf( const char *szFmt, ... )
 {
 	va_list args;
-
+#if !XASH_DREAMCAST
 	if( host_developer.value < DEV_NORMAL )
 		return;
-
+#endif
 	va_start( args, szFmt );
 	Con_Printfv( true, szFmt, args );
 	va_end( args );

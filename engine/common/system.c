@@ -478,7 +478,11 @@ Sys_Quit
 void Sys_Quit( void )
 {
 	Host_Shutdown();
+#if XASH_DREAMCAST
+	arch_menu();
+#else
 	exit( error_on_exit );
+#endif
 }
 
 /*

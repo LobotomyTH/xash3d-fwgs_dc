@@ -119,11 +119,7 @@ qboolean SNDDMA_Init( void )
 	memset( &desired, 0, sizeof( desired ) );
 	desired.freq     = SOUND_DMA_SPEED;
 	desired.format   = AUDIO_S16LSB;
-#if XASH_DREAMCAST && XASH_SDL == 12
-	desired.samples  = 512;
-#else
-	desired.samples  = 1024;
-#endif
+	desired.samples  = 2048;
 	desired.channels = 2;
 	desired.callback = SDL_SoundCallback;
 

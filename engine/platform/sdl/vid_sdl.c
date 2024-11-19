@@ -753,10 +753,12 @@ VID_CreateWindow
 qboolean VID_CreateWindow( int width, int height, window_mode_t window_mode )
 {
 	string wndname;
-	#if XASH_DREAMCAST
-int xpos, ypos;
+#if XASH_DREAMCAST
+	int xpos, ypos;
+
 	xpos = - 1;
 	ypos = 1;	
+
 #endif															 
 #if SDL_VERSION_ATLEAST( 2, 0, 0 )
 	qboolean maximized = vid_maximized.value != 0.0f;
