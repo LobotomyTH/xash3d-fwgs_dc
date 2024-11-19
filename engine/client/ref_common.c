@@ -53,7 +53,7 @@ void R_GetTextureParms( int *w, int *h, int texnum )
 
 static qboolean CheckSkybox( const char *name, char out[SKYBOX_MAX_SIDES][MAX_STRING] )
 {
-	static const char *skybox_ext[3] = { "dds", "tga", "bmp" };
+	static const char *skybox_ext[4] = { "dds", "tga", "bmp", "pvr" };
 	static const char *skybox_delim[2] = { "", "_" }; // no space for HL style, underscore for Q1 style
 	int	i;
 
@@ -88,7 +88,6 @@ static qboolean CheckSkybox( const char *name, char out[SKYBOX_MAX_SIDES][MAX_ST
 
 void R_SetupSky( const char *name )
 {
-#if !XASH_DREAMCAST
 	string loadname;
 	char sidenames[SKYBOX_MAX_SIDES][MAX_STRING];
 	int skyboxTextures[SKYBOX_MAX_SIDES] = { 0 };
@@ -120,16 +119,18 @@ void R_SetupSky( const char *name )
 	}
 
 	ref.dllFuncs.R_SetupSky( NULL ); // unload skybox
+#if !XASH_DREAMCAST
 	Con_DPrintf( "SKY:  " );
-
+#endif
 	for( i = 0; i < SKYBOX_MAX_SIDES; i++ )
 	{
 		skyboxTextures[i] = ref.dllFuncs.GL_LoadTexture( sidenames[i], NULL, 0, TF_CLAMP|TF_SKY );
 
 		if( !skyboxTextures[i] )
 			break;
-
+#if !XASH_DREAMCAST
 		Con_DPrintf( "%s%s%s", name, r_skyBoxSuffix[i], i != 5 ? " " : " " );
+#endif
 	}
 
 	if( i == SKYBOX_MAX_SIDES )
@@ -139,17 +140,14 @@ void R_SetupSky( const char *name )
 		ref.dllFuncs.R_SetupSky( skyboxTextures );
 		return; // loaded
 	}
-#if XASH_DREAMCAST
-	Con_DPrintf( "failed\n" );
-#else
+
 	Con_DPrintf( "^2failed\n" );
-#endif
 	for( i = 0; i < SKYBOX_MAX_SIDES; i++ )
 	{
 		if( skyboxTextures[i] )
 			ref.dllFuncs.GL_FreeTexture( skyboxTextures[i] );
 	}
-#endif
+
 }
 
 void GAME_EXPORT GL_FreeImage( const char *name )

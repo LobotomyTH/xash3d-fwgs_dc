@@ -182,6 +182,29 @@ void GL_ApplyTextureParams( gl_texture_t *tex )
 	if( tex->target == GL_TEXTURE_CUBE_MAP_ARB && !GL_Support( GL_ARB_SEAMLESS_CUBEMAP ) && FBitSet( tex->flags, TF_BORDER ))
 		ClearBits( tex->flags, TF_BORDER );
 
+	if( FBitSet( tex->flags, TF_CLAMP ))
+	{
+		if( GL_Support( GL_CLAMPTOEDGE_EXT ))
+		{
+			glTexParameteri( tex->target, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE );
+
+			glTexParameteri( tex->target, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE );
+		}
+		else
+		{
+			glTexParameteri( tex->target, GL_TEXTURE_WRAP_S, GL_CLAMP );
+
+			glTexParameteri( tex->target, GL_TEXTURE_WRAP_T, GL_CLAMP );
+
+		}
+	}
+	else
+	{
+		glTexParameteri( tex->target, GL_TEXTURE_WRAP_S, GL_REPEAT );
+
+		glTexParameteri( tex->target, GL_TEXTURE_WRAP_T, GL_REPEAT );
+
+	}
 }
 
 /*
@@ -274,6 +297,12 @@ GL_CalcImageSize
 static size_t GL_CalcImageSize( pixformat_t format, int width, int height, int depth )
 {
 	size_t	size = 0;
+	int codebook_sz;
+
+	
+		
+    codebook_sz = 2048;
+
 
 	// check the depth error
 	depth = Q_max( 1, depth );
@@ -289,13 +318,24 @@ static size_t GL_CalcImageSize( pixformat_t format, int width, int height, int d
 		size = width * height * depth;
 		break;
 	case PF_RGB_5650:
+	#if 1
+		size = ((width + 3) & ~3) * ((height + 3) & ~3) * 2;
+	#else
 		size = width * height * depth * 2;
+	#endif 
 		break;
 	case PF_VQ_RGB_5650:
-		size = 2048 + ((width * height) / 4);
+		size = codebook_sz + ((width * height) / 4);
 		break;
 	case PF_ARGB_1555:
 		size = width * height * depth * 2;
+		break;
+	case PF_VQ_MIPMAP_RGB_5650:
+		int main_size = (width * height) / 4;
+        int mip1_size = main_size / 4;
+        int mip2_size = mip1_size / 4;
+        int mip3_size = mip2_size / 4;
+		size = codebook_sz + main_size + mip1_size + mip2_size + mip3_size;
 		break;
 	case PF_VQ_ARGB_1555:
 		size = 2048 + ((width * height) / 4);
@@ -337,6 +377,10 @@ GL_CalcTextureSize
 static size_t GL_CalcTextureSize( GLenum format, int width, int height, int depth )
 {
 	size_t	size = 0;
+	int codebook_sz;
+
+    codebook_sz = 2048;
+
 
 	// check the depth error
 	depth = Q_max( 1, depth );
@@ -362,10 +406,21 @@ static size_t GL_CalcTextureSize( GLenum format, int width, int height, int dept
 		size = (width * height * depth * 4) / 2;
 		break;
 	case GL_RGB565_KOS:
-		size = width * height * depth * 2;
+	#if 1
+		size = ((width + 3) & ~3) * ((height + 3) & ~3) * 2;
+	#else
+		size = width * height * 2;
+	#endif
+		break;
+	case GL_COMPRESSED_RGB_565_VQ_MIPMAP_KOS:
+		int main_size = (width * height) / 4;
+        int mip1_size = main_size / 4;
+        int mip2_size = mip1_size / 4;
+        int mip3_size = mip2_size / 4;
+		size = codebook_sz + main_size + mip1_size + mip2_size + mip3_size;
 		break;
 	case GL_COMPRESSED_RGB_565_VQ_KOS:
-		size = 2048 + ((width * height) / 4);
+		size = codebook_sz + ((width * height) / 4);
 		break;
 	case GL_COMPRESSED_ARGB_1555_VQ_KOS:
 		size = 2048 + ((width * height) / 4);
@@ -419,9 +474,10 @@ static int GL_CalcMipmapCount( gl_texture_t *tex, qboolean haveBuffer )
 	// mip-maps can't exceeds 4
 	for( mipcount = 0; mipcount < 4; mipcount++ )
 	{
-		width = Q_max( 1, ( TEXTURE_SIZE_MIN >> mipcount ));
-		height = Q_max( 1, ( TEXTURE_SIZE_MIN >> mipcount ));
-		if( TEXTURE_SIZE_MIN == 1 && TEXTURE_SIZE_MIN == 1 )
+		width = Q_max( TEXTURE_SIZE_MIN, ( tex->width >> mipcount ));
+		height = Q_max( TEXTURE_SIZE_MIN, ( tex->height >> mipcount ));
+
+		if( width == TEXTURE_SIZE_MIN && height == TEXTURE_SIZE_MIN )
 			break;
 		
 	}
@@ -516,8 +572,8 @@ static void GL_SetTextureDimensions( gl_texture_t *tex, int width, int height, i
 	}
 
 	// set the texture dimensions
-	tex->width = Q_max( 1, width );
-	tex->height = Q_max( 1, height );
+	tex->width = Q_max( TEXTURE_SIZE_MIN, width );
+	tex->height = Q_max( TEXTURE_SIZE_MIN, height );
 	tex->depth = Q_max( 1, depth );
 }
 #endif
@@ -538,9 +594,12 @@ static void GL_SetTextureTarget( gl_texture_t *tex, rgbdata_t *pic )
 	// correct mip count
 	pic->numMips = Q_max( 1, pic->numMips );
 
-	// trying to determine texture type
-	tex->target = GL_TEXTURE_2D;
-}
+	if( FBitSet( pic->flags, IMAGE_CUBEMAP ))
+		tex->target = GL_TEXTURE_CUBE_MAP_ARB;
+	else
+		// trying to determine texture type
+		tex->target = GL_TEXTURE_2D;
+	}
 
 /*
 ===============
@@ -562,8 +621,8 @@ static void GL_SetTextureFormat( gl_texture_t *tex, pixformat_t format, int chan
 		case PF_VQ_ARGB_4444: tex->format = GL_COMPRESSED_ARGB_4444_VQ_KOS; break;
 		case PF_VQ_ARGB_1555: tex->format = GL_COMPRESSED_ARGB_1555_VQ_KOS; break;
 		case PF_VQ_RGB_5650: tex->format = GL_COMPRESSED_RGB_565_VQ_KOS; break;
+		case PF_VQ_MIPMAP_RGB_5650: tex->format = GL_COMPRESSED_RGB_565_VQ_MIPMAP_KOS; break;
 		}
-		printf("%s: Set tex->format= %04X\n", __func__, tex->format);
 	} 
 	else
 	{
@@ -787,105 +846,7 @@ static byte *GL_ApplyFilter( const byte *source, int width, int height )
 	return out;
 }
 
-#if XASH_DREAMCAST
-int GL_POT2(int value)
-{
-    if (value < 1)
-        return 1;
 
-    int power = 1;
-    while (power < value)
-        power <<= 1;
-
-    return power;
-}
-static void GL_BuildMipMap(byte *in, int srcWidth, int srcHeight, int srcDepth, int flags)
-{
-    byte *out = in;
-    int instride = ALIGN(srcWidth * 4, 1);
-    int mipWidth, mipHeight, outpadding;
-    int row, x, y, z;
-    vec3_t normal;
-
-    if (!in) return;
-
-    // Adjust mipWidth and mipHeight to be powers of two
-    mipWidth = GL_POT2(Q_max(1, srcWidth));
-    mipHeight = GL_POT2(Q_max(1, srcHeight));
-
-    // Calculate outpadding
-    outpadding = ALIGN(mipWidth * 4, 1) - mipWidth * 4;
-    row = srcWidth << 2;
-
-    if (FBitSet(flags, TF_ALPHACONTRAST))
-    {
-        memset(in, mipWidth, mipWidth * mipHeight * 4);
-        return;
-    }
-
-    // Move through all layers
-    for (z = 0; z < srcDepth; z++)
-    {
-        if (FBitSet(flags, TF_NORMALMAP))
-        {
-            for (y = 0; y < mipHeight; y++, in += instride * 2, out += outpadding)
-            {
-                byte *next = (((y << 1) + 1) < srcHeight) ? (in + instride) : in;
-                for (x = 0, row = 0; x < mipWidth; x++, row += 8, out += 4)
-                {
-                    if (((x << 1) + 1) < srcWidth)
-                    {
-                        normal[0] = MAKE_SIGNED(in[row + 0]) + MAKE_SIGNED(in[row + 4]) +
-                                     MAKE_SIGNED(next[row + 0]) + MAKE_SIGNED(next[row + 4]);
-                        normal[1] = MAKE_SIGNED(in[row + 1]) + MAKE_SIGNED(in[row + 5]) +
-                                     MAKE_SIGNED(next[row + 1]) + MAKE_SIGNED(next[row + 5]);
-                        normal[2] = MAKE_SIGNED(in[row + 2]) + MAKE_SIGNED(in[row + 6]) +
-                                     MAKE_SIGNED(next[row + 2]) + MAKE_SIGNED(next[row + 6]);
-                    }
-                    else
-                    {
-                        normal[0] = MAKE_SIGNED(in[row + 0]) + MAKE_SIGNED(next[row + 0]);
-                        normal[1] = MAKE_SIGNED(in[row + 1]) + MAKE_SIGNED(next[row + 1]);
-                        normal[2] = MAKE_SIGNED(in[row + 2]) + MAKE_SIGNED(next[row + 2]);
-                    }
-
-                    if (!VectorNormalizeLength(normal))
-                        VectorSet(normal, 0.5f, 0.5f, 1.0f);
-
-                    out[0] = 128 + (byte)(127.0f * normal[0]);
-                    out[1] = 128 + (byte)(127.0f * normal[1]);
-                    out[2] = 128 + (byte)(127.0f * normal[2]);
-                    out[3] = 255;
-                }
-            }
-        }
-        else
-        {
-            for (y = 0; y < mipHeight; y++, in += instride * 2, out += outpadding)
-            {
-                byte *next = (((y << 1) + 1) < srcHeight) ? (in + instride) : in;
-                for (x = 0, row = 0; x < mipWidth; x++, row += 8, out += 4)
-                {
-                    if (((x << 1) + 1) < srcWidth)
-                    {
-                        out[0] = (in[row + 0] + in[row + 4] + next[row + 0] + next[row + 4]) >> 2;
-                        out[1] = (in[row + 1] + in[row + 5] + next[row + 1] + next[row + 5]) >> 2;
-                        out[2] = (in[row + 2] + in[row + 6] + next[row + 2] + next[row + 6]) >> 2;
-                        out[3] = (in[row + 3] + in[row + 7] + next[row + 3] + next[row + 7]) >> 2;
-                    }
-                    else
-                    {
-                        out[0] = (in[row + 0] + next[row + 0]) >> 1;
-                        out[1] = (in[row + 1] + next[row + 1]) >> 1;
-                        out[2] = (in[row + 2] + next[row + 2]) >> 1;
-                        out[3] = (in[row + 3] + next[row + 3]) >> 1;
-                    }
-                }
-            }
-        }
-    }
-}
-#else
 /*
 =================
 GL_BuildMipMap
@@ -976,7 +937,7 @@ static void GL_BuildMipMap( byte *in, int srcWidth, int srcHeight, int srcDepth,
 		}
 	}
 }
-#endif
+
 static void GL_TextureImageRAW( gl_texture_t *tex, GLint side, GLint level, GLint width, GLint height, GLint depth, GLint type, const void *data )
 {
 	GLuint	cubeTarget = GL_TEXTURE_CUBE_MAP_POSITIVE_X_ARB;
@@ -984,7 +945,14 @@ static void GL_TextureImageRAW( gl_texture_t *tex, GLint side, GLint level, GLin
 	GLenum	inFormat = gEngfuncs_gl.Image_GetPFDesc(type)->glFormat;
 	GLint	dataType = GL_UNSIGNED_BYTE;
 	GLsizei	samplesCount = 0;
-
+ 
+#if XASH_DREAMCAST 
+	// hacky stuff incoming
+    if(tex->format == GL_RGB565_KOS) {
+        inFormat = GL_RGB; // force informat for RGB565 
+		dataType = GL_UNSIGNED_SHORT_5_6_5;
+	}
+#endif // XASH_DREAMCAST
 	Assert( tex != NULL );
 
 	if( FBitSet( tex->flags, TF_DEPTHMAP ))
@@ -1001,7 +969,7 @@ static void GL_TextureImageRAW( gl_texture_t *tex, GLint side, GLint level, GLin
 		else glTexImage1D( tex->target, level, tex->format, width, 0, inFormat, dataType, data );
 	}
 	else
-	#else 
+#else 
 	if( tex->target == GL_TEXTURE_CUBE_MAP_ARB )
 #endif // !XASH_DREAMCAST
 	{
@@ -1162,11 +1130,6 @@ static qboolean GL_UploadTexture( gl_texture_t *tex, rgbdata_t *pic )
 		gEngfuncs_gl.Con_Reportf( "%s: %s s&3 [%d x %d]\n", __func__, tex->name, pic->width, pic->height );
 	}
 
-#if XASH_DREAMCAST
-	if (!pic->buffer)
-		return true;
-#endif
-
 	buf = pic->buffer;
 	bufend = pic->buffer + pic->size; // total image size include all the layers, cube sides, mipmaps
 	offset = GL_CalcImageSize( pic->type, pic->width, pic->height, 1);
@@ -1204,8 +1167,8 @@ static qboolean GL_UploadTexture( gl_texture_t *tex, rgbdata_t *pic )
 		{
 			for( j = 0; j < Q_max( 1, pic->numMips ); j++ )
 			{
-				width = Q_max( 1, ( TEXTURE_SIZE_MIN >> j ));
-				height = Q_max( 1, ( TEXTURE_SIZE_MIN >> j ));
+				width = Q_max( TEXTURE_SIZE_MIN,  ( tex->width >> j ));
+				height = Q_max( TEXTURE_SIZE_MIN,   ( tex->height >> j ));
 				texsize = GL_CalcTextureSize( tex->format, width, height, tex->depth );
 				size = GL_CalcImageSize( pic->type, width, height, tex->depth );
 				GL_TextureImageRAW( tex, i, j, width, height, tex->depth, pic->type, buf );
@@ -1230,8 +1193,8 @@ static qboolean GL_UploadTexture( gl_texture_t *tex, rgbdata_t *pic )
 			// mips will be auto-generated if desired
 			for( j = 0; j < mipCount; j++ )
 			{
-				width = Q_max( 1, ( tex->width >> j ));
-				height = Q_max( 1, ( tex->height >> j ));
+				width = Q_max( TEXTURE_SIZE_MIN, (tex->width >> j ));
+				height = Q_max( TEXTURE_SIZE_MIN, (tex->height >> j ));
 				texsize = GL_CalcTextureSize( tex->format, width, height, tex->depth );
 				size = GL_CalcImageSize( pic->type, width, height, tex->depth );
 				GL_TextureImageRAW( tex, i, j, width, height, tex->depth, pic->type, data );
@@ -1306,9 +1269,13 @@ static void GL_ProcessImage( gl_texture_t *tex, rgbdata_t *pic )
 		// we need to expand image into RGBA buffer
 		if( pic->type == PF_INDEXED_24 || pic->type == PF_INDEXED_32 )
 			img_flags |= IMAGE_FORCE_RGBA;
-
+		
 		// processing image before uploading (force to rgba, make luma etc)
-		if( pic->buffer ) gEngfuncs_gl.Image_Process( &pic, 0, 0, img_flags, 0 );
+		if( pic->buffer ) {
+			 // Skip processing for PVR textures
+   			 if(pic->type != PF_RGB_5650 && pic->type != PF_VQ_RGB_5650)
+			 gEngfuncs_gl.Image_Process( &pic, 0, 0, img_flags, 0 );
+		}
 
 		if( FBitSet( tex->flags, TF_LUMINANCE ))
 			ClearBits( pic->flags, IMAGE_HAS_COLOR );
@@ -1521,8 +1488,8 @@ void GL_UpdateTexSize( int texnum, int width, int height, int depth )
 	{
 		for( j = 0; j < Q_max( 1, tex->numMips ); j++ )
 		{
-			width = Q_max( 1, ( TEXTURE_SIZE_MIN >> j ));
-			height = Q_max( 1, ( TEXTURE_SIZE_MIN >> j ));
+			width = Q_max( TEXTURE_SIZE_MIN, ( tex->width >> j ));
+			height = Q_max( TEXTURE_SIZE_MIN, ( tex->height >> j ));
 			texsize = GL_CalcTextureSize( tex->format, width, height, tex->depth );
 			tex->size += texsize;
 		}
@@ -2028,8 +1995,8 @@ void R_InitDlightTexture( void )
 	r_image.width = BLOCK_SIZE;
 	r_image.height = BLOCK_SIZE;
 	r_image.flags = IMAGE_HAS_COLOR;
-	r_image.type = LIGHTMAP_FORMAT;
-	r_image.size = r_image.width * r_image.height * LIGHTMAP_BPP;
+	r_image.type = PF_RGBA_32;
+	r_image.size = r_image.width * r_image.height * 4;
 
 	tr.dlightTexture = GL_LoadTextureInternal( "*dlight", &r_image, TF_NOMIPMAP|TF_CLAMP|TF_ATLAS_PAGE );
 }

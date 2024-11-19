@@ -823,7 +823,7 @@ static void R_RenderInfo_f( void )
 static void GL_InitExtensionsBigGL( void )
 {
 	// intialize wrapper type
-	glConfig.context = gEngfuncs_gl.Sys_CheckParm( "-glcore" )? CONTEXT_TYPE_GL_CORE : CONTEXT_TYPE_GL;
+	glConfig.context = CONTEXT_TYPE_GL_CORE;
 	glConfig.wrapper = GLES_WRAPPER_NONE;
 	glConfig.hardware_type = GLHW_GENERIC;
 

@@ -23,7 +23,7 @@ typedef struct
 	int		current_lightmap_texture;
 	msurface_t	*dynamic_surfaces;
 	msurface_t	*lightmap_surfaces[MAX_LIGHTMAPS];
-	byte		lightmap_buffer[BLOCK_SIZE_MAX*BLOCK_SIZE_MAX*LIGHTMAP_BPP];
+	byte		lightmap_buffer[BLOCK_SIZE_MAX*BLOCK_SIZE_MAX*4];
 } gllightmapstate_t;
 
 static int		nColinElim; // stats
@@ -690,8 +690,8 @@ static void LM_UploadBlock( qboolean dynamic )
 
 		r_lightmap.width = BLOCK_SIZE;
 		r_lightmap.height = BLOCK_SIZE;
-		r_lightmap.type = LIGHTMAP_FORMAT;
-		r_lightmap.size = r_lightmap.width * r_lightmap.height * LIGHTMAP_BPP;
+		r_lightmap.type = PF_RGBA_32;
+		r_lightmap.size = r_lightmap.width * r_lightmap.height * 4;
 		r_lightmap.flags = IMAGE_HAS_COLOR;
 		r_lightmap.buffer = gl_lms.lightmap_buffer;
 		tr.lightmapTextures[i] = GL_LoadTextureInternal( lmName, &r_lightmap, TF_NOMIPMAP|TF_ATLAS_PAGE );
@@ -748,7 +748,7 @@ static void R_BuildLightMap( msurface_t *surf, byte *dest, int stride, qboolean 
 	// add all the dynamic lights
 	if( surf->dlightframe == tr.framecount && dynamic )
 		R_AddDynamicLights( surf );
-#if !XASH_DREAMCAST
+#if 1
 	// Put into texture format
 	stride -= (smax << 2);
 	bl = r_blocklights;
@@ -1018,9 +1018,9 @@ static void R_BlendLightmaps( void )
 			if( LM_AllocBlock( smax, tmax, &surf->info->dlight_s, &surf->info->dlight_t ))
 			{
 				base = gl_lms.lightmap_buffer;
-				base += ( surf->info->dlight_t * BLOCK_SIZE + surf->info->dlight_s ) * LIGHTMAP_BPP;
+				base += ( surf->info->dlight_t * BLOCK_SIZE + surf->info->dlight_s ) * 4;
 
-				R_BuildLightMap( surf, base, BLOCK_SIZE * LIGHTMAP_BPP, true );
+				R_BuildLightMap( surf, base, BLOCK_SIZE * 4, true );
 			}
 			else
 			{
@@ -1050,9 +1050,9 @@ static void R_BlendLightmaps( void )
 					gEngfuncs_gl.Host_Error( "AllocBlock: full\n" );
 
 				base = gl_lms.lightmap_buffer;
-				base += ( surf->info->dlight_t * BLOCK_SIZE + surf->info->dlight_s ) * LIGHTMAP_BPP;
+				base += ( surf->info->dlight_t * BLOCK_SIZE + surf->info->dlight_s ) * 4;
 
-				R_BuildLightMap( surf, base, BLOCK_SIZE * LIGHTMAP_BPP, true );
+				R_BuildLightMap( surf, base, BLOCK_SIZE * 4, true );
 			}
 		}
 
@@ -1266,7 +1266,7 @@ dynamic:
 
 		if(( fa->styles[maps] >= 32 || fa->styles[maps] == 0 || fa->styles[maps] == 20 ) && ( fa->dlightframe != tr.framecount ))
 		{
-			byte		temp[132*132*LIGHTMAP_BPP];
+			byte		temp[132*132*4];
 			mextrasurf_t	*info = fa->info;
 			int		sample_size;
 			int		smax, tmax;
@@ -1275,7 +1275,7 @@ dynamic:
 			smax = ( info->lightextents[0] / sample_size ) + 1;
 			tmax = ( info->lightextents[1] / sample_size ) + 1;
 			
-			R_BuildLightMap( fa, temp, smax * LIGHTMAP_BPP, true );
+			R_BuildLightMap( fa, temp, smax * 4, true );
 		
 			R_SetCacheState( fa );
 			
@@ -3735,10 +3735,10 @@ static void GL_CreateSurfaceLightmap( msurface_t *surf, model_t *loadmodel )
 	surf->lightmaptexturenum = gl_lms.current_lightmap_texture;
 
 	base = gl_lms.lightmap_buffer;
-	base += ( surf->light_t * BLOCK_SIZE + surf->light_s ) * LIGHTMAP_BPP;
+	base += ( surf->light_t * BLOCK_SIZE + surf->light_s ) * 4;
 
 	R_SetCacheState( surf );
-	R_BuildLightMap( surf, base, BLOCK_SIZE * LIGHTMAP_BPP, false );
+	R_BuildLightMap( surf, base, BLOCK_SIZE * 4, false );
 }
 
 /*
