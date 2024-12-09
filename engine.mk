@@ -137,12 +137,11 @@ XASH_SERVER_OBJS =	\
 	
 XASH_PLATFORM_OBJS = \
 	engine/platform/misc/lib_static.o \
-	engine/platform/sdl/s_sdl.o \
-	engine/platform/sdl/sys_sdl.o \
-	engine/platform/posix/sys_posix.o \
-	engine/platform/sdl/vid_sdl.o \
-	engine/platform/sdl/in_sdl.o \
-	engine/platform/sdl/events.o \
+	engine/platform/dreamcast/s_dc.o \
+	engine/platform/dreamcast/sys_dc.o \
+	engine/platform/dreamcast/vid_dc.o \
+	engine/platform/dreamcast/in_dc.o \
+
 
 
 INCLUDE = -Icommon \
