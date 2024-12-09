@@ -90,13 +90,11 @@ SETUP BACKENDS DEFINITIONS
 		#endif // XASH_SOUND
 
 		#ifndef XASH_TIMER
-			#define XASH_TIMER TIMER_POSIX
+			#define XASH_TIMER TIMER_KOS
 		#endif
 
 		// usually only 10-20 fds availiable
 		#define XASH_REDUCE_FD
-
-
 	#endif
 
 #endif // XASH_DEDICATED
