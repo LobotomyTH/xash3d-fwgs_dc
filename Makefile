@@ -31,12 +31,12 @@ LIBS = -L$(SV_DLL_DIR) \
        -L$(FILESYSTEM_DIR) \
        -L$(GLDC_DIR) \
        -L$(MAINUI_DIR) \
-       -lSDL_gl \
        -lfilesystem_stdio \
        -lhl \
        -lcl_dll \
        -lref_gldc \
-       -l:libGL.a
+       -l:libGL.a 
+	   
 
 # Build module libraries
 $(FILESYSTEM_LIB):
@@ -76,7 +76,7 @@ clean:
 	
 
 $(TARGET): $(OBJS) $(FILESYSTEM_LIB) $(GLDC_LIB) $(SV_DLL_LIB) $(CL_DLL_LIB)
-	kos-c++ -o $(TARGET) $(OBJS) $(LIBS)  -Wl,--allow-multiple-definition -Wl,--gc-sections -fwhole-program -s -Wl,--build-id=none
+	kos-c++ -o $(TARGET) $(OBJS) $(LIBS)  -Wl,--allow-multiple-definition -Wl,--gc-sections -fwhole-program -Wl,--build-id=none
 
 run: $(TARGET)
 	$(KOS_LOADER) $(TARGET)
@@ -87,19 +87,15 @@ run: $(TARGET)
 	cp 1ST_READ.BIN build
 	
 
-IP.BIN:
-	rm -f build/IP.BIN
-	makeip -v build/IP.BIN
-
-$(PROJECT_NAME).iso: IP.BIN 1ST_READ.BIN
-	mkisofs -C 0,11702 -V $(PROJECT_NAME) -G build/IP.BIN -r -J -l -o $(PROJECT_NAME).iso build
+IP.BIN: ip.txt
+	$(KOS_BASE)/utils/makeip/makeip ip.txt build/IP.BIN
+	
+$(PROJECT_NAME).iso: 1ST_READ.BIN
+	mkisofs -V XashDC -G IP.BIN -r -J -l -o xash.iso build
 
 $(PROJECT_NAME).cdi: $(PROJECT_NAME).iso
 	makedisc $(PROJECT_NAME).cdi build build/IP.BIN $(TARGET) 
 
-cdi: $(PROJECT_NAME).cdi
-	makedisc $(PROJECT_NAME).cdi build build/IP.BIN $(TARGET) 
-
-.PHONY: all clean 1ST_READ.BIN IP.BIN cdi
+.PHONY: all clean 1ST_READ.BIN IP.BIN $(PROJECT_NAME).iso $(PROJECT_NAME).cdi
 
 
