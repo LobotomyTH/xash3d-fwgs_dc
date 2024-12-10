@@ -76,7 +76,7 @@ clean:
 	
 
 $(TARGET): $(OBJS) $(FILESYSTEM_LIB) $(GLDC_LIB) $(SV_DLL_LIB) $(CL_DLL_LIB)
-	kos-c++ -o $(TARGET) $(OBJS) $(LIBS)  -Wl,--allow-multiple-definition -Wl,--gc-sections -fwhole-program -s -Wl,--build-id=none
+	kos-c++ -o $(TARGET) $(OBJS) $(LIBS)  -Wl,--allow-multiple-definition -Wl,--gc-sections -fwhole-program -Wl,--build-id=none
 
 run: $(TARGET)
 	$(KOS_LOADER) $(TARGET)
@@ -92,7 +92,7 @@ IP.BIN:
 	makeip -v build/IP.BIN
 
 $(PROJECT_NAME).iso: IP.BIN 1ST_READ.BIN
-	mkisofs -C 0,11702 -V $(PROJECT_NAME) -G build/IP.BIN -r -J -l -o $(PROJECT_NAME).iso build
+	mkisofs -V $(PROJECT_NAME) -G build/IP.BIN -r -J -l -o $(PROJECT_NAME).iso build
 
 $(PROJECT_NAME).cdi: $(PROJECT_NAME).iso
 	makedisc $(PROJECT_NAME).cdi build build/IP.BIN $(TARGET) 

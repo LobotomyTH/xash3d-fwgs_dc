@@ -167,5 +167,5 @@ INCLUDE = -Icommon \
 
 
 DEFINES = -DDEBUG -DENGINE_DLL -D_KOS_ -D_SH4_ -DXASH_BUILD_COMMIT="64726f13-dirty" -DXASH_BUILD_BRANCH="master" -DFRAME_POINTERS=1 -DXASH_STATIC_LIBS=1 -DXASH_LOW_MEMORY=2 -DXASH_ENABLE_MAIN=1 -DXASH_REF_SOFT_ENABLED=0  -DXASH_REF_GL_ENABLED=1 -DHAVE_TGMATH_H=0 -DHAVE_STRNICMP=1 -DHAVE_STRICMP=1 -D_snprintf=snprintf -DXASH_SDL=12
-FLAGS = -O3 -ffast-math -fomit-frame-pointer -fno-common -fno-builtin -fno-strict-aliasing -fno-stack-protector -mrelax -ffunction-sections -fdata-sections -fno-exceptions
+FLAGS = -Os -ffast-math -fno-omit-frame-pointer -fno-common -fno-builtin -fno-strict-aliasing -fno-stack-protector -mrelax -ffunction-sections -fdata-sections -fno-exceptions
 CFLAGS +=  $(INCLUDE) $(DEFINES) $(FLAGS)  
