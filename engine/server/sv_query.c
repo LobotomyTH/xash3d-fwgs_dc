@@ -71,7 +71,7 @@ static void SV_SourceQuery_Details( netadr_t from )
 		MSG_WriteByte( &buf, 1 );
 	else MSG_WriteByte( &buf, 0 );
 #if XASH_DREAMCAST
-	MSG_WriteByte( &buf, "secure" );
+	MSG_WriteByte( &buf, 1 );
 #else
 	MSG_WriteByte( &buf, GI->secure );
 #endif
