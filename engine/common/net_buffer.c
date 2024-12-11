@@ -118,7 +118,7 @@ const char *svc_goldsrc_strings[svc_lastmsg+1] =
 	[svc_goldsrc_sendcvarvalue] = "svc_goldsrc_sendcvarvalue",
 	[svc_goldsrc_sendcvarvalue2] = "svc_goldsrc_sendcvarvalue2",
 };
-
+#if !XASH_DREAMCAST
 const char *svc_quake_strings[svc_lastmsg+1] =
 {
 	[svc_updatestat] = "svc_quake_updatestat",
@@ -139,7 +139,7 @@ const char *svc_quake_strings[svc_lastmsg+1] =
 	[svc_skyboxsize] = "svc_quake_skyboxsize",
 	[svc_fog] = "svc_quake_fog",
 };
-
+#endif
 void MSG_InitMasks( void )
 {
 	uint	startbit, endbit;
