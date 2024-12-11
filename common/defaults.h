@@ -78,11 +78,23 @@ SETUP BACKENDS DEFINITIONS
 		// usually only 10-20 fds availiable
 		#define XASH_REDUCE_FD
 	#elif XASH_DREAMCAST
+		#ifndef XASH_VIDEO
+			#define XASH_VIDEO VIDEO_KOS
+		#endif
+		#ifndef XASH_INPUT
+			#define XASH_INPUT INPUT_KOS
+		#endif // XASH_INPUT
+
+		#ifndef XASH_SOUND
+			#define XASH_SOUND SOUND_KOS
+		#endif // XASH_SOUND
+
+		#ifndef XASH_TIMER
+			#define XASH_TIMER TIMER_KOS
+		#endif
 
 		// usually only 10-20 fds availiable
 		#define XASH_REDUCE_FD
-
-
 	#endif
 
 #endif // XASH_DEDICATED
@@ -166,6 +178,10 @@ Default build-depended cvar and constant values
 #elif XASH_MOBILE_PLATFORM
 	#define DEFAULT_TOUCH_ENABLE "1"
 	#define DEFAULT_M_IGNORE     "1"
+#elif XASH_DREAMCAST
+	#define DEFAULT_TOUCH_ENABLE "0"
+	#define DEFAULT_M_IGNORE     "0" 
+	#define DEFAULT_ALLOWCONSOLE 1
 #endif // !XASH_MOBILE_PLATFORM && !XASH_NSWITCH
 
 #if XASH_ANDROID || XASH_IOS || XASH_EMSCRIPTEN

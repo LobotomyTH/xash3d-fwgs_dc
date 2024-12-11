@@ -17,7 +17,6 @@ XASH_CLIENT_OBJS = \
 	engine/client/cl_game.o \
 	engine/client/cl_gameui.o \
 	engine/client/cl_main.o \
-	engine/client/cl_mobile.o \
 	engine/client/cl_netgraph.o \
 	engine/client/cl_parse.o \
 	engine/client/cl_parse_48.o \
@@ -33,7 +32,6 @@ XASH_CLIENT_OBJS = \
 	engine/client/console.o \
 	engine/client/gamma.o \
 	engine/client/in_joy.o \
-	engine/client/in_touch.o \
 	engine/client/input.o \
 	engine/client/keys.o \
 	engine/client/mod_dbghulls.o \
@@ -139,14 +137,10 @@ XASH_SERVER_OBJS =	\
 	
 XASH_PLATFORM_OBJS = \
 	engine/platform/misc/lib_static.o \
-	engine/platform/sdl/s_sdl.o \
-	engine/platform/sdl/sys_sdl.o \
-	engine/platform/posix/sys_posix.o \
-	engine/platform/sdl/vid_sdl.o \
-	engine/platform/sdl/in_sdl.o \
-	engine/platform/sdl/events.o \
-
-
+	engine/platform/dreamcast/s_dc.o \
+	engine/platform/dreamcast/sys_dc.o \
+	engine/platform/dreamcast/vid_dc.o \
+	engine/platform/dreamcast/in_dc.o 
 
 INCLUDE = -Icommon \
 -Iengine/server \
@@ -161,7 +155,7 @@ INCLUDE = -Icommon \
 -Ipm_shared \
 -Iengine/platform \
 -Iengine/platform/dreamcast \
--I$(KOS_BASE)/addons/include/SDL \
+
 -I$(KOS_PORTS)/include/opus \
 -I$(KOS_PORTS)/include/GL \
 

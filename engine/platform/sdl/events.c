@@ -202,67 +202,9 @@ static void SDLash_KeyEvent( SDL_KeyboardEvent key )
 	else
 	{
 		qboolean numLock = FBitSet( SDL_GetModState(), KMOD_NUM );
-#if XASH_DREAMCAST
-		switch( keynum )
-		{
-		case SDL_SCANCODE_GRAVE: keynum = '`'; break;
-		case SDL_SCANCODE_0: keynum = '0'; break;
-		case SDL_SCANCODE_BACKSLASH: keynum = '\\'; break;
-		case SDL_SCANCODE_LEFTBRACKET: keynum = '['; break;
-		case SDL_SCANCODE_RIGHTBRACKET: keynum = ']'; break;
-		case SDL_SCANCODE_EQUALS: keynum = '='; break;
-		case SDL_SCANCODE_MINUS: keynum = '-'; break;
-		case SDL_SCANCODE_TAB: keynum = K_TAB; break;
-		case SDL_SCANCODE_RETURN: keynum = K_ENTER; break;
-		case SDL_SCANCODE_ESCAPE: keynum = K_ESCAPE; break;
-		case SDL_SCANCODE_SPACE: keynum = K_SPACE; break;
-		case SDL_SCANCODE_BACKSPACE: keynum = K_BACKSPACE; break;
-		case SDL_SCANCODE_UP: keynum = K_UPARROW; break;
-		case SDL_SCANCODE_LEFT: keynum = K_LEFTARROW; break;
-		case SDL_SCANCODE_DOWN: keynum = K_DOWNARROW; break;
-		case SDL_SCANCODE_RIGHT: keynum = K_RIGHTARROW; break;
-		case SDL_SCANCODE_RALT: keynum = K_ALT; break;
-		case SDL_SCANCODE_RCTRL: keynum = K_CTRL; break;
-		case SDL_SCANCODE_RSHIFT: keynum = K_SHIFT; break;
-		case SDL_SCANCODE_RGUI: keynum = K_WIN; break;
-		case SDL_SCANCODE_INSERT: keynum = K_INS; break;
-		case SDL_SCANCODE_DELETE: keynum = K_DEL; break;
-		case SDL_SCANCODE_PAGEDOWN: keynum = K_PGDN; break;
-		case SDL_SCANCODE_PAGEUP: keynum = K_PGUP; break;
-		case SDL_SCANCODE_HOME: keynum = K_HOME; break;
-		case SDL_SCANCODE_END: keynum = K_END; break;
-		case SDL_SCANCODE_KP_1: keynum = numLock ? '1' : K_KP_END; break;
-		case SDL_SCANCODE_KP_2: keynum = numLock ? '2' : K_KP_DOWNARROW; break;
-		case SDL_SCANCODE_KP_3: keynum = numLock ? '3' : K_KP_PGDN; break;
-		case SDL_SCANCODE_KP_4: keynum = numLock ? '4' : K_KP_LEFTARROW; break;
-		case SDL_SCANCODE_KP_5: keynum = numLock ? '5' : K_KP_5; break;
-		case SDL_SCANCODE_KP_6: keynum = numLock ? '6' : K_KP_RIGHTARROW; break;
-		case SDL_SCANCODE_KP_7: keynum = numLock ? '7' : K_KP_HOME; break;
-		case SDL_SCANCODE_KP_8: keynum = numLock ? '8' : K_KP_UPARROW; break;
-		case SDL_SCANCODE_KP_9: keynum = numLock ? '9' : K_KP_PGUP; break;
-		case SDL_SCANCODE_KP_0: keynum = numLock ? '0' : K_KP_INS; break;
-		case SDL_SCANCODE_KP_PERIOD: keynum = K_KP_DEL; break;
-		case SDL_SCANCODE_KP_ENTER: keynum = K_KP_ENTER; break;
-		case SDL_SCANCODE_KP_PLUS: keynum = K_KP_PLUS; break;
-		case SDL_SCANCODE_KP_MINUS: keynum = K_KP_MINUS; break;
-		case SDL_SCANCODE_KP_DIVIDE: keynum = K_KP_SLASH; break;
-		case SDL_SCANCODE_KP_MULTIPLY: keynum = '*'; break;
-		case SDL_SCANCODE_NUMLOCKCLEAR: keynum = K_KP_NUMLOCK; break;
-		case SDL_SCANCODE_CAPSLOCK: keynum = K_CAPSLOCK; break;
-		case SDL_SCANCODE_SLASH: keynum = '/'; break;
-		case SDL_SCANCODE_PERIOD: keynum = '.'; break;
-		case SDL_SCANCODE_SEMICOLON: keynum = ';'; break;
-		case SDL_SCANCODE_APOSTROPHE: keynum = '\''; break;
-		case SDL_SCANCODE_COMMA: keynum = ','; break;
-		case SDL_SCANCODE_PRINTSCREEN:
-		{
-			host.force_draw_version_time = host.realtime + FORCE_DRAW_VERSION_TIME;
-			break;
-		}
-#else
-		switch( keynum )
-		{
 
+		switch( keynum )
+		{
 		case SDL_SCANCODE_GRAVE: keynum = '`'; break;
 		case SDL_SCANCODE_0: keynum = '0'; break;
 		case SDL_SCANCODE_BACKSLASH: keynum = '\\'; break;
@@ -324,7 +266,6 @@ static void SDLash_KeyEvent( SDL_KeyboardEvent key )
 		}
 		case SDL_SCANCODE_PAUSE: keynum = K_PAUSE; break;
 		case SDL_SCANCODE_SCROLLLOCK: keynum = K_SCROLLOCK; break;
-#endif
 #if SDL_VERSION_ATLEAST( 2, 0, 0 )
 		case SDL_SCANCODE_APPLICATION: keynum = K_WIN; break; // (compose key) ???
 		// don't console spam on known functional buttons, not used in engine
@@ -369,11 +310,9 @@ static void SDLash_MouseEvent( SDL_MouseButtonEvent button )
 
 	if( button.state == SDL_RELEASED )
 		down = 0;
-#if !XASH_DREAMCAST
 	else if( button.clicks >= 2 )
 		down = 2; // special state for double-click in UI
 	else
-#endif		
 		down = 1;
 
 	switch( button.button )
@@ -708,17 +647,16 @@ static void SDLash_EventHandler( SDL_Event *event )
 		case SDL_WINDOWEVENT_FOCUS_LOST:
 			SDLash_ActiveEvent( false );
 			break;
-#if !XASH_DREAMCAST			
 		case SDL_WINDOWEVENT_RESIZED:
 #if !XASH_MOBILE_PLATFORM
 			if( vid_fullscreen.value == WINDOW_MODE_WINDOWED )
 #endif
+			{
 				SDL_Window *wnd = SDL_GetWindowFromID( event->window.windowID );
 				VID_SaveWindowSize( event->window.data1, event->window.data2,
 					FBitSet( SDL_GetWindowFlags( wnd ), SDL_WINDOW_MAXIMIZED ) != 0 );
 			}
 			break;
-#endif
 		case SDL_WINDOWEVENT_MAXIMIZED:
 			Cvar_DirectSet( &vid_maximized, "1" );
 			break;
@@ -726,11 +664,9 @@ static void SDLash_EventHandler( SDL_Event *event )
 			break;
 		}
 #else
-#if !XASH_DREAMCAST
 	case SDL_VIDEORESIZE:
 		VID_SaveWindowSize( event->resize.w, event->resize.h );
 		break;
-#endif
 	case SDL_ACTIVEEVENT:
 		SDLash_ActiveEvent( event->active.gain );
 		break;

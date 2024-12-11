@@ -18,9 +18,6 @@ GNU General Public License for more details.
 #include "client.h"
 #include "vid_common.h"
 #include "platform/sdl/events.h"
-#if XASH_DREAMCAST
-#include <SDL_dreamcast.h>
-#endif						  
 
 static vidmode_t *vidmodes = NULL;
 static int num_vidmodes = 0;
@@ -446,7 +443,7 @@ GL_GetProcAddress
 void *GL_GetProcAddress( const char *name )
 {
 	void *func = SDL_GL_GetProcAddress( name );
-#if !SDL_VERSION_ATLEAST( 2, 0, 6 ) && XASH_POSIX && !XASH_DREAMCAST
+#if !SDL_VERSION_ATLEAST( 2, 0, 6 ) && XASH_POSIX
 	if( !func && Sys_CheckParm( "-egl" ))
 	{
 		/*
@@ -677,7 +674,7 @@ static void VID_SetWindowIcon( SDL_Window *hWnd )
 		if( ico && WIN_SetWindowIcon( ico ))
 			return;
 	}
-#endif // _WIN32 && !XASH_64BIT
+#endif // XASH_WIN32
 
 	Q_strncpy( iconpath, GI->iconpath, sizeof( iconpath ));
 	COM_ReplaceExtension( iconpath, ".tga", sizeof( iconpath ));
@@ -713,14 +710,7 @@ static qboolean VID_CreateWindowWithSafeGL( const char *wndname, int xpos, int y
 #if SDL_VERSION_ATLEAST( 2, 0, 0 )
 		host.hWnd = SDL_CreateWindow( wndname, xpos, ypos, w, h, flags );
 #else
-		host.hWnd = sw.surf = SDL_SetVideoMode( w, h, refState.desktopBitsPixel, flags );
-#if XASH_DREAMCAST
-		SDL_DC_SetWindow(w, h);
-
-		SDL_JoystickEventState(SDL_ENABLE);
-        SDL_JoystickOpen(0);
-        SDL_ShowCursor(0);
-#endif		
+		host.hWnd = sw.surf = SDL_SetVideoMode( width, height, 16, flags );
 #endif
 		// we have window, exit loop
 		if( host.hWnd )
@@ -753,13 +743,6 @@ VID_CreateWindow
 qboolean VID_CreateWindow( int width, int height, window_mode_t window_mode )
 {
 	string wndname;
-#if XASH_DREAMCAST
-	int xpos, ypos;
-
-	xpos = - 1;
-	ypos = 1;	
-
-#endif															 
 #if SDL_VERSION_ATLEAST( 2, 0, 0 )
 	qboolean maximized = vid_maximized.value != 0.0f;
 	Uint32 wndFlags = SDL_WINDOW_SHOWN | SDL_WINDOW_MOUSE_FOCUS;
@@ -872,23 +855,21 @@ qboolean VID_CreateWindow( int width, int height, window_mode_t window_mode )
 
 #else // SDL_VERSION_ATLEAST( 2, 0, 0 )
 	Uint32 flags = 0;
-#if !XASH_DREAMCAST
+
 	Q_strncpy( wndname, GI->title, sizeof( wndname ));
-#endif
+
 	if( window_mode != WINDOW_MODE_WINDOWED )
 		SetBits( flags, SDL_FULLSCREEN|SDL_HWSURFACE );
 
 	if( !glw_state.software )
 		SetBits( flags, SDL_OPENGL );
 
-	if( !VID_CreateWindowWithSafeGL( wndname, xpos, ypos, width, height, flags ))
+	if( !VID_CreateWindowWithSafeGL( wndname, xpos, ypos, width, height, wndFlags ))
 		return false;
 #endif // SDL_VERSION_ATLEAST( 2, 0, 0 )
-#if XASH_DREAMCAST
-	VID_SaveWindowSize( width, height, 0 );
-#else
+
 	VID_SaveWindowSize( width, height, maximized );
-#endif
+
 	return true;
 }
 
@@ -935,11 +916,7 @@ void GL_SwapBuffers( void )
 #if SDL_VERSION_ATLEAST( 2, 0, 0 )
 	SDL_GL_SwapWindow( host.hWnd );
 #else // SDL_VERSION_ATLEAST( 2, 0, 0 )
-#if XASH_REF_GL_ENABLED && XASH_DREAMCAST
-	glKosSwapBuffers();
-#else
 	SDL_Flip( host.hWnd );
-#endif // XASH_REF_GL_ENABLED && XASH_DREAMCAST											
 #endif // SDL_VERSION_ATLEAST( 2, 0, 0 )
 }
 
@@ -1066,12 +1043,6 @@ qboolean R_Init_Video( const int type )
 	WIN_SetDPIAwareness();
 #endif
 
-#if XASH_DREAMCAST
-	/*Dreamhal template for porting games*/
-    SDL_DC_ShowAskHz(SDL_FALSE);
-    SDL_DC_Default60Hz(SDL_FALSE);
-	SDL_DC_VerticalWait(SDL_FALSE);		
-#endif									 
 	switch( type )
 	{
 	case REF_SOFTWARE:
@@ -1206,8 +1177,8 @@ qboolean VID_SetMode( void )
 		iScreenHeight = DEFAULT_MODE_HEIGHT;
 #endif
 #else // SDL_VERSION_ATLEAST( 2, 0, 0 )
-		iScreenWidth = 640;
-		iScreenHeight = 480;
+		iScreenWidth = 320;
+		iScreenHeight = 240;
 #endif // SDL_VERSION_ATLEAST( 2, 0, 0 )
 	}
 

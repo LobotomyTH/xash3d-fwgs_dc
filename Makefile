@@ -31,12 +31,12 @@ LIBS = -L$(SV_DLL_DIR) \
        -L$(FILESYSTEM_DIR) \
        -L$(GLDC_DIR) \
        -L$(MAINUI_DIR) \
-       -lSDL_gl \
        -lfilesystem_stdio \
        -lhl \
        -lcl_dll \
        -lref_gldc \
-       -l:libGL.a
+       -l:libGL.a 
+	   
 
 # Build module libraries
 $(FILESYSTEM_LIB):
@@ -56,7 +56,7 @@ $(CL_DLL_LIB):
 #-l:libGL.a
 # The rm-elf step is to remove the target before building, to force the
 # re-creation of the rom disk.
-all: $(FILESYSTEM_LIB) $(GLDC_LIB) $(SV_DLL_LIB) $(CL_DLL_LIB) $(TARGET) 1ST_READ.BIN IP.BIN cdi
+all: $(FILESYSTEM_LIB) $(GLDC_LIB) $(SV_DLL_LIB) $(CL_DLL_LIB) $(TARGET) 1ST_READ.BIN IP.BIN $(PROJECT_NAME).iso $(PROJECT_NAME).cdi
 
 include $(KOS_BASE)/Makefile.rules
 
@@ -70,7 +70,7 @@ clean:
 	-rm -f $(TARGET).bin
 	-rm -f $(PROJECT_NAME).cdi
 	-rm -f 1ST_READ.BIN
-	-rm -f IP.BIN
+	-rm -f build/IP.BIN
 	-rm -f $(PROJECT_NAME).iso
 	-rm -f $(PROJECT_NAME).cdi
 	
@@ -85,21 +85,18 @@ run: $(TARGET)
 	kos-objcopy -R .stack -O binary $(TARGET) $(TARGET).bin 
 	scramble $(TARGET).bin 1ST_READ.BIN
 	cp 1ST_READ.BIN build
+
+IP.BIN: ip.txt
+	-rm -f build/IP.BIN
+	$(KOS_BASE)/utils/makeip/makeip ip.txt build/IP.BIN
 	
-
-IP.BIN:
-	rm -f build/IP.BIN
-	makeip -v build/IP.BIN
-
-$(PROJECT_NAME).iso: IP.BIN 1ST_READ.BIN
-	mkisofs -V $(PROJECT_NAME) -G build/IP.BIN -r -J -l -o $(PROJECT_NAME).iso build
+$(PROJECT_NAME).iso: 1ST_READ.BIN
+	mkisofs -V XashDC -G build/IP.BIN -r -J -l -o xash.iso build
 
 $(PROJECT_NAME).cdi: $(PROJECT_NAME).iso
 	makedisc $(PROJECT_NAME).cdi build build/IP.BIN $(TARGET) 
 
-cdi: $(PROJECT_NAME).cdi
-	makedisc $(PROJECT_NAME).cdi build build/IP.BIN $(TARGET) 
-
 .PHONY: all clean 1ST_READ.BIN IP.BIN cdi
+
 
 

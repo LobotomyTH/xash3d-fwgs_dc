@@ -45,10 +45,6 @@ so it can unlock and free the data block after it has been played.
 =======================================================================
 */
 static int sdl_dev;
-#if XASH_DREAMCAST && XASH_SDL == 12
-typedef uint32_t SDL_AudioDeviceID;
-typedef uint16_t SDL_AudioFormat;
-#endif							   
 static SDL_AudioDeviceID in_dev = 0;
 static SDL_AudioFormat sdl_format;
 static char sdl_backend_name[32];
@@ -106,10 +102,9 @@ qboolean SNDDMA_Init( void )
 
 	// even if we don't have PA
 	// we still can safely set env variables
-#if !XASH_DREAMCAST && !XASH_SDL == 12	   
 	SDL_setenv( "PULSE_PROP_application.name", GI->title, 1 );
 	SDL_setenv( "PULSE_PROP_media.role", "game", 1 );
-#endif
+
 	if( SDL_Init( SDL_INIT_AUDIO ))
 	{
 		Con_Reportf( S_ERROR "Audio: SDL: %s \n", SDL_GetError( ) );
@@ -119,7 +114,7 @@ qboolean SNDDMA_Init( void )
 	memset( &desired, 0, sizeof( desired ) );
 	desired.freq     = SOUND_DMA_SPEED;
 	desired.format   = AUDIO_S16LSB;
-	desired.samples  = 2048;
+	desired.samples  = 1024;
 	desired.channels = 2;
 	desired.callback = SDL_SoundCallback;
 
@@ -275,11 +270,7 @@ qboolean VoiceCapture_Init( void )
 		VoiceCapture_Shutdown();
 	}
 
-#if XASH_DREAMCAST && XASH_SDL == 12
-	memset(&wanted, 0, sizeof(wanted));							   
-#else										  
 	SDL_zero( wanted );
-#endif																   
 	wanted.freq = voice.samplerate;
 	wanted.format = AUDIO_S16LSB;
 	wanted.channels = VOICE_PCM_CHANNELS;
@@ -293,11 +284,8 @@ qboolean VoiceCapture_Init( void )
 		Con_Printf( "%s: error creating capture device (%s)\n", __func__, SDL_GetError() );
 		return false;
 	}
-#if XASH_DREAMCAST && XASH_SDL == 12		
-	Con_Printf( S_NOTE "%s: capture device creation success (%i: %s)\n", __func__, in_dev, SDL_AudioDriverName( in_dev, SDL_TRUE ) );
-#else
+		
 	Con_Printf( S_NOTE "%s: capture device creation success (%i: %s)\n", __func__, in_dev, SDL_GetAudioDeviceName( in_dev, SDL_TRUE ) );
-#endif
 	return true;
 }
 
