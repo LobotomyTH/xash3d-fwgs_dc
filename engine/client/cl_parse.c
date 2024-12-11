@@ -21,7 +21,7 @@ GNU General Public License for more details.
 #include "shake.h"
 #include "hltv.h"
 #include "input.h"
-#if XASH_LOW_MEMORY != 2 || XASH_DREAMCAST
+#if XASH_LOW_MEMORY != 2 
 int CL_UPDATE_BACKUP = SINGLEPLAYER_BACKUP;
 #endif
 /*

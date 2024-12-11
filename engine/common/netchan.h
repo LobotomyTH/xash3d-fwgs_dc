@@ -85,15 +85,16 @@ GNU General Public License for more details.
 #define NETSPLIT_BACKUP 8
 #define NETSPLIT_BACKUP_MASK (NETSPLIT_BACKUP - 1)
 #define NETSPLIT_HEADER_SIZE 18
+
 #if XASH_DREAMCAST
 	#undef MULTIPLAYER_BACKUP
 	#undef SINGLEPLAYER_BACKUP
 	#undef NUM_PACKET_ENTITIES
 	#undef MAX_CUSTOM_BASELINES
 	#undef NET_MAX_FRAGMENT
-	#define MULTIPLAYER_BACKUP		32	
+	#define MULTIPLAYER_BACKUP		4	
 	#define SINGLEPLAYER_BACKUP		4
-	#define NUM_PACKET_ENTITIES		64
+	#define NUM_PACKET_ENTITIES		32
 	#define MAX_CUSTOM_BASELINES    8  
 	#define NET_MAX_FRAGMENT		32768
 #else
@@ -119,6 +120,7 @@ GNU General Public License for more details.
 	#define NET_MAX_FRAGMENT		32768
 #endif
 #endif
+
 typedef struct netsplit_chain_packet_s
 {
 	// bool vector
