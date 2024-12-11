@@ -188,6 +188,8 @@ GNU General Public License for more details.
 #undef MAX_ELIGHTS
 #undef MAX_RENDER_DECALS
 #undef MAX_RESOURCES
+#undef MAX_EDICTS
+#define MAX_EDICTS 256
 #define MAX_VISIBLE_PACKET      128     
 #define MAX_VISIBLE_PACKET_VIS_BYTES    ((MAX_VISIBLE_PACKET + 7) / 8)
 #define MAX_EVENTS          64      

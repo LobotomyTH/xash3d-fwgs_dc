@@ -1801,7 +1801,7 @@ void MSG_WriteDeltaEntity( entity_state_t *from, entity_state_t *to, sizebuf_t *
 	startBit = msg->iCurBit;
 
 #if XASH_DREAMCAST
-	if( to->number < 0 || to->number >= 512 )
+	if( to->number < 0 || to->number >= MAX_EDICTS )
 #else
 	if( to->number < 0 || to->number >= GI->max_edicts )
 #endif // XASH_DREAMCAST

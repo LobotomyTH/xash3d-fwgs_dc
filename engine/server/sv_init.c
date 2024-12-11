@@ -714,7 +714,7 @@ void SV_DeactivateServer( void )
 		svs.clients[i].frames = NULL;
 	}
 #if XASH_DREAMCAST
-	svgame.globals->maxEntities = 512;
+	svgame.globals->maxEntities = MAX_EDICTS;
 #else
 	svgame.globals->maxEntities = GI->max_edicts;
 #endif
@@ -1065,7 +1065,7 @@ qboolean SV_SpawnServer( const char *mapname, const char *startspot, qboolean ba
 	// clearing all the baselines
 	memset( svs.static_entities, 0, sizeof( entity_state_t ) * MAX_STATIC_ENTITIES );
 #if XASH_DREAMCAST
-	memset( svs.baselines, 0, sizeof( entity_state_t ) * 512 );
+	memset( svs.baselines, 0, sizeof( entity_state_t ) * MAX_EDICTS );
 #else
 	memset( svs.baselines, 0, sizeof( entity_state_t ) * GI->max_edicts );
 #endif
