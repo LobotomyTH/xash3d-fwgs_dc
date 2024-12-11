@@ -1,6 +1,8 @@
 /*
 sys_dc.c - DC system component
 Copyright (C) 2024 maximqad
+sys_win.c - posix system utils
+Copyright (C) 2019 a1batross
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -20,6 +22,67 @@ GNU General Public License for more details.
 #include <errno.h>
 #include "platform/platform.h"
 #include "menu_int.h"
+
+
+#define MAX_LINE_LENGTH 40
+#define Y_SPACING 24
+#include <dc/video.h>
+#include <arch/arch.h>
+//-----------------------------------------------------------------------------
+extern void bfont_draw_str(uint16_t *buffer, int bufwidth, int opaque, char *str);
+static void drawtext(int x, int y, char *string) {
+  printf("%s\n", string);
+  fflush(stdout);
+  int offset = ((y * 640) + x);
+  bfont_draw_str(vram_s + offset, 640, 1, string);
+}
+
+static void assert_hnd(const char *file, int line, const char *expr, const char *msg, const char *func) {
+  char strbuffer[1024];
+
+  /* Reset video mode, clear screen */
+  vid_set_mode(DM_640x480, PM_RGB565);
+  vid_empty();
+
+  /* Display the error message on screen */
+  drawtext(32, 64, "Xash3D - Assertion failure");
+
+  sprintf(strbuffer, " Location: %s, line %d (%s)", file, line, func);
+  drawtext(32, 96, strbuffer);
+
+  sprintf(strbuffer, "Assertion: %s", expr);
+  drawtext(32, 128, strbuffer);
+
+  sprintf(strbuffer, "  Message: %s", msg);
+  drawtext(32, 160, strbuffer);
+}
+
+void Platform_MessageBox(const char *title, const char *message, qboolean parentMainWindow)
+{
+    char line[MAX_LINE_LENGTH + 1];
+    const char *msg = message;
+    int y = 96;
+    int len = 0;
+    int i;
+
+    drawtext(32, 64, title);
+
+    while (*msg)
+    {
+        // Copy characters until we hit max length or end of string
+        for (i = 0; i < MAX_LINE_LENGTH && msg[i] && msg[i] != '\n'; i++)
+            line[i] = msg[i];
+        
+        line[i] = '\0';
+        
+        drawtext(32, y, line);
+        y += Y_SPACING;
+        
+        msg += i;
+        if (*msg == '\n') 
+            msg++;
+    }
+}
 
 static qboolean Sys_FindExecutable( const char *baseName, char *buf, size_t size )
 {

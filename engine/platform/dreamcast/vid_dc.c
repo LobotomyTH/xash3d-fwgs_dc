@@ -19,11 +19,9 @@ GNU General Public License for more details.
 #include "client.h"
 #include "filesystem.h"
 #include "vid_common.h"
-#include <errno.h>
-#include <kos.h> // Include KOS header for video functions
+#include <kos.h>
 
 
-static vid_mode_t *kos_vidmodes = NULL;
 static int num_vidmodes = 0;
 static void GL_SetupAttributes( void );
 
@@ -40,7 +38,8 @@ static void GL_SetupAttributes( void )
 
 int GL_SetAttribute(int attr, int val)
 {
-    switch (attr) {
+    switch (attr) 
+    {
         case REF_GL_RED_SIZE:
             val = 5; 
             break;
@@ -79,7 +78,8 @@ int GL_GetAttribute(int attr, int *val)
 {
 	int value;
 
-    switch (attr) {
+    switch (attr) 
+    {
         case REF_GL_RED_SIZE:
             value = 5; 
             break;
@@ -110,7 +110,9 @@ int GL_GetAttribute(int attr, int *val)
         default:
             return -1; // Unsupported 
     }
+
 	*val = value;
+    
     return 0; 
 }
 
@@ -133,7 +135,6 @@ always return false
 */
 qboolean GL_DeleteContext( void )
 {
-
 	return false;
 }
 
@@ -144,7 +145,6 @@ GL_CreateContext
 */
 static qboolean GL_CreateContext( void )
 {
-
 	return true;
 }
 
@@ -235,16 +235,13 @@ rserr_t R_ChangeDisplaySettings( int width, int height, window_mode_t window_mod
 
 int R_MaxVideoModes( void )
 {
-	// Return the maximum number of video modes available
-	return num_vidmodes; // Assuming num_vidmodes is set correctly
+    // stub
+	return 1; 
 }
 
 vidmode_t* R_GetVideoMode( int num )
 {
-	// Return a specific video mode if available
-	if (num < num_vidmodes) {
-		return &kos_vidmodes[num]; // Return the requested video mode
-	}
+    //stub
 	return NULL;
 }
 
@@ -262,7 +259,6 @@ void GL_UpdateSwapInterval( void )
 void *SW_LockBuffer( void )
 {
 	// stub
-
 	return NULL;
 }
 
