@@ -2,7 +2,7 @@
 
 Xash3D (pronounced `[ksɑʂ]`) FWGS is a game engine, aimed to provide compatibility with Half-Life Engine and extend it, as well as to give game developers well known workflow.
 
-Xash3D FWGS is a heavily modified fork of an original [Xash3D Engine](https://www.moddb.com/engines/xash3d-engine) by Unkle Mike.
+Xash3D FWGS is a heavily modified fork of an original [Xash3D Engine](https://www.moddb.com/engines/xash3d-engine) by Uncle Mike.
 
 ## Installation & Running (Dreamcast)
 0) Build the binaries
@@ -19,3 +19,4 @@ Currently it runs only on 32MB modded Dreamcast, 16 MB RAM support will come lat
 0) Build GPFTroy/SDL1.2 and GLDC by Kazade, replace at GLDC's texture.c:1700  FASTCPY(targetData, conversionBuffer, destBytes); to memcpy;
 2) Compile engine at root dir: with `make all` this will build all xash libs and hlsdk-portable_dc and will make CDI, be sure to put Half-Life Dreamcast valve folder data to build/valve
 
+You can support me and this port at https://boosty.to/maximqad
