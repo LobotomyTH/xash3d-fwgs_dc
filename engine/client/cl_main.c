@@ -3364,18 +3364,21 @@ void CL_Shutdown( void )
 {
 	Con_Printf( "%s()\n", __func__ );
 
+#if !XASH_DREAMCAST
 	if( !host.crashed && cls.initialized )
 	{
 		Host_WriteOpenGLConfig ();
 		Host_WriteVideoConfig ();
 		Touch_WriteConfig();
 	}
-
+#endif // do not write configs on DC
 	// IN_TouchShutdown ();
 	Joy_Shutdown ();
 	CL_CloseDemoHeader ();
 	IN_Shutdown ();
+#if !XASH_DREAMCAST
 	Mobile_Shutdown ();
+#endif
 	SCR_Shutdown ();
 	CL_UnloadProgs ();
 	cls.initialized = false;
@@ -3383,9 +3386,10 @@ void CL_Shutdown( void )
 	// for client-side VGUI support we use other order
 	if( FI && FI->GameInfo && !FI->GameInfo->internal_vgui_support )
 		VGui_Shutdown();
-
+#if !XASH_DREAMCAST
 	if( g_fsapi.Delete )
 		g_fsapi.Delete( "demoheader.tmp" ); // remove tmp file
+#endif
 	SCR_FreeCinematic (); // release AVI's *after* client.dll because custom renderer may use them
 	S_Shutdown ();
 	R_Shutdown ();
