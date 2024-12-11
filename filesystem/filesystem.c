@@ -44,6 +44,7 @@ GNU General Public License for more details.
 #include "common/protocol.h"
 
 #if XASH_DREAMCAST
+extern char *_copystring( poolhandle_t mempool, const char *s, const char *filename, int fileline );
 #define copystring( s ) _copystring( fs_mempool, s, __FILE__, __LINE__ )
 #endif
 #define FILE_COPY_SIZE		(1024 * 1024)
@@ -64,7 +65,7 @@ static char			fs_gamedir[MAX_SYSPATH];	// game current directory
 const fs_archive_t g_archives[] =
 {
 { "pak",    SEARCHPATH_PAK,    FS_AddPak_Fullpath, true, true },
-#if !XASH_DREAMCAST
+#ifndef XASH_DREAMCAST
 { "pk3",    SEARCHPATH_ZIP,    FS_AddZip_Fullpath, true, true },
 #endif
 { "pk3dir", SEARCHPATH_PK3DIR, FS_AddDir_Fullpath, true, false },
@@ -83,8 +84,9 @@ static const fs_archive_t g_android_archive =
 
 #ifdef XASH_REDUCE_FD
 static dc_file_t *fs_last_readfile;
+#ifndef XASH_DREAMCAST
 static zip_t *fs_last_zip;
-
+#endif
 static void FS_EnsureOpenFile( dc_file_t *file )
 {
 	if( fs_last_readfile == file )
@@ -95,7 +97,7 @@ static void FS_EnsureOpenFile( dc_file_t *file )
 
 	if( fs_last_readfile && (fs_last_readfile->handle != -1) )
 	{
-		fs_last_readfile->backup_position = lseek(  fs_last_readfile->handle, 0, SEEK_CUR );
+		fs_last_readfile->backup_position = fs_seek(  fs_last_readfile->handle, 0, SEEK_CUR );
 		close( fs_last_readfile->handle );
 		fs_last_readfile->handle = -1;
 	}
@@ -103,7 +105,7 @@ static void FS_EnsureOpenFile( dc_file_t *file )
 	if( file && (file->handle == -1) )
 	{
 		file->handle = open( file->backup_path, file->backup_options );
-		lseek( file->handle, file->backup_position, SEEK_SET );
+		fs_seek( file->handle, file->backup_position, SEEK_SET );
 	}
 }
 
@@ -447,6 +449,7 @@ void FS_ClearSearchPath( void )
 	}
 }
 
+#ifndef XASH_DREAMCAST
 /*
 ====================
 FS_CheckNastyPath
@@ -474,10 +477,10 @@ static int FS_CheckNastyPath( const char *path )
 
 	// all: don't allow going to parent directory (../ or /../)
 	if( Q_strstr( path, "..")) return 2; // attempt to go outside the game directory
-#if !XASH_DREAMCAST
+	
 	// Windows and UNIXes: don't allow absolute paths
 	if( path[0] == '/') return 2; // attempt to go outside the game directory
-#endif
+	
 #if 0
 	// all: forbid trailing slash on gamedir
 	if( isgamedir && path[Q_strlen(path)-1] == '/' ) return 2;
@@ -490,7 +493,7 @@ static int FS_CheckNastyPath( const char *path )
 	// and won't do much if any harm
 	return false;
 }
-
+#endif
 /*
 ================
 FS_WriteGameInfo
@@ -1334,7 +1337,7 @@ static qboolean FS_FindLibrary( const char *dllname, qboolean directpath, fs_dll
 {
 	string fixedname;
 	searchpath_t	*search;
-	int index, start = 0, i, len;
+	int index, start = 0, len;
 
 	// check for bad exports
 	if( !COM_CheckString( dllname ))
@@ -1671,7 +1674,9 @@ dc_file_t *FS_SysOpen( const char *filepath, const char *mode )
 	dc_file_t	*file;
 	int	mod, opt;
 	uint	ind;
-
+#if XASH_DREAMCAST
+	char *str_tmp;
+#endif
 	// Parse the mode string
 	switch( mode[0] )
 	{
@@ -1717,7 +1722,11 @@ dc_file_t *FS_SysOpen( const char *filepath, const char *mode )
 #if XASH_WIN32
 	file->handle = _wopen( FS_PathToWideChar( filepath ), mod | opt, 0666 );
 #else
-	file->handle = open( filepath, mod|opt, 0666 );
+	str_tmp = Q_strstr(filepath, "gameinfo.txt");
+	if(str_tmp) 
+		file->handle = open("/ram/gameinfo.txt", mod|opt, 0666);
+	else
+		file->handle = open( filepath, mod|opt, 0666 );
 #endif
 
 #if !XASH_WIN32
@@ -1735,7 +1744,7 @@ dc_file_t *FS_SysOpen( const char *filepath, const char *mode )
 	}
 
 	file->searchpath = NULL;
-	file->real_length = lseek( file->handle, 0, SEEK_END );
+	file->real_length = fs_seek( file->handle, 0, SEEK_END );
 
 	// uncomment do disable write
 	//if( opt & O_CREAT )
@@ -1743,7 +1752,7 @@ dc_file_t *FS_SysOpen( const char *filepath, const char *mode )
 
 	// For files opened in append mode, we start at the end of the file
 	if( opt & O_APPEND )  file->position = file->real_length;
-	else lseek( file->handle, 0, SEEK_SET );
+	else fs_seek( file->handle, 0, SEEK_SET );
 
 	return file;
 }
@@ -1754,7 +1763,7 @@ static int FS_DuplicateHandle( const char *filename, int handle, fs_offset_t pos
 	return dup( handle );
 #else
 	int newhandle = open( filename, O_RDONLY|O_BINARY );
-	lseek( newhandle, pos, SEEK_SET );
+	fs_seek( newhandle, pos, SEEK_SET );
 	return newhandle;
 #endif
 }
@@ -1777,7 +1786,7 @@ dc_file_t *FS_OpenHandle( searchpath_t *searchpath, int handle, fs_offset_t offs
 		return NULL;
 	}
 
-	if( lseek( file->handle, offset, SEEK_SET ) == -1 )
+	if( fs_seek( file->handle, offset, SEEK_SET ) == -1 )
 	{
 		Mem_Free( file );
 		return NULL;
@@ -1785,7 +1794,7 @@ dc_file_t *FS_OpenHandle( searchpath_t *searchpath, int handle, fs_offset_t offs
 
 #else
 	file->backup_position = offset;
-	file->backup_path = copystring( searchpath );
+	file->backup_path = copystring( searchpath->filename );
 	file->backup_options = O_RDONLY|O_BINARY;
 	file->handle = -1;
 #endif
@@ -1843,7 +1852,7 @@ qboolean FS_SysFolderExists( const char *path )
 #elif XASH_DREAMCAST
 	struct stat buf;
 	char direct_path[MAX_SYSPATH];
-	Q_strncpy(direct_path, "/cd/", sizeof("/cd/"));
+	Q_strncpy(direct_path, "/cd/", sizeof(direct_path));
 	Q_strncat(direct_path, path, sizeof(direct_path));
 	if( stat( direct_path, &buf ) < 0 )
 #else
@@ -1897,7 +1906,7 @@ int FS_SetCurrentDirectory( const char *path )
 		Sys_Error( "Changing directory to %s failed: %s\n", path, buf );
 		return false;
 	}
-#elif XASH_POSIX
+#elif XASH_POSIX && !XASH_DREAMCAST
 	if( chdir( path ) < 0 )
 	{
 		Sys_Error( "Changing directory to %s failed: %s\n", path, strerror( errno ));
@@ -2055,7 +2064,7 @@ dc_file_t *FS_Open( const char *filepath, const char *mode, qboolean gamedironly
 
 	if( filepath[0] == '/' || filepath[0] == '\\' )
 		filepath++;
-#if !XASH_DREAMCAST
+#ifndef XASH_DREAMCAST
 	if( FS_CheckNastyPath( filepath ))
 		return NULL;
 #endif
@@ -2143,14 +2152,14 @@ fs_offset_t FS_Write( dc_file_t *file, const void *data, size_t datasize )
 
 	// if necessary, seek to the exact file position we're supposed to be
 	if( file->buff_ind != file->buff_len )
-		lseek( file->handle, file->buff_ind - file->buff_len, SEEK_CUR );
+		fs_seek( file->handle, file->buff_ind - file->buff_len, SEEK_CUR );
 
 	// purge cached data
 	FS_Purge( file );
 
 	// write the buffer and update the position
-	result = write( file->handle, data, datasize );
-	file->position = lseek( file->handle, 0, SEEK_CUR );
+	result = fs_write( file->handle, data, datasize );
+	file->position = fs_seek( file->handle, 0, SEEK_CUR );
 
 	if( file->real_length < file->position )
 		file->real_length = file->position;
@@ -2212,8 +2221,8 @@ fs_offset_t FS_Read( dc_file_t *file, void *buffer, size_t buffersize )
 	{
 		if( count > (fs_offset_t)buffersize )
 			count = (fs_offset_t)buffersize;
-		lseek( file->handle, file->offset + file->position, SEEK_SET );
-		nb = read( file->handle, &((byte *)buffer)[done], count );
+		fs_seek( file->handle, file->offset + file->position, SEEK_SET );
+		nb = fs_read( file->handle, &((byte *)buffer)[done], count );
 
 		if( nb > 0 )
 		{
@@ -2227,8 +2236,8 @@ fs_offset_t FS_Read( dc_file_t *file, void *buffer, size_t buffersize )
 	{
 		if( count > (fs_offset_t)sizeof( file->buff ))
 			count = (fs_offset_t)sizeof( file->buff );
-		lseek( file->handle, file->offset + file->position, SEEK_SET );
-		nb = read( file->handle, file->buff, count );
+		fs_seek( file->handle, file->offset + file->position, SEEK_SET );
+		nb = fs_read( file->handle, file->buff, count );
 
 		if( nb > 0 )
 		{
@@ -2304,7 +2313,7 @@ int FS_VPrintf( dc_file_t *file, const char *format, va_list ap )
 		buff_size *= 2;
 	}
 
-	len = write( file->handle, tempbuff, len );
+	len = fs_write( file->handle, tempbuff, len );
 	Mem_Free( tempbuff );
 
 	return len;
@@ -2385,7 +2394,7 @@ FS_Seek
 
 Move the position index in a file
 NOTE: when porting code, check return value!
-NOTE: it's not compatible with lseek!
+NOTE: it's not compatible with fs_seek!
 ====================
 */
 int FS_Seek( dc_file_t *file, fs_offset_t offset, int whence )
@@ -2419,7 +2428,7 @@ int FS_Seek( dc_file_t *file, fs_offset_t offset, int whence )
 	// Purge cached data
 	FS_Purge( file );
 
-	if( lseek( file->handle, file->offset + offset, SEEK_SET ) == -1 )
+	if( fs_seek( file->handle, file->offset + offset, SEEK_SET ) == -1 )
 		return -1;
 	file->position = offset;
 
@@ -2476,45 +2485,19 @@ static void FS_CustomFree( void *data )
 	Mem_Free( data );
 }
 
-/*
-============
-FS_LoadFile
-
-Filename are relative to the xash directory.
-Always appends a 0 byte.
-============
-*/
-static byte *FS_LoadFile_( const char *path, fs_offset_t *filesizeptr, const qboolean gamedironly, const qboolean custom_alloc )
+static byte *FS_LoadFileFromArchive( searchpath_t *sp, const char *path, int pack_ind, fs_offset_t *filesizeptr, const qboolean sys_malloc )
 {
-	searchpath_t *search;
 	fs_offset_t	filesize;
 	dc_file_t *file;
 	byte *buf;
-	char netpath[MAX_SYSPATH];
-	int pack_ind;
-	void *( *pfnAlloc )( size_t ) = custom_alloc ? FS_CustomAlloc : malloc;
-	void ( *pfnFree )( void * ) = custom_alloc ? FS_CustomFree : free;
-
-	// some mappers used leading '/' or '\' in path to models or sounds
-	if( path[0] == '/' || path[0] == '\\' )
-		path++;
-
-	if( path[0] == '/' || path[0] == '\\' )
-		path++;
-#if !XASH_DREAMCAST
-	if( !fs_searchpaths || FS_CheckNastyPath( path ))
-		return NULL;
-#endif
-	search = FS_FindFile( path, &pack_ind, netpath, sizeof( netpath ), gamedironly );
-
-	if( !search )
-		return NULL;
+	void *( *pfnAlloc )( size_t ) = sys_malloc ? malloc : FS_CustomAlloc;
+	void ( *pfnFree )( void * ) = sys_malloc ? free : FS_CustomFree;
 
 	// custom load file function for compressed files
-	if( search->pfnLoadFile )
-		return search->pfnLoadFile( search, netpath, pack_ind, filesizeptr, pfnAlloc, pfnFree );
+	if( sp->pfnLoadFile )
+		return sp->pfnLoadFile( sp, path, pack_ind, filesizeptr, pfnAlloc, pfnFree );
 
-	file = search->pfnOpenFile( search, netpath, "rb", pack_ind );
+	file = sp->pfnOpenFile( sp, path, "rb", pack_ind );
 
 	if( !file ) // TODO: indicate errors
 		return NULL;
@@ -2536,6 +2519,38 @@ static byte *FS_LoadFile_( const char *path, fs_offset_t *filesizeptr, const qbo
 
 	return buf;
 }
+/*
+============
+FS_LoadFile
+
+Filename are relative to the xash directory.
+Always appends a 0 byte.
+============
+*/
+static byte *FS_LoadFile_( const char *path, fs_offset_t *filesizeptr, const qboolean gamedironly, const qboolean custom_alloc )
+{
+	searchpath_t *search;
+	char netpath[MAX_SYSPATH];
+	int pack_ind;
+
+	// some mappers used leading '/' or '\' in path to models or sounds
+	if( path[0] == '/' || path[0] == '\\' )
+		path++;
+
+	if( path[0] == '/' || path[0] == '\\' )
+		path++;
+#ifndef XASH_DREAMCAST
+	if( !fs_searchpaths || FS_CheckNastyPath( path ))
+		return NULL;
+#endif
+	search = FS_FindFile( path, &pack_ind, netpath, sizeof( netpath ), gamedironly );
+
+	if( !search )
+		return NULL;
+
+	return FS_LoadFileFromArchive( search, netpath, pack_ind, filesizeptr, !custom_alloc );
+}
+
 
 byte *FS_LoadFileMalloc( const char *path, fs_offset_t *filesizeptr, qboolean gamedironly )
 {
@@ -2960,6 +2975,7 @@ search_t *FS_Search( const char *pattern, int caseinsensitive, int gamedironly )
 	return search;
 }
 
+#ifndef XASH_DREAMCAST
 static const char *FS_ArchivePath( dc_file_t *f )
 {
 	if( f->searchpath )
@@ -2967,7 +2983,7 @@ static const char *FS_ArchivePath( dc_file_t *f )
 
 	return "plain";
 }
-
+#endif
 static qboolean FS_IsArchiveExtensionSupported( const char *ext, uint flags )
 {
 	int i;
@@ -2986,6 +3002,26 @@ static qboolean FS_IsArchiveExtensionSupported( const char *ext, uint flags )
 
 	return false;
 }
+
+static searchpath_t *FS_GetArchiveByName( const char *name, searchpath_t *prev )
+{
+	searchpath_t *sp = prev ? prev->next : fs_searchpaths;
+	for( ; sp; sp = sp->next )
+	{
+		if( !Q_stricmp( COM_FileWithoutPath( sp->filename ), name ))
+			return sp;
+	}
+	return NULL;
+}
+static int FS_FindFileInArchive( searchpath_t *sp, const char *path, char *truepath, size_t len )
+{
+	return sp->pfnFindFile( sp, path, truepath, len );
+}
+static dc_file_t *FS_OpenFileFromArchive( searchpath_t *sp, const char *path, const char *mode, int pack_ind )
+{
+	return sp->pfnOpenFile( sp, path, mode, pack_ind );
+}
+
 
 void FS_InitMemory( void )
 {
@@ -3117,6 +3153,10 @@ const fs_api_t g_api =
 	FS_LoadFileMalloc,
 
 	FS_IsArchiveExtensionSupported,
+	FS_GetArchiveByName,
+	FS_FindFileInArchive,
+	FS_OpenFileFromArchive,
+	FS_LoadFileFromArchive,
 };
 
 int EXPORT GetFSAPI( int version, fs_api_t *api, fs_globals_t **globals, fs_interface_t *engfuncs );

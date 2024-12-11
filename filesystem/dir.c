@@ -416,7 +416,7 @@ static void FS_Search_DIR( searchpath_t *search, stringlist_t *list, const char 
 
 #if XASH_DREAMCAST
 			// get a directory listing and look at each name
-	Q_snprintf( netpath,  sizeof (netpath), "%s%s",  search->dir, basepath );
+	Q_snprintf( netpath,  sizeof (netpath), "%s%s",  search->dir->name, basepath );
 	stringlistinit( &dirlist );
 	listdirectory( &dirlist, netpath);
 
@@ -432,7 +432,7 @@ static void FS_Search_DIR( searchpath_t *search, stringlist_t *list, const char 
 							break;
 			}
 
-			if( resultlistindex == list->strings )
+			if( resultlistindex == list->numstrings )
 				stringlistappend( list, temp );
 		}
 	}

@@ -171,8 +171,8 @@ static pack_t *FS_LoadPackPAK( const char *packfile, int *error )
 
 #ifdef XASH_REDUCE_FD
 	// will reopen when needed
-	close( pack->handle );
-	pack->handle = -1;
+	close( pack->handle->handle );
+	pack->handle->handle = -1;
 #endif
 
 	if( error )
