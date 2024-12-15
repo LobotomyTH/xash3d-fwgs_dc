@@ -167,6 +167,9 @@ qboolean Image_LoadMDL( const char *name, const byte *buffer, fs_offset_t filesi
 	ASSERT(fin);
 	g_mdltexdata = NULL;
 
+	if (!Image_ValidSize(name))
+			return false;
+
 	 // Check for PVR texture by looking for GBIX signature
     if (*(uint32_t*)fin == GBIXHEADER)
     {
@@ -176,11 +179,7 @@ qboolean Image_LoadMDL( const char *name, const byte *buffer, fs_offset_t filesi
 		image.width = pin->width;
 		image.height = pin->height;
 
-		if (!Image_ValidSize(name))
-			return false;
-
 		uint32_t format = *(uint32_t*)texture_data;
-	
 		
 		uint8_t texture_format = (format >> 8) & 0xFF;
 		uint8_t color_format = format & 0xFF;
@@ -192,7 +191,6 @@ qboolean Image_LoadMDL( const char *name, const byte *buffer, fs_offset_t filesi
 			{
 				texture_data += 8; // Skip format header for VQ
 
-			
     			image.size = 2048 + ((image.width * image.height) / 4);
 				image.type = PF_VQ_RGB_5650;
 				
@@ -216,13 +214,13 @@ qboolean Image_LoadMDL( const char *name, const byte *buffer, fs_offset_t filesi
 
 		}
     }
-    else
+    else if (image.hint == IL_HINT_HL)
     {
-	if (image.hint == IL_HINT_HL)
-        {
             size_t pixels = image.width * image.height;
             if (filesize < (sizeof(*pin) + pixels + 768))
                 return false;
+
+			Con_DPrintf("%s: loading IL_HINT_HL texture %s\n", __func__, name);
 
             if (FBitSet(pin->flags, STUDIO_NF_MASKED))
             {
@@ -231,20 +229,19 @@ qboolean Image_LoadMDL( const char *name, const byte *buffer, fs_offset_t filesi
                 image.flags |= IMAGE_HAS_ALPHA|IMAGE_ONEBIT_ALPHA;
             }
             else Image_GetPaletteLMP(fin + pixels, LUMP_NORMAL);
-        }
-        else
-        {
-            return false;
-        }
 
         image.type = PF_INDEXED_32;
         image.depth = 1;
 
         return Image_AddIndexedImageToPack(fin, image.width, image.height);
     }
-
+	else 
+ 	{
+		Con_DPrintf("%s: unsupported texture %s should be PVR or indexed\n", __func__, name);
+		return false;
+	}
 }
-
+ 	
 
 
 

@@ -46,7 +46,7 @@ qboolean SV_CheckEdict( const edict_t *e, const char *file, const int line )
 
 	n = ((int)((edict_t *)(e) - svgame.edicts));
 #if XASH_DREAMCAST
-	if(( n >= 0 ) && ( n < MAX_EDICTS ))
+	if(( n >= 0 ) && ( n < DC_MAX_EDICTS ))
 #else
 	if(( n >= 0 ) && ( n < GI->max_edicts ))
 #endif	  
@@ -60,7 +60,7 @@ qboolean SV_CheckEdict( const edict_t *e, const char *file, const int line )
 static edict_t *SV_PEntityOfEntIndex( const int iEntIndex, const qboolean allentities )
 {
 #if XASH_DREAMCAST
-	if( iEntIndex >= 0 && iEntIndex < MAX_EDICTS )
+	if( iEntIndex >= 0 && iEntIndex < DC_MAX_EDICTS )
 #else
 	if( iEntIndex >= 0 && iEntIndex < GI->max_edicts )
 #endif  
@@ -1093,11 +1093,11 @@ edict_t *GAME_EXPORT SV_AllocEdict( void )
 		}
 	}
 #if XASH_DREAMCAST
-	if( i >= MAX_EDICTS )
+	if( i >= DC_MAX_EDICTS )
 #else
 	if( i >= GI->max_edicts )
 #endif
-		Host_Error( "%s: no free edicts (max is %d)\n", __func__, MAX_EDICTS );
+		Host_Error( "%s: no free edicts (max is %d)\n", __func__, DC_MAX_EDICTS );
 
 	svgame.numEntities++;
 	e = EDICT_NUM( i );
@@ -3426,7 +3426,7 @@ int GAME_EXPORT pfnIndexOfEdict( const edict_t *pEdict )
 
 	number = NUM_FOR_EDICT( pEdict );
 #if XASH_DREAMCAST
-	if( number < 0 || number > MAX_EDICTS )
+	if( number < 0 || number > DC_MAX_EDICTS )
 #else
 	if( number < 0 || number > GI->max_edicts )
 #endif
@@ -3472,7 +3472,7 @@ static edict_t *GAME_EXPORT pfnFindEntityByVars( entvars_t *pvars )
 	// don't pass invalid arguments
 	if( !pvars ) return NULL;
 #if XASH_DREAMCAST
-	for( i = 0; i < MAX_EDICTS; i++ )
+	for( i = 0; i < DC_MAX_EDICTS; i++ )
 #else
 	for( i = 0; i < GI->max_edicts; i++ )
 #endif
@@ -5123,7 +5123,7 @@ void SV_SpawnEntities( const char *mapname )
 	ent->v.movetype = MOVETYPE_PUSH;
 	svgame.movevars.fog_settings = 0;
 #if XASH_DREAMCAST
-	svgame.globals->maxEntities = MAX_EDICTS;
+	svgame.globals->maxEntities = DC_MAX_EDICTS;
 #else
 	svgame.globals->maxEntities = GI->max_edicts;
 #endif
@@ -5306,14 +5306,14 @@ qboolean SV_LoadProgs( const char *name )
 
 	svgame.globals->pStringBase = ""; // setup string base
 #if XASH_DREAMCAST
-	svgame.globals->maxEntities = MAX_EDICTS;
+	svgame.globals->maxEntities = DC_MAX_EDICTS;
 	svgame.globals->maxClients = svs.maxclients;
-	svgame.edicts = Mem_Calloc( svgame.mempool, sizeof( edict_t ) * MAX_EDICTS );
+	svgame.edicts = Mem_Calloc( svgame.mempool, sizeof( edict_t ) * DC_MAX_EDICTS );
 	svs.static_entities = Z_Calloc( sizeof( entity_state_t ) * MAX_STATIC_ENTITIES );
-	svs.baselines = Z_Calloc( sizeof( entity_state_t ) * MAX_EDICTS );
+	svs.baselines = Z_Calloc( sizeof( entity_state_t ) * DC_MAX_EDICTS );
 	svgame.numEntities = svs.maxclients + 1; // clients + world
 
-	for( i = 0, e = svgame.edicts; i < MAX_EDICTS; i++, e++ )
+	for( i = 0, e = svgame.edicts; i < DC_MAX_EDICTS; i++, e++ )
 #else
 	svgame.globals->maxEntities = GI->max_edicts;
 	svgame.globals->maxClients = svs.maxclients;

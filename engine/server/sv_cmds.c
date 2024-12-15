@@ -895,8 +895,8 @@ static void SV_EdictUsage_f( void )
 	active = pfnNumberOfEntities();
 	Con_Printf( "%5i edicts is used\n", active );
 #if XASH_DREAMCAST
-	Con_Printf( "%5i edicts is free\n", MAX_EDICTS - active );
-	Con_Printf( "%5i total\n", MAX_EDICTS );
+	Con_Printf( "%5i edicts is free\n", DC_MAX_EDICTS - active );
+	Con_Printf( "%5i total\n", DC_MAX_EDICTS );
 #else
 	Con_Printf( "%5i edicts is free\n", GI->max_edicts - active );
 	Con_Printf( "%5i total\n", GI->max_edicts );

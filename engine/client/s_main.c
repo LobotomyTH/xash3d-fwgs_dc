@@ -1225,7 +1225,7 @@ void S_StreamAviSamples( void *Avi, int entnum, float fvol, float attn, float sy
 		return;
 
 #if XASH_DREAMCAST
-	if( entnum < 0 || entnum >= MAX_EDICTS )
+	if( entnum < 0 || entnum >= DC_MAX_EDICTS )
 #else
 	if( entnum < 0 || entnum >= GI->max_edicts )
 		return;
@@ -1365,7 +1365,7 @@ static void S_SpatializeRawChannels( void )
 		}
 #if XASH_DREAMCAST
 		// spatialization
-		if( !S_IsClient( ch->entnum ) && ch->dist_mult && ch->entnum >= 0 && ch->entnum < MAX_EDICTS )
+		if( !S_IsClient( ch->entnum ) && ch->dist_mult && ch->entnum >= 0 && ch->entnum < DC_MAX_EDICTS )
 #else
 		// spatialization
 		if( !S_IsClient( ch->entnum ) && ch->dist_mult && ch->entnum >= 0 && ch->entnum < GI->max_edicts )

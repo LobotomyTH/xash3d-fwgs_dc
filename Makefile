@@ -32,7 +32,6 @@ LIBS = -L$(SV_DLL_DIR) \
        -L$(GLDC_DIR) \
        -L$(MAINUI_DIR) \
        -lfilesystem_stdio \
-       -lhl \
        -lcl_dll \
        -lref_gldc \
        -l:libGL.a 
@@ -56,7 +55,7 @@ $(CL_DLL_LIB):
 #-l:libGL.a
 # The rm-elf step is to remove the target before building, to force the
 # re-creation of the rom disk.
-all: $(FILESYSTEM_LIB) $(GLDC_LIB) $(SV_DLL_LIB) $(CL_DLL_LIB) $(TARGET) 1ST_READ.BIN IP.BIN $(PROJECT_NAME).iso $(PROJECT_NAME).cdi
+all: $(FILESYSTEM_LIB) $(GLDC_LIB)  $(CL_DLL_LIB) $(TARGET) 1ST_READ.BIN IP.BIN $(PROJECT_NAME).iso $(PROJECT_NAME).cdi
 
 include $(KOS_BASE)/Makefile.rules
 
@@ -65,7 +64,6 @@ clean:
 	-rm -f $(TARGET)
 	$(MAKE) -C $(FILESYSTEM_DIR) clean
 	$(MAKE) -C $(GLDC_DIR) clean
-	$(MAKE) -C $(SV_DLL_DIR) clean
 	$(MAKE) -C $(CL_DLL_DIR) clean
 	-rm -f $(TARGET).bin
 	-rm -f $(PROJECT_NAME).cdi
@@ -75,8 +73,8 @@ clean:
 	-rm -f $(PROJECT_NAME).cdi
 	
 
-$(TARGET): $(OBJS) $(FILESYSTEM_LIB) $(GLDC_LIB) $(SV_DLL_LIB) $(CL_DLL_LIB)
-	kos-c++ -o $(TARGET) $(OBJS) $(LIBS)  -Wl,--allow-multiple-definition -Wl,--gc-sections -fwhole-program -Wl,--build-id=none
+$(TARGET): $(OBJS) $(FILESYSTEM_LIB) $(GLDC_LIB)  $(CL_DLL_LIB)
+	kos-c++ -o $(TARGET) $(OBJS) $(LIBS)  -Wl,--gc-sections -fwhole-program -Wl,--build-id=none
 
 run: $(TARGET)
 	$(KOS_LOADER) $(TARGET)

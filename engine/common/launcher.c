@@ -73,7 +73,7 @@ static int Sys_Start( void )
 }
 
 #if XASH_DREAMCAST
-KOS_INIT_FLAGS(INIT_CDROM | INIT_CONTROLLER);
+KOS_INIT_FLAGS(INIT_CDROM | INIT_CONTROLLER | INIT_NET);
 #endif
 int main( int argc, char **argv )
 {

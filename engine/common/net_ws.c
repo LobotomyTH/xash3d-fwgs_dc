@@ -2132,13 +2132,6 @@ void NET_Init( void )
 		net.ip_sockets[i]  = INVALID_SOCKET;
 		net.ip6_sockets[i] = INVALID_SOCKET;
 	}
-#if XASH_DREAMCAST
-	if (net_init(net_default_dev))
-	{
-		Con_DPrintf( S_ERROR "network initialization failed.\n" );
-		return;
-	}
-#endif
 
 #if XASH_WIN32
 	if( WSAStartup( MAKEWORD( 1, 1 ), &net.winsockdata ))

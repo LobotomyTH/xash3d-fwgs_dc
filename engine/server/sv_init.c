@@ -20,7 +20,7 @@ GNU General Public License for more details.
 #include "voice.h"
 #include "pm_local.h"
 
-#if XASH_LOW_MEMORY != 2
+#if XASH_LOW_MEMORY != 2 || XASH_DREAMCAST
 int SV_UPDATE_BACKUP = SINGLEPLAYER_BACKUP;
 #endif
 server_t		sv;	// local server
@@ -714,7 +714,7 @@ void SV_DeactivateServer( void )
 		svs.clients[i].frames = NULL;
 	}
 #if XASH_DREAMCAST
-	svgame.globals->maxEntities = MAX_EDICTS;
+	svgame.globals->maxEntities = DC_MAX_EDICTS;
 #else
 	svgame.globals->maxEntities = GI->max_edicts;
 #endif
@@ -817,7 +817,7 @@ static void SV_SetupClients( void )
 
 	// feedback for cvar
 	Cvar_FullSet( "maxplayers", va( "%d", svs.maxclients ), FCVAR_LATCH );
-#if XASH_LOW_MEMORY != 2
+#if XASH_DREAMCAST || XASH_LOW_MEMORY != 2 
 	SV_UPDATE_BACKUP = ( svs.maxclients == 1 ) ? SINGLEPLAYER_BACKUP : MULTIPLAYER_BACKUP;
 #endif
 
@@ -1065,7 +1065,7 @@ qboolean SV_SpawnServer( const char *mapname, const char *startspot, qboolean ba
 	// clearing all the baselines
 	memset( svs.static_entities, 0, sizeof( entity_state_t ) * MAX_STATIC_ENTITIES );
 #if XASH_DREAMCAST
-	memset( svs.baselines, 0, sizeof( entity_state_t ) * MAX_EDICTS );
+	memset( svs.baselines, 0, sizeof( entity_state_t ) * DC_MAX_EDICTS );
 #else
 	memset( svs.baselines, 0, sizeof( entity_state_t ) * GI->max_edicts );
 #endif

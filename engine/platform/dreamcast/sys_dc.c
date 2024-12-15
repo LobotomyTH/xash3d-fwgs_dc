@@ -56,7 +56,7 @@ static void assert_hnd(const char *file, int line, const char *expr, const char 
   sprintf(strbuffer, "  Message: %s", msg);
   drawtext(32, 160, strbuffer);
 }
-
+#if XASH_MESSAGEBOX == MSGBOX_KOS
 void Platform_MessageBox(const char *title, const char *message, qboolean parentMainWindow)
 {
     char line[MAX_LINE_LENGTH + 1];
@@ -83,7 +83,7 @@ void Platform_MessageBox(const char *title, const char *message, qboolean parent
             msg++;
     }
 }
-
+#endif // XASH_MESSAGEBOX == MSGBOX_KOS
 static qboolean Sys_FindExecutable( const char *baseName, char *buf, size_t size )
 {
 	char *envPath;

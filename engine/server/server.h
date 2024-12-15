@@ -32,7 +32,7 @@ GNU General Public License for more details.
 //=============================================================================
 
 #define SV_UPDATE_MASK	(SV_UPDATE_BACKUP - 1)
-#if XASH_LOW_MEMORY == 2
+#if XASH_LOW_MEMORY == 2 && !XASH_DREAMCAST
 #define SV_UPDATE_BACKUP SINGLEPLAYER_BACKUP
 #else
 extern int SV_UPDATE_BACKUP;
@@ -631,7 +631,7 @@ qboolean SV_RestoreCustomDecal( struct decallist_s *entry, edict_t *pEdict, qboo
 static inline edict_t *SV_EdictNum( int n )
 {
 #if XASH_DREAMCAST
-	if( likely( n >= 0 && n < MAX_EDICTS ))
+	if( likely( n >= 0 && n < DC_MAX_EDICTS ))
 #else
 	if( likely( n >= 0 && n < GI->max_edicts ))
 #endif				   
