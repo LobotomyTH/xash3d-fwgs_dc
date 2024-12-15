@@ -23,7 +23,7 @@ typedef struct
 	int		current_lightmap_texture;
 	msurface_t	*dynamic_surfaces;
 	msurface_t	*lightmap_surfaces[MAX_LIGHTMAPS];
-	byte		lightmap_buffer[BLOCK_SIZE_MAX*BLOCK_SIZE_MAX*4];
+	byte		lightmap_buffer[BLOCK_SIZE_MAX*BLOCK_SIZE_MAX*LIGHTMAP_BPP];
 } gllightmapstate_t;
 
 static int		nColinElim; // stats
@@ -657,7 +657,7 @@ static void LM_UploadDynamicBlock( void )
 			height = gl_lms.allocated[i];
 	}
 
-	glTexSubImage2D( GL_TEXTURE_2D, 0, 0, 0, BLOCK_SIZE, height, GL_RGBA, GL_UNSIGNED_BYTE, gl_lms.lightmap_buffer );
+    glTexSubImage2D( GL_TEXTURE_2D, 0, 0, 0, BLOCK_SIZE, height, GL_RGB, GL_UNSIGNED_SHORT_5_6_5, gl_lms.lightmap_buffer );
 }
 
 static void LM_UploadBlock( qboolean dynamic )
@@ -674,13 +674,13 @@ static void LM_UploadBlock( qboolean dynamic )
 				height = gl_lms.allocated[i];
 		}
 
-		GL_Bind( XASH_TEXTURE0, tr.dlightTexture );
-		glTexSubImage2D( GL_TEXTURE_2D, 0, 0, 0, BLOCK_SIZE, height, GL_RGBA, GL_UNSIGNED_BYTE, gl_lms.lightmap_buffer );
-	}
-	else
-	{
-		rgbdata_t	r_lightmap;
-		char	lmName[16];
+        GL_Bind( XASH_TEXTURE0, tr.dlightTexture );
+        glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, BLOCK_SIZE, height, GL_RGB, GL_UNSIGNED_SHORT_5_6_5, gl_lms.lightmap_buffer);
+    }
+    else
+    {
+        rgbdata_t r_lightmap;
+        char lmName[16];
 
 		i = gl_lms.current_lightmap_texture;
 
@@ -690,8 +690,8 @@ static void LM_UploadBlock( qboolean dynamic )
 
 		r_lightmap.width = BLOCK_SIZE;
 		r_lightmap.height = BLOCK_SIZE;
-		r_lightmap.type = PF_RGBA_32;
-		r_lightmap.size = r_lightmap.width * r_lightmap.height * 4;
+        r_lightmap.type = LIGHTMAP_FORMAT;
+        r_lightmap.size = r_lightmap.width * r_lightmap.height * LIGHTMAP_BPP;
 		r_lightmap.flags = IMAGE_HAS_COLOR;
 		r_lightmap.buffer = gl_lms.lightmap_buffer;
 		tr.lightmapTextures[i] = GL_LoadTextureInternal( lmName, &r_lightmap, TF_NOMIPMAP|TF_ATLAS_PAGE );
@@ -748,8 +748,9 @@ static void R_BuildLightMap( msurface_t *surf, byte *dest, int stride, qboolean 
 	// add all the dynamic lights
 	if( surf->dlightframe == tr.framecount && dynamic )
 		R_AddDynamicLights( surf );
-#if 1
+
 	// Put into texture format
+#if 0
 	stride -= (smax << 2);
 	bl = r_blocklights;
 
@@ -757,16 +758,9 @@ static void R_BuildLightMap( msurface_t *surf, byte *dest, int stride, qboolean 
 	{
 		for( s = 0; s < smax; s++ )
 		{
-			int i;
-			for( i = 0; i < 3; i++ )
-			{
-				int t = bl[i] * lightscale >> 14;
-
-				if( t > 1023 )
-					t = 1023;
-
-				dest[i] = gEngfuncs_gl.LightToTexGammaEx( t ) >> 2;
-			}
+			dest[0] = Q_min((bl[0] >> 7), 255 );
+			dest[1] = Q_min((bl[1] >> 7), 255 );
+			dest[2] = Q_min((bl[2] >> 7), 255 );
 			dest[3] = 255;
 
 			bl += 3;
@@ -790,10 +784,14 @@ static void R_BuildLightMap( msurface_t *surf, byte *dest, int stride, qboolean 
 			dest[0] |= ( color[1] >> 2 ) & 0x38;
 			dest[0] |= ( color[2]      ) & 0xc0;
 #elif LIGHTMAP_BPP == 2
-			dest[0]  = ( color[0] >> 3 ) & 0x1f;
-			dest[0] |= ( color[1] << 3 ) & 0xe0;
-			dest[1]  = ( color[1] >> 5 ) & 0x07;
-			dest[1] |= ( color[2]      ) & 0xf8;
+
+			uint16_t r = (color[0] >> 3) & 0x1F;  // 5 bits red
+			uint16_t g = (color[1] >> 2) & 0x3F;  // 6 bits green
+			uint16_t b = (color[2] >> 3) & 0x1F;  // 5 bits blue
+			uint16_t rgb = (r << 11) | (g << 5) | b;
+
+			dest[0] = rgb & 0xFF;        
+			dest[1] = (rgb >> 8) & 0xFF; 
 #elif LIGHTMAP_BPP == 3
 			dest[0] = color[0];
 			dest[1] = color[1];
@@ -967,11 +965,13 @@ static void R_BlendLightmaps( void )
 	glDepthFunc( GL_EQUAL );
 
 	glDisable( GL_ALPHA_TEST );
+
 	if( gl_overbright.value )
 	{
+		// Scale down intensity for overbright
 		glBlendFunc( GL_DST_COLOR, GL_SRC_COLOR );
 		if(!( R_HasEnabledVBO() && !r_vbo_overbrightmode.value ))
-			glColor4f( 128.0f / 192.0f, 128.0f / 192.0f, 128.0f / 192.0f, 1.0f );
+			glColor4f( 0.5f, 0.5f, 0.5f, 1.0f );  // Reduce intensity by half
 	}
 	
 	else
@@ -979,16 +979,16 @@ static void R_BlendLightmaps( void )
 		glBlendFunc( GL_ZERO, GL_SRC_COLOR );
 		
 	}
-
+#if !XASH_DREAMCAST
 	glTexEnvi( GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE );
-
+#endif
 	// render static lightmaps first
 	for( i = 0; i < MAX_LIGHTMAPS; i++ )
 	{
 		if( gl_lms.lightmap_surfaces[i] )
 		{
 			GL_Bind( XASH_TEXTURE0, tr.lightmapTextures[i] );
-			glTexParameteri(GL_TEXTURE_2D, GL_SHARED_TEXTURE_BANK_KOS, 1);
+			//glTexParameteri(GL_TEXTURE_2D, GL_SHARED_TEXTURE_BANK_KOS, 1);
 			for( surf = gl_lms.lightmap_surfaces[i]; surf != NULL; surf = surf->info->lightmapchain )
 			{
 				if( surf->polys ) DrawGLPolyChain( surf->polys, 0.0f, 0.0f );
@@ -1000,7 +1000,6 @@ static void R_BlendLightmaps( void )
 	if( r_dynamic->value )
 	{
 		LM_InitBlock();
-
 		GL_Bind( XASH_TEXTURE0, tr.dlightTexture );
 		newsurf = gl_lms.dynamic_surfaces;
 
@@ -1018,9 +1017,9 @@ static void R_BlendLightmaps( void )
 			if( LM_AllocBlock( smax, tmax, &surf->info->dlight_s, &surf->info->dlight_t ))
 			{
 				base = gl_lms.lightmap_buffer;
-				base += ( surf->info->dlight_t * BLOCK_SIZE + surf->info->dlight_s ) * 4;
+				base += ( surf->info->dlight_t * BLOCK_SIZE + surf->info->dlight_s ) * LIGHTMAP_BPP;
 
-				R_BuildLightMap( surf, base, BLOCK_SIZE * 4, true );
+				R_BuildLightMap( surf, base, BLOCK_SIZE * LIGHTMAP_BPP, true );
 			}
 			else
 			{
@@ -1050,9 +1049,9 @@ static void R_BlendLightmaps( void )
 					gEngfuncs_gl.Host_Error( "AllocBlock: full\n" );
 
 				base = gl_lms.lightmap_buffer;
-				base += ( surf->info->dlight_t * BLOCK_SIZE + surf->info->dlight_s ) * 4;
+				base += ( surf->info->dlight_t * BLOCK_SIZE + surf->info->dlight_s ) * LIGHTMAP_BPP;
 
-				R_BuildLightMap( surf, base, BLOCK_SIZE * 4, true );
+				R_BuildLightMap( surf, base, BLOCK_SIZE * LIGHTMAP_BPP, true );
 			}
 		}
 
@@ -1073,7 +1072,7 @@ static void R_BlendLightmaps( void )
 	glDisable( GL_BLEND );
 	glDepthMask( GL_TRUE );
 	glDepthFunc( GL_LEQUAL );
-	glTexEnvi( GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE );
+//	glTexEnvi( GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE );
 	glColor4f( 1.0f, 1.0f, 1.0f, 1.0f );
 
 	// restore fog here
@@ -1260,14 +1259,14 @@ dynamic:
 		if( r_dynamic->value )
 			is_dynamic = true;
 	}
-#if !XASH_DREAMCAST
+
 	if( is_dynamic )
 	{
 		const int style = fa->styles[maps];
 
 		if(( fa->styles[maps] >= 32 || fa->styles[maps] == 0 || fa->styles[maps] == 20 ) && ( fa->dlightframe != tr.framecount ))
 		{
-			byte		temp[132*132*4];
+			byte		temp[132*132*LIGHTMAP_BPP];
 			mextrasurf_t	*info = fa->info;
 			int		sample_size;
 			int		smax, tmax;
@@ -1276,7 +1275,7 @@ dynamic:
 			smax = ( info->lightextents[0] / sample_size ) + 1;
 			tmax = ( info->lightextents[1] / sample_size ) + 1;
 			
-			R_BuildLightMap( fa, temp, smax * 4, true );
+			R_BuildLightMap( fa, temp, smax * LIGHTMAP_BPP, true );
 		
 			R_SetCacheState( fa );
 			
@@ -1287,8 +1286,7 @@ dynamic:
 			GL_Bind( XASH_TEXTURE0, tr.lightmapTextures[fa->lightmaptexturenum] );
 #endif
 
-			glTexSubImage2D( GL_TEXTURE_2D, 0, fa->light_s, fa->light_t, smax, tmax, GL_RGBA, GL_UNSIGNED_BYTE, temp );
-
+			glTexSubImage2D(GL_TEXTURE_2D, 0, fa->light_s, fa->light_t, smax, tmax, GL_RGB, GL_UNSIGNED_SHORT_5_6_5, temp);
 #ifdef XASH_WES
 			GL_SelectTexture( XASH_TEXTURE0 );
 #endif
@@ -1296,7 +1294,7 @@ dynamic:
 		else
 			return true; // add to dynamic chain
 	}
-#endif
+
 	return false; // updated
 }
 
@@ -3737,10 +3735,10 @@ static void GL_CreateSurfaceLightmap( msurface_t *surf, model_t *loadmodel )
 	surf->lightmaptexturenum = gl_lms.current_lightmap_texture;
 
 	base = gl_lms.lightmap_buffer;
-	base += ( surf->light_t * BLOCK_SIZE + surf->light_s ) * 4;
+	base += ( surf->light_t * BLOCK_SIZE + surf->light_s ) * LIGHTMAP_BPP;
 
 	R_SetCacheState( surf );
-	R_BuildLightMap( surf, base, BLOCK_SIZE * 4, false );
+	R_BuildLightMap( surf, base, BLOCK_SIZE * LIGHTMAP_BPP, false );
 }
 
 /*
@@ -3816,12 +3814,14 @@ void GL_BuildLightmaps( void )
 
 	memset( tr.lightmapTextures, 0, sizeof( tr.lightmapTextures ));
 	memset( &RI, 0, sizeof( RI ));
-
+#if XASH_DREAMCAST
+	tr.block_size = BLOCK_SIZE_DEFAULT;
+#else
 	// update the lightmap blocksize
 	if( FBitSet( gp_host->features, ENGINE_LARGE_LIGHTMAPS ) || tr.world->version == QBSP2_VERSION )
 		tr.block_size = BLOCK_SIZE_MAX;
 	else tr.block_size = BLOCK_SIZE_DEFAULT;
-
+#endif
 	skychain = NULL;
 
 	tr.framecount = tr.visframecount = 1;	// no dlight cache

@@ -2557,9 +2557,7 @@ static void R_StudioDrawBones( void )
 	{
 		if( pbones[i].parent >= 0 )
 		{
-			#if !XASH_DREAMCAST
 			glPointSize( 3.0f );
-			#endif
 			glColor3f( 1, 0.7f, 0 );
 			glBegin( GL_LINES );
 
@@ -2584,9 +2582,7 @@ static void R_StudioDrawBones( void )
 		else
 		{
 			// draw parent bone node
-			#if !XASH_DREAMCAST
 			glPointSize( 5.0f );
-			#endif;
 			glColor3f( 0.8f, 0, 0 );
 			glBegin( GL_POINTS );
 			Matrix3x4_OriginFromMatrix( g_studio.bonestransform[i], point );
@@ -2594,9 +2590,7 @@ static void R_StudioDrawBones( void )
 			glEnd();
 		}
 	}
-	#if 0
 	glPointSize( 1.0f );
-	#endif
 	glEnable( GL_TEXTURE_2D );
 }
 
@@ -2632,16 +2626,12 @@ static void R_StudioDrawAttachments( void )
 		glColor3f( 1, 1, 1 );
 		glVertex3fv( v[3] );
 		glEnd();
-		#if 0
 		glPointSize( 5.0f );
-		#endif
 		glColor3f( 0, 1, 0 );
 		glBegin( GL_POINTS );
 		glVertex3fv( v[0] );
 		glEnd();
-		#if 0
 		glPointSize( 1.0f );
-		#endif
 	}
 
 	glEnable( GL_TEXTURE_2D );
@@ -3140,16 +3130,12 @@ static void R_StudioRenderFinal( void )
 		glVertex3fv( g_studio.lightspot );
 		glVertex3fv( origin );
 		glEnd();
-	#if 0
 		glPointSize( 5.0f );
-	#endif
 		glColor3f( 1, 0, 0 );
 		glBegin( GL_POINTS );
 		glVertex3fv( g_studio.lightspot );
 		glEnd();
-		#if 0
 		glPointSize( 1.0f );
-		#endif
 		glEnable( GL_DEPTH_TEST );
 		glEnable( GL_TEXTURE_2D );
 	}
@@ -3812,6 +3798,7 @@ static void R_StudioLoadTexture( model_t *mod, studiohdr_t *phdr, mstudiotexture
 	if( FBitSet( gp_host->features, ENGINE_IMPROVED_LINETRACE ) && FBitSet( ptexture->flags, STUDIO_NF_MASKED ))
 		flags |= TF_KEEP_SOURCE; // Paranoia2 texture alpha-tracing
 
+#if !XASH_DREAMCAST
 	// NOTE: colormaps must have the palette for properly work. Ignore them
 	if( Mod_AllowMaterials( ) && !FBitSet( ptexture->flags, STUDIO_NF_COLORMAP ))
 	{
@@ -3823,6 +3810,7 @@ static void R_StudioLoadTexture( model_t *mod, studiohdr_t *phdr, mstudiotexture
 				ptexture->index = gl_texturenum;
 		}
 	}
+#endif
 
 	if( !load_external )
 	{

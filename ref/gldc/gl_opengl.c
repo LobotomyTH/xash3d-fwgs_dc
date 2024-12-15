@@ -468,8 +468,7 @@ GL_SetPixelformat
 qboolean GL_SetPixelformat( void )
 {
 	int			colorBits = 16;
-	int			alphaBits = 8;
-	int			stencilBits = 8;
+	int			alphaBits = 0;
 	int			pixelFormat = 0;
 	int			depthBits = 16;
 
@@ -485,8 +484,6 @@ qboolean GL_SetPixelformat( void )
 	glConfig.color_bits = colorBits;
 	glConfig.alpha_bits = alphaBits;
 	glConfig.depth_bits = depthBits;
-	glConfig.stencil_bits = stencilBits;
-
 	glState.stencilEnabled = false;
 
 	return true;
@@ -748,10 +745,8 @@ static void GL_SetDefaults( void )
 	glEnable( GL_TEXTURE_2D );
 	glShadeModel( GL_SMOOTH );
 	glFrontFace( GL_CCW );
-#if !XASH_DREAMCAST
 	glPointSize( 1.2f );
 	glLineWidth( 1.2f );
-#endif
 	GL_Cull( GL_NONE );
 }
 

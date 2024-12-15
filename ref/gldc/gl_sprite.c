@@ -67,6 +67,7 @@ static const byte *R_SpriteLoadFrame( model_t *mod, const void *pin, mspritefram
 	}
 	else
 	{
+#if !XASH_DREAMCAST
 		// partial HD-textures support
 		if( Mod_AllowMaterials( ))
 		{
@@ -76,6 +77,7 @@ static const byte *R_SpriteLoadFrame( model_t *mod, const void *pin, mspritefram
 				R_TextureReplacementReport( sprite_name, gl_texturenum, texname );
 			}
 		}
+#endif
 
 		if( gl_texturenum == 0 )
 		{

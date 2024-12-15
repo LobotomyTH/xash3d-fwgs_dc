@@ -28,6 +28,7 @@ GNU General Public License for more details.
 // REFTODO: rewrite in triapi
 void R_DrawWorldHull( void )
 {
+#if !XASH_DREAMCAST
 	hull_model_t	*hull;
 	winding_t		*poly;
 	int		i;
@@ -55,10 +56,12 @@ void R_DrawWorldHull( void )
 		glEnd();
 	}
 	glEnable( GL_TEXTURE_2D );
+#endif
 }
 
 void R_DrawModelHull( void )
 {
+#if !XASH_DREAMCAST
 	hull_model_t	*hull;
 	winding_t		*poly;
 	int		i;
@@ -89,4 +92,5 @@ void R_DrawModelHull( void )
 	}
 	glEnable( GL_TEXTURE_2D );
 	glDisable( GL_POLYGON_OFFSET_FILL );
+#endif
 }

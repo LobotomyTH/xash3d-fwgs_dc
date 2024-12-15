@@ -102,10 +102,10 @@ static decal_t *R_DecalAlloc( decal_t *pdecal )
 {
 	int	limit = MAX_RENDER_DECALS;
 
-
+#if !XASH_DREAMCAST
 	if( r_decals->value < limit )
 		limit = r_decals->value;
-
+#endif
 	if( !limit ) return NULL;
 
 	if( !pdecal )

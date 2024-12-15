@@ -1995,8 +1995,8 @@ void R_InitDlightTexture( void )
 	r_image.width = BLOCK_SIZE;
 	r_image.height = BLOCK_SIZE;
 	r_image.flags = IMAGE_HAS_COLOR;
-	r_image.type = PF_RGBA_32;
-	r_image.size = r_image.width * r_image.height * 4;
+	r_image.type = LIGHTMAP_FORMAT;
+	r_image.size = r_image.width * r_image.height * LIGHTMAP_BPP;
 
 	tr.dlightTexture = GL_LoadTextureInternal( "*dlight", &r_image, TF_NOMIPMAP|TF_CLAMP|TF_ATLAS_PAGE );
 }
@@ -2329,7 +2329,7 @@ void R_ShutdownImages( void )
 
 void R_TextureReplacementReport( const char *modelname, int gl_texturenum, const char *foundpath )
 {
-
+#if !XASH_DREAMCAST
 	if( host_allow_materials->value != 2.0f )
 		return;
 
@@ -2339,6 +2339,7 @@ void R_TextureReplacementReport( const char *modelname, int gl_texturenum, const
 		gEngfuncs_gl.Con_Printf( "Looking for %s tex replacement..." S_YELLOW "MISS (%s)\n", modelname, foundpath );
 	else
 		gEngfuncs_gl.Con_Printf( "Looking for %s tex replacement..." S_RED "FAIL (%s)\n", modelname, foundpath );
+#endif
 }
 
 qboolean R_SearchForTextureReplacement( char *out, size_t size, const char *modelname, const char *fmt, ... )

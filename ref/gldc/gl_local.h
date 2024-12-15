@@ -87,11 +87,11 @@ extern poolhandle_t r_temppool;
 	#define MAX_LIGHTMAPS 64
 	#define BLOCK_SIZE_MAX 128
 	#define MAX_TEXTURES 1536
-	#define MAX_DECAL_SURFS 256
-	#define MAX_DETAILTEXTURES 64		
+	#define MAX_DECAL_SURFS 64
+	#define MAX_DETAILTEXTURES 16		
 #endif
 
-#define LIGHTMAP_BPP	4 //1 2 3 4
+#define LIGHTMAP_BPP	2 //1 2 3 4
 
 #if LIGHTMAP_BPP == 1
 #define LIGHTMAP_FORMAT	PF_RGB_332
@@ -318,7 +318,7 @@ extern gl_globals_t	tr;
 extern float		gldepthmin, gldepthmax;
 #define r_numEntities	(tr.draw_list->num_solid_entities + tr.draw_list->num_trans_entities)
 #define r_numStatics	(r_stats.c_client_ents)
-#define Mod_AllowMaterials() (host_allow_materials->value && !FBitSet( gp_host->features, ENGINE_DISABLE_HDTEXTURES ))
+//#define Mod_AllowMaterials() (host_allow_materials->value && !FBitSet( gp_host->features, ENGINE_DISABLE_HDTEXTURES ))
 
 //
 // gl_backend.c

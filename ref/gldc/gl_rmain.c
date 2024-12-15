@@ -1051,11 +1051,11 @@ void R_BeginFrame( qboolean clearScene )
 #if XASH_DREAMCAST
 	glEnable(GL_NEARZ_CLIPPING_KOS);
 
-	if(( gl_clear->value || ENGINE_GET_PARM( PARM_DEV_OVERVIEW )) &&
-		clearScene && ENGINE_GET_PARM( PARM_CONNSTATE ) != ca_cinematic )
-	{
-		glClear( GL_COLOR_BUFFER_BIT );
-	}
+	//if(( gl_clear->value || ENGINE_GET_PARM( PARM_DEV_OVERVIEW )) &&
+	//	clearScene && ENGINE_GET_PARM( PARM_CONNSTATE ) != ca_cinematic )
+	//{
+	//	glClear( GL_COLOR_BUFFER_BIT );
+	//}
 #endif
 
 	R_CheckCvars();
