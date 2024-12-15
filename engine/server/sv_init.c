@@ -832,7 +832,7 @@ static void SV_SetupClients( void )
 	ClearBits( sv_maxclients.flags, FCVAR_CHANGED );
 }
 
-qboolean CRC32_MapFile( dword *crcvalue, const char *filename, qboolean multiplayer )
+qboolean CRC32_MapFile( uint32_t *crcvalue, const char *filename, qboolean multiplayer )
 {
 	char	headbuf[1024], buffer[1024];
 	int	i, num_bytes, lumplen;

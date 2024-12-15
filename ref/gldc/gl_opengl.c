@@ -469,10 +469,7 @@ qboolean GL_SetPixelformat( void )
 {
 	int			colorBits = 16;
 	int			alphaBits = 0;
-	int			pixelFormat = 0;
 	int			depthBits = 16;
-
-	pixelFormat = 12;
 
 	if( gpGlobals_gl->desktopBitsPixel < 32 )
 	{
@@ -541,7 +538,9 @@ GL_CheckExtension
 */
 qboolean GL_CheckExtension( const char *name, const dllfunc_t *funcs, const char *cvarname, int r_ext, float minver )
 {
+#ifndef XASH_GL_STATIC
 	const dllfunc_t	*func;
+#endif
 	cvar_t		*parm = NULL;
 	const char	*extensions_string;
 	char		desc[MAX_VA_STRING];
@@ -904,11 +903,12 @@ void GL_InitExtensions( void )
 	glConfig.renderer_string = (const char *)glGetString( GL_RENDERER );
 	glConfig.version_string = (const char *)glGetString( GL_VERSION );
 	glConfig.extensions_string = (const char *)glGetString( GL_EXTENSIONS );
-
+#if !XASH_DREAMCAST
 	glGetIntegerv( GLDC_VERSION, &major );
 	glGetIntegerv( GLDC_VERSION, &minor );
 	if( !major && glConfig.version_string )
 	{
+#endif
 		const char *str = glConfig.version_string;
 		float ver;
 
@@ -919,13 +919,14 @@ void GL_InitExtensions( void )
 			glConfig.version_major = ver;
 			glConfig.version_minor = (int)(ver * 10) % 10;
 		}
+#if !XASH_DREAMCAST
 	}
 	else
 	{
 		glConfig.version_major = major;
 		glConfig.version_minor = minor;
 	}
-
+#endif
 	gEngfuncs_gl.Con_Reportf( "^3Video^7: %s\n", glConfig.renderer_string );
 	printf ("^3Video^7: %s\n", glConfig.renderer_string );
 

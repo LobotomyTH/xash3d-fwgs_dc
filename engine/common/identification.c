@@ -38,7 +38,7 @@ static bloomfilter_t id;
 
 static bloomfilter_t BloomFilter_Process( const char *buffer, int size )
 {
-	dword crc32;
+	uint32_t crc32;
 	bloomfilter_t value = 0;
 
 	if( size <= 0 || size > 512 )

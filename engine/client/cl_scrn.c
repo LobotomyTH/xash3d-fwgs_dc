@@ -627,7 +627,7 @@ void SCR_LoadCreditsFont( void )
 	cl_font_t *const font = &cls.creditsFont;
 	qboolean success = false;
 	float scale = hud_fontscale.value;
-	dword crc = 0;
+	uint32_t crc = 0;
 
 	// replace default gfx.wad textures by current charset's font
 	if( !CRC32_File( &crc, "gfx.wad" ) || crc == 0x49eb9f16 )

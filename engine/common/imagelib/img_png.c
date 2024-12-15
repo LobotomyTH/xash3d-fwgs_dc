@@ -46,8 +46,8 @@ qboolean Image_LoadPNG( const char *name, const byte *buffer, fs_offset_t filesi
 	short		p, a, b, c, pa, pb, pc;
 	byte		*buf_p, *pixbuf, *raw, *prior, *idat_buf = NULL, *uncompressed_buffer = NULL;
 	byte		*pallete = NULL, *trns = NULL;
-	uint	 	chunk_len, trns_len, plte_len, crc32, crc32_check, oldsize = 0, newsize = 0, rowsize;
-	uint		uncompressed_size, pixel_size, pixel_count, i, y, filter_type, chunk_sign, r_alpha, g_alpha, b_alpha;
+	uint32_t	chunk_len, trns_len, plte_len, crc32, crc32_check, oldsize = 0, newsize = 0, rowsize;
+	uint32_t	uncompressed_size, pixel_size, pixel_count, i, y, filter_type, chunk_sign, r_alpha, g_alpha, b_alpha;
 	qboolean 	has_iend_chunk = false;
 	z_stream 	stream = {0};
 	png_t		png_hdr;
@@ -516,8 +516,8 @@ Image_SavePNG
 qboolean Image_SavePNG( const char *name, rgbdata_t *pix )
 {
 	int		 ret;
-	uint		 y, outsize, pixel_size, filtered_size, idat_len;
-	uint		 ihdr_len, crc32, rowsize, big_idat_len;
+	uint32_t y, outsize, pixel_size, filtered_size, idat_len;
+	uint32_t ihdr_len, crc32, rowsize, big_idat_len;
 	byte		*in, *buffer, *out, *filtered_buffer, *rowend;
 	z_stream 	 stream = {0};
 	png_t		 png_hdr;

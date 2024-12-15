@@ -161,7 +161,7 @@ static void CL_CreatePlaylist(const char *filename)
     char rampath[256];
 
     Q_snprintf(rampath, sizeof(rampath), "/ram/%s", COM_FileWithoutPath(filename));
-    f = FS_SysOpen(rampath, "w");
+    f = FS_Open(rampath, "w", false);
     if(!f) return;
 
     Con_DPrintf("Creating playlist at %s\n", rampath);

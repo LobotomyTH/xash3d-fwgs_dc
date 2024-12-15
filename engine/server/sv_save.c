@@ -852,7 +852,7 @@ static int GetClientDataSize( const char *level )
 #if XASH_DREAMCAST
 	Q_snprintf( name, sizeof( name ), "/ram/%s.HL2", level );
 
-	if(( pFile = FS_SysOpen( name, "rb", true )) == NULL )
+	if(( pFile = FS_Open( name, "rb", true )) == NULL )
 		return 0;
 #else
 	Q_snprintf( name, sizeof( name ), DEFAULT_SAVE_DIRECTORY "%s.HL2", level );
@@ -904,7 +904,7 @@ static SAVERESTOREDATA *LoadSaveData( const char *level )
 	Q_snprintf( name, sizeof( name ), "/ram/%s.HL1", level );
 	Con_Printf( "Loading game from %s...\n", name );
 
-	if(( pFile = FS_SysOpen( name, "rb", true )) == NULL )
+	if(( pFile = FS_Open( name, "rb", true )) == NULL )
 	{
 		Con_Printf( S_ERROR "Couldn't open save data file %s.\n", name );
 		return NULL;
@@ -1027,7 +1027,7 @@ static void EntityPatchWrite( SAVERESTOREDATA *pSaveData, const char *level )
 #if XASH_DREAMCAST
 	Q_snprintf( name, sizeof( name ), "/ram/%s.HL3", level );
 
-	if(( pFile = FS_SysOpen( name, "wb", true )) == NULL )
+	if(( pFile = FS_Open( name, "wb", true )) == NULL )
 		return;
 #else
 	Q_snprintf( name, sizeof( name ), DEFAULT_SAVE_DIRECTORY "%s.HL3", level );
@@ -1070,7 +1070,7 @@ static void EntityPatchRead( SAVERESTOREDATA *pSaveData, const char *level )
 #if XASH_DREAMCAST
 	Q_snprintf( name, sizeof( name ), "/ram/%s.HL3", level );
 
-	if(( pFile = FS_SysOpen( name, "rb", true )) == NULL )
+	if(( pFile = FS_Open( name, "rb", true )) == NULL )
 		return;
 #else
 	Q_snprintf( name, sizeof( name ), DEFAULT_SAVE_DIRECTORY "%s.HL3", level );
@@ -1276,7 +1276,7 @@ static void SaveClientState( SAVERESTOREDATA *pSaveData, const char *level, int 
 #if XASH_DREAMCAST
 	Q_snprintf( name, sizeof( name ), "/ram/%s.HL2", level );
 
-	if(( pFile = FS_SysOpen( name, "wb", true )) == NULL )
+	if(( pFile = FS_Open( name, "wb", true )) == NULL )
 		return; // something bad is happens
 #else
 	Q_snprintf( name, sizeof( name ), DEFAULT_SAVE_DIRECTORY "%s.HL2", level );
@@ -1321,7 +1321,7 @@ static void LoadClientState( SAVERESTOREDATA *pSaveData, const char *level, qboo
 #if XASH_DREAMCAST
 	Q_snprintf( name, sizeof( name ), "/ram/%s.HL2", level );
 
-	if(( pFile = FS_SysOpen( name, "rb", true )) == NULL )
+	if(( pFile = FS_Open( name, "rb", true )) == NULL )
 		return; // something bad is happens
 #else
 	Q_snprintf( name, sizeof( name ), DEFAULT_SAVE_DIRECTORY "%s.HL2", level );
@@ -1606,7 +1606,7 @@ static SAVERESTOREDATA *SaveGameState( int changelevel )
 
 #if XASH_DREAMCAST
 	// output to disk
-	if(( pFile = FS_SysOpen( name, "wb", true )) == NULL )
+	if(( pFile = FS_Open( name, "wb", true )) == NULL )
 	{
 		// something bad is happens
 		SaveFinish( pSaveData );
@@ -1776,7 +1776,7 @@ static qboolean SaveGameSlot( const char *pSaveName, const char *pSaveComment )
 
 #if XASH_DREAMCAST
 	// output to disk
-	if(( pFile = FS_SysOpen( name, "wb", true )) == NULL )
+	if(( pFile = FS_Open( name, "wb", true )) == NULL )
 	{
 		// something bad is happens
 		SaveFinish( pSaveData );
@@ -2171,7 +2171,7 @@ qboolean SV_LoadGame( const char *pPath )
 
 	svs.initialized = true;
 #if XASH_DREAMCAST
-	pFile = FS_SysOpen( pPath, "rb", true );
+	pFile = FS_Open( pPath, "rb", true );
 #else
 	pFile = FS_Open( pPath, "rb", true );
 #endif

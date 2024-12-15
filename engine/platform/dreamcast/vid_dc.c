@@ -20,7 +20,7 @@ GNU General Public License for more details.
 #include "filesystem.h"
 #include "vid_common.h"
 #include <kos.h>
-
+#include <glkos.h>
 
 static int num_vidmodes = 0;
 static void GL_SetupAttributes( void );

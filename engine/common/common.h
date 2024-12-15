@@ -758,7 +758,7 @@ int COM_FileSize( const char *filename );
 void COM_FreeFile( void *buffer );
 int COM_CompareFileTime( const char *filename1, const char *filename2, int *iCompare );
 char *va( const char *format, ... ) _format( 1 );
-qboolean CRC32_MapFile( dword *crcvalue, const char *filename, qboolean multiplayer );
+qboolean CRC32_MapFile( uint32_t *crcvalue, const char *filename, qboolean multiplayer );
 
 static inline qboolean Host_IsLocalGame( void )
 {

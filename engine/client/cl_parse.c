@@ -306,12 +306,12 @@ static client entity
 */
 static void CL_ParseStaticEntity( sizebuf_t *msg )
 {
-	int		i, newnum;
+	int	i;
 	entity_state_t	from, to;
 	cl_entity_t	*ent;
 
 	memset( &from, 0, sizeof( from ));
-	newnum = MSG_ReadUBitLong( msg, MAX_ENTITY_BITS );
+	MSG_ReadUBitLong( msg, MAX_ENTITY_BITS );
 	MSG_ReadDeltaEntity( msg, &from, &to, 0, DELTA_STATIC, cl.mtime[0] );
 
 	i = clgame.numStatics;
@@ -388,7 +388,7 @@ void CL_ParseStaticDecal( sizebuf_t *msg )
 {
 	vec3_t		origin;
 	int		decalIndex, entityIndex, modelIndex;
-	cl_entity_t	*ent = NULL;
+//	cl_entity_t	*ent = NULL;
 	float		scale;
 	int		flags;
 
@@ -916,7 +916,7 @@ void CL_ParseServerData( sizebuf_t *msg, qboolean legacy )
 	}
 
 	Q_snprintf( mapfile, sizeof( mapfile ), "maps/%s.bsp", clgame.mapname );
-	if( CRC32_MapFile( &mapCRC, mapfile, cl.maxclients > 1 ))
+	if( CRC32_MapFile(&mapCRC, mapfile, cl.maxclients > 1 ))
 	{
 		// validate map checksum
 		if( mapCRC != cl.checksum )

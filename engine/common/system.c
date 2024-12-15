@@ -19,6 +19,10 @@ GNU General Public License for more details.
 #include <stdlib.h>
 #include <errno.h>
 
+#if XASH_DREAMCAST
+#include <arch/arch.h>
+#endif
+
 #if _MSC_VER
 #include <intrin.h>
 #endif
