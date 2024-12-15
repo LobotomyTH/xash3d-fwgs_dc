@@ -81,7 +81,7 @@ run: $(TARGET)
 
 1ST_READ.BIN: $(TARGET)
 	kos-objcopy -R .stack -O binary $(TARGET) $(TARGET).bin 
-	scramble $(TARGET).bin 1ST_READ.BIN
+	$(KOS_BASE)/utils/scramble/scramble $(TARGET).bin 1ST_READ.BIN
 	cp 1ST_READ.BIN build
 
 IP.BIN: ip.txt

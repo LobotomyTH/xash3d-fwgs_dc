@@ -2746,7 +2746,7 @@ byte *FS_LoadFile( const char *path, fs_offset_t *filesizeptr, qboolean gamediro
 	return FS_LoadFile_( path, filesizeptr, gamedironly, g_engfuncs._Mem_Alloc != _Mem_Alloc );
 }
 
-qboolean CRC32_File( dword *crcvalue, const char *filename )
+qboolean CRC32_File( uint32_t *crcvalue, const char *filename )
 {
 	char	buffer[1024];
 	int	num_bytes;
@@ -2756,7 +2756,7 @@ qboolean CRC32_File( dword *crcvalue, const char *filename )
 	
 	if( !f ) return false;
 
-	CRC32_Init( (uint32_t*)crcvalue );
+	CRC32_Init( crcvalue );
 
 	while( 1 )
 	{
@@ -2764,7 +2764,7 @@ qboolean CRC32_File( dword *crcvalue, const char *filename )
 
 		if( num_bytes > 0 )
 		{
-			CRC32_ProcessBuffer( (uint32_t*) crcvalue, buffer, num_bytes );
+			CRC32_ProcessBuffer( crcvalue, buffer, num_bytes );
 		}
 
 		if( FS_Eof( f )) break;
