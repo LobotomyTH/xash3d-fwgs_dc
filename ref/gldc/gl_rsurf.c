@@ -971,7 +971,7 @@ static void R_BlendLightmaps( void )
 		// Scale down intensity for overbright
 		glBlendFunc( GL_DST_COLOR, GL_SRC_COLOR );
 		if(!( R_HasEnabledVBO() && !r_vbo_overbrightmode.value ))
-			glColor4f( 0.5f, 0.5f, 0.5f, 1.0f );  // Reduce intensity by half
+			glColor4f( 128.0f / 192.0f, 128.0f / 192.0f, 128.0f / 192.0f, 1.0f );
 	}
 	
 	else

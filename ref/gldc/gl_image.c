@@ -1987,6 +1987,7 @@ R_InitDlightTexture
 void R_InitDlightTexture( void )
 {
 	rgbdata_t	r_image;
+	byte *data;
 
 	if( tr.dlightTexture != 0 )
 		return; // already initialized
@@ -1998,7 +1999,18 @@ void R_InitDlightTexture( void )
 	r_image.type = LIGHTMAP_FORMAT;
 	r_image.size = r_image.width * r_image.height * LIGHTMAP_BPP;
 
-	tr.dlightTexture = GL_LoadTextureInternal( "*dlight", &r_image, TF_NOMIPMAP|TF_CLAMP|TF_ATLAS_PAGE );
+
+#if LIGHTMAP_FORMAT == PF_RGB_5650
+    data = Mem_Malloc(r_temppool, r_image.size);
+   // memset(data, 0, r_image.size);
+    r_image.buffer = data;
+
+    tr.dlightTexture = GL_LoadTextureInternal("*dlight", &r_image, TF_NOMIPMAP|TF_CLAMP|TF_ATLAS_PAGE);
+    
+    Mem_Free(data);
+#else
+	tr.dlightTexture = GL_LoadTextureInternal("*dlight", &r_image, TF_NOMIPMAP|TF_CLAMP|TF_ATLAS_PAGE);
+#endif
 }
 
 /*
