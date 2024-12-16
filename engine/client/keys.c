@@ -842,7 +842,7 @@ void GAME_EXPORT Key_SetKeyDest( int key_dest )
 		cls.key_dest = key_menu;
 		break;
 	case key_console:
-#if !XASH_NSWITCH && !XASH_PSVITA // if we don't disable this, pops up the keyboard during load
+#if !XASH_NSWITCH && !XASH_PSVITA && !XASH_DREAMCAST // if we don't disable this, pops up the keyboard during load
 		Key_EnableTextInput( true, false );
 #endif
 		cls.key_dest = key_console;
@@ -1092,6 +1092,7 @@ static qboolean OSK_KeyEvent( int key, int down )
 			}
 		}
 		break;
+	case K_DPAD_UP:
 	case K_UPARROW:
 		if( down && --osk.curbutton.y < 0 )
 		{
@@ -1100,6 +1101,7 @@ static qboolean OSK_KeyEvent( int key, int down )
 			return true;
 		}
 		break;
+	case K_DPAD_DOWN:
 	case K_DOWNARROW:
 		if( down && ++osk.curbutton.y >= MAX_OSK_LINES )
 		{
@@ -1108,10 +1110,12 @@ static qboolean OSK_KeyEvent( int key, int down )
 			return true;
 		}
 		break;
+	case K_DPAD_LEFT:
 	case K_LEFTARROW:
 		if( down && --osk.curbutton.x < 0 )
 			osk.curbutton.x = MAX_OSK_ROWS - 1;
 		break;
+	case K_DPAD_RIGHT:
 	case K_RIGHTARROW:
 		if( down && ++osk.curbutton.x >= MAX_OSK_ROWS )
 			osk.curbutton.x = 0;
