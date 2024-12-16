@@ -2104,9 +2104,9 @@ static void CL_ConnectionlessPacket( netadr_t from, sizebuf_t *msg )
 	else if( !Q_strcmp( c, "testpacket" ))
 	{
 		byte	recv_buf[NET_MAX_FRAGMENT];
-		dword	crcValue;
+		uint32_t	crcValue;
 		int	realsize;
-		dword	crcValue2 = 0;
+		uint32_t	crcValue2 = 0;
 
 		// this message only used during connection
 		// it doesn't make sense after client_connect
@@ -2140,7 +2140,7 @@ static void CL_ConnectionlessPacket( netadr_t from, sizebuf_t *msg )
 		MSG_ReadBytes( msg, recv_buf, realsize );
 
 		// procssing the CRC
-		CRC32_ProcessBuffer( &crcValue2, recv_buf, realsize );
+		CRC32_ProcessBuffer((uint32_t *) &crcValue2, recv_buf, realsize );
 
 		if( crcValue == crcValue2 )
 		{

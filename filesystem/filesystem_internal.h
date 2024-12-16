@@ -38,7 +38,7 @@ typedef struct pack_s pack_t;
 typedef struct wfile_s wfile_t;
 typedef struct android_assets_s android_assets_t;
 
-#define FILE_BUFF_SIZE (2048)
+#define FILE_BUFF_SIZE (0)
 
 struct file_s
 {
@@ -186,7 +186,7 @@ byte *FS_LoadDirectFile( const char *path, fs_offset_t *filesizeptr );
 qboolean FS_WriteFile( const char *filename, const void *data, fs_offset_t len );
 
 // file hashing
-qboolean CRC32_File( dword *crcvalue, const char *filename );
+qboolean CRC32_File( uint32_t *crcvalue, const char *filename );
 qboolean MD5_HashFile( byte digest[16], const char *pszFileName, uint seed[4] );
 
 // stringlist ops

@@ -87,7 +87,6 @@ VoiceCapture_Shutdown
 void VoiceCapture_Shutdown( void )
 {
     // stub
-	return false;
 }
 
 #endif // XASH_SOUND == SOUND_KOS

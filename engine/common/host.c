@@ -1056,7 +1056,7 @@ static void Host_InitCommon( int argc, char **argv, const char *progname, qboole
 
 	// share developer level across all dlls
 #if XASH_DREAMCAST
-	Cvar_DirectSet( &host_developer, 5 );
+	Cvar_DirectSet( &host_developer, "5" );
 #else
 	Q_snprintf( dev_level, sizeof( dev_level ), "%i", developer );
 	Cvar_DirectSet( &host_developer, dev_level );

@@ -90,22 +90,41 @@ static zip_t *fs_last_zip;
 static void FS_EnsureOpenFile( dc_file_t *file )
 {
 	if( fs_last_readfile == file )
+	{
 		return;
+	}
 
 	if( file && !file->backup_path )
+	{
 		return;
+	}
 
 	if( fs_last_readfile && (fs_last_readfile->handle != -1) )
 	{
+#if XASH_DREAMCAST
 		fs_last_readfile->backup_position = fs_seek(  fs_last_readfile->handle, 0, SEEK_CUR );
+		fs_close( fs_last_readfile->handle );
+#else
+		fs_last_readfile->backup_position = lseek(  fs_last_readfile->handle, 0, SEEK_CUR );
 		close( fs_last_readfile->handle );
+#endif
 		fs_last_readfile->handle = -1;
 	}
+	
 	fs_last_readfile = file;
+	
 	if( file && (file->handle == -1) )
 	{
+#if XASH_DREAMCAST
+		//printf("%s %08X\n", file->backup_path, file->backup_options);
+		/** WTF i don't know why fs_open don't work for this **/
+		/** TODO research and fix **/
 		file->handle = open( file->backup_path, file->backup_options );
 		fs_seek( file->handle, file->backup_position, SEEK_SET );
+#else
+		file->handle = open( file->backup_path, file->backup_options );
+		lseek( file->handle, file->backup_position, SEEK_SET );
+#endif
 	}
 }
 
@@ -114,9 +133,14 @@ static void FS_BackupFileName( dc_file_t *file, const char *path, uint options )
 	if( path == NULL )
 	{
 		if( file->backup_path )
+		{
 			Mem_Free( (void*)file->backup_path );
+		}
+		
 		if( file == fs_last_readfile )
+		{
 			FS_EnsureOpenFile( NULL );
+		}
 	}
 	else if( options == O_RDONLY || options == (O_RDONLY|O_BINARY) )
 	{
@@ -1675,29 +1699,29 @@ dc_file_t *FS_SysOpen( const char *filepath, const char *mode )
 	int	mod, opt;
 	uint	ind;
 #if XASH_DREAMCAST
-	char *str_tmp;
+	//char *str_tmp;
 #endif
 	// Parse the mode string
 	switch( mode[0] )
 	{
-	case 'r':	// read
-		mod = O_RDONLY;
-		opt = 0;
-		break;
-	case 'w': // write
-		mod = O_WRONLY;
-		opt = O_CREAT | O_TRUNC;
-		break;
-	case 'a': // append
-		mod = O_WRONLY;
-		opt = O_CREAT | O_APPEND;
-		break;
-	case 'e': // edit
-		mod = O_WRONLY;
-		opt = O_CREAT;
-		break;
-	default:
-		return NULL;
+		case 'r':	// read
+			mod = O_RDONLY;
+			opt = 0;
+			break;
+		case 'w': // write
+			mod = O_WRONLY;
+			opt = O_CREAT | O_TRUNC;
+			break;
+		case 'a': // append
+			mod = O_WRONLY;
+			opt = O_CREAT | O_APPEND;
+			break;
+		case 'e': // edit
+			mod = O_WRONLY;
+			opt = O_CREAT;
+			break;
+		default:
+			return NULL;
 	}
 
 	for( ind = 1; mode[ind] != '\0'; ind++ )
@@ -1722,37 +1746,62 @@ dc_file_t *FS_SysOpen( const char *filepath, const char *mode )
 #if XASH_WIN32
 	file->handle = _wopen( FS_PathToWideChar( filepath ), mod | opt, 0666 );
 #else
-	str_tmp = Q_strstr(filepath, "gameinfo.txt");
+#if XASH_DREAMCAST
+	/*str_tmp = Q_strstr(filepath, "gameinfo.txt");
 	if(str_tmp) 
-		file->handle = open("/ram/gameinfo.txt", mod|opt, 0666);
-	else
-		file->handle = open( filepath, mod|opt, 0666 );
+	{
+		file->handle = fs_open("/ram/gameinfo.txt", mod|opt);
+	}
+	else*/
+	{
+		file->handle = fs_open( filepath, mod|opt );
+	}
+#else
+	file->handle = open( filepath, mod|opt, 0666 );
+#endif
 #endif
 
 #if !XASH_WIN32
 	if( file->handle < 0 )
+	{
 		FS_BackupFileName( file, filepath, mod|opt );
+	}
 #endif
 
 	if( file->handle < 0 )
 	{
 		if( errno != ENOENT )
+		{
 			Con_Printf( S_ERROR "%s: can't open file %s: %s\n", __func__, filepath, strerror( errno ));
+		}
 
 		Mem_Free( file );
 		return NULL;
 	}
 
 	file->searchpath = NULL;
+#if XASH_DREAMCAST
 	file->real_length = fs_seek( file->handle, 0, SEEK_END );
-
+#else
+	file->real_length = seek( file->handle, 0, SEEK_END );
+#endif
 	// uncomment do disable write
 	//if( opt & O_CREAT )
 	//	return NULL;
 
 	// For files opened in append mode, we start at the end of the file
-	if( opt & O_APPEND )  file->position = file->real_length;
-	else fs_seek( file->handle, 0, SEEK_SET );
+	if( opt & O_APPEND )  
+	{
+		file->position = file->real_length;
+	}
+	else 
+	{
+#if XASH_DREAMCAST
+		fs_seek( file->handle, 0, SEEK_SET );
+#else
+		seek( file->handle, 0, SEEK_SET );
+#endif
+	}
 
 	return file;
 }
@@ -1774,11 +1823,18 @@ dc_file_t *FS_OpenHandle( searchpath_t *searchpath, int handle, fs_offset_t offs
 	dc_file_t *file = (dc_file_t *)Mem_Calloc( fs_mempool, sizeof( dc_file_t ));
 #ifndef XASH_REDUCE_FD
 #ifdef HAVE_DUP
+#if XASH_DREAMCAST
+	file->handle = fs_dup( handle );
+#else
 	file->handle = dup( handle );
+#endif
+#else
+#if XASH_DREAMCAST
+	file->handle = fs_open( searchpath->filename, O_RDONLY );
 #else
 	file->handle = open( searchpath->filename, O_RDONLY|O_BINARY );
 #endif
-
+#endif
 	if( file->handle < 0 )
 	{
 		Con_Printf( S_ERROR "%s: couldn't create fd for %s:0x%lx: %s\n", __func__, searchpath->filename, (long)offset, strerror( errno ));
@@ -1786,7 +1842,11 @@ dc_file_t *FS_OpenHandle( searchpath_t *searchpath, int handle, fs_offset_t offs
 		return NULL;
 	}
 
+#if XASH_DREAMCAST
 	if( fs_seek( file->handle, offset, SEEK_SET ) == -1 )
+#else
+	if( seek( file->handle, offset, SEEK_SET ) == -1 )
+#endif
 	{
 		Mem_Free( file );
 		return NULL;
@@ -1859,7 +1919,9 @@ qboolean FS_SysFolderExists( const char *path )
 	struct stat buf;												
 	if( stat( path, &buf ) < 0 )
 #endif
+	{
 		return false;
+	}
 
 	return S_ISDIR( buf.st_mode );
 }
@@ -2101,8 +2163,14 @@ int FS_Close( dc_file_t *file )
 
 	if( file->handle >= 0 )
 	{
+#if XASH_DREAMCAST
+		if( fs_close( file->handle ))
+#else
 		if( close( file->handle ))
+#endif
+		{
 			return EOF;
+		}
 	}
 
 	Mem_Free( file );
@@ -2152,20 +2220,35 @@ fs_offset_t FS_Write( dc_file_t *file, const void *data, size_t datasize )
 
 	// if necessary, seek to the exact file position we're supposed to be
 	if( file->buff_ind != file->buff_len )
+	{
+#if XASH_DREAMCAST
 		fs_seek( file->handle, file->buff_ind - file->buff_len, SEEK_CUR );
-
+#else
+		seek( file->handle, file->buff_ind - file->buff_len, SEEK_CUR );
+#endif
+	}
 	// purge cached data
 	FS_Purge( file );
 
 	// write the buffer and update the position
+#if XASH_DREAMCAST
 	result = fs_write( file->handle, data, datasize );
 	file->position = fs_seek( file->handle, 0, SEEK_CUR );
+#else
+	result = write( file->handle, data, datasize );
+	file->position = seek( file->handle, 0, SEEK_CUR );
+#endif
 
 	if( file->real_length < file->position )
+	{
 		file->real_length = file->position;
+	}
 
 	if( result < 0 )
+	{
 		return 0;
+	}
+	
 	return result;
 }
 
@@ -2178,6 +2261,40 @@ Read up to "buffersize" bytes from a file
 */
 fs_offset_t FS_Read( dc_file_t *file, void *buffer, size_t buffersize )
 {
+#if 0
+	fs_offset_t	nb;
+	fs_offset_t	count;
+	
+	// nothing to copy
+	if( buffersize == 0 ) return 1;
+	
+	// Get rid of the ungetc character
+	if( file->ungetc != EOF )
+	{
+		file->ungetc = EOF;
+	}
+	
+	FS_EnsureOpenFile( file );
+	// we must take care to not read after the end of the file
+	count = file->real_length - file->position;
+	
+	if( count > (fs_offset_t)buffersize )
+	{
+		count = (fs_offset_t)buffersize;
+	}
+	
+	fs_seek( file->handle, file->offset + file->position, SEEK_SET );
+	nb = fs_read( file->handle, buffer, count );
+	
+	if( nb > 0 )
+	{
+		file->position += nb;
+		// purge cached data
+		FS_Purge( file );
+	}
+	
+	return nb;
+#else	
 	fs_offset_t	done;
 	fs_offset_t	nb;
 	fs_offset_t	count;
@@ -2193,7 +2310,10 @@ fs_offset_t FS_Read( dc_file_t *file, void *buffer, size_t buffersize )
 		file->ungetc = EOF;
 		done = 1;
 	}
-	else done = 0;
+	else 
+	{
+		done = 0;
+	}
 
 	// first, we copy as many bytes as we can from "buff"
 	if( file->buff_ind < file->buff_len )
@@ -2207,7 +2327,9 @@ fs_offset_t FS_Read( dc_file_t *file, void *buffer, size_t buffersize )
 
 		buffersize -= count;
 		if( buffersize == 0 )
+		{
 			return done;
+		}
 	}
 
 	// NOTE: at this point, the read buffer is always empty
@@ -2220,10 +2342,16 @@ fs_offset_t FS_Read( dc_file_t *file, void *buffer, size_t buffersize )
 	if( buffersize > sizeof( file->buff ) / 2 )
 	{
 		if( count > (fs_offset_t)buffersize )
+		{
 			count = (fs_offset_t)buffersize;
+		}
+#if XASH_DREAMCAST
 		fs_seek( file->handle, file->offset + file->position, SEEK_SET );
 		nb = fs_read( file->handle, &((byte *)buffer)[done], count );
-
+#else
+		seek( file->handle, file->offset + file->position, SEEK_SET );
+		nb = read( file->handle, &((byte *)buffer)[done], count );
+#endif
 		if( nb > 0 )
 		{
 			done += nb;
@@ -2235,10 +2363,17 @@ fs_offset_t FS_Read( dc_file_t *file, void *buffer, size_t buffersize )
 	else
 	{
 		if( count > (fs_offset_t)sizeof( file->buff ))
+		{
 			count = (fs_offset_t)sizeof( file->buff );
+		}
+		
+#if XASH_DREAMCAST
 		fs_seek( file->handle, file->offset + file->position, SEEK_SET );
 		nb = fs_read( file->handle, file->buff, count );
-
+#else
+		seek( file->handle, file->offset + file->position, SEEK_SET );
+		nb = read( file->handle, file->buff, count );
+#endif
 		if( nb > 0 )
 		{
 			file->buff_len = nb;
@@ -2253,6 +2388,7 @@ fs_offset_t FS_Read( dc_file_t *file, void *buffer, size_t buffersize )
 	}
 
 	return done;
+#endif
 }
 
 /*
@@ -2307,13 +2443,18 @@ int FS_VPrintf( dc_file_t *file, const char *format, va_list ap )
 		len = Q_vsnprintf( tempbuff, buff_size, format, ap );
 
 		if( len >= 0 && len < buff_size )
+		{
 			break;
+		}
 
 		Mem_Free( tempbuff );
 		buff_size *= 2;
 	}
-
+#if XASH_DREAMCAST
 	len = fs_write( file->handle, tempbuff, len );
+#else
+	len = write( file->handle, tempbuff, len );
+#endif
 	Mem_Free( tempbuff );
 
 	return len;
@@ -2331,7 +2472,9 @@ int FS_Getc( dc_file_t *file )
 	char	c;
 
 	if( FS_Read( file, &c, 1 ) != 1 )
+	{
 		return EOF;
+	}
 
 	return c;
 }
@@ -2347,9 +2490,14 @@ int FS_UnGetc( dc_file_t *file, char c )
 {
 	// If there's already a character waiting to be read
 	if( file->ungetc != EOF )
+	{
 		return EOF;
+	}
 
 	file->ungetc = c;
+#if 0
+	file->position--;
+#endif
 	return c;
 }
 
@@ -2372,7 +2520,9 @@ int FS_Gets( dc_file_t *file, char *string, size_t bufsize )
 			break;
 
 		if( end < bufsize - 1 )
+		{
 			string[end++] = c;
+		}
 	}
 	string[end] = 0;
 
@@ -2402,34 +2552,48 @@ int FS_Seek( dc_file_t *file, fs_offset_t offset, int whence )
 	// compute the file offset
 	switch( whence )
 	{
-	case SEEK_CUR:
-		offset += file->position - file->buff_len + file->buff_ind;
-		break;
-	case SEEK_SET:
-		break;
-	case SEEK_END:
-		offset += file->real_length;
-		break;
-	default:
-		return -1;
+		case SEEK_CUR:
+#if 0
+			offset += file->position;
+#else
+			offset += file->position - file->buff_len + file->buff_ind;
+#endif
+			break;
+		case SEEK_SET:
+			break;
+		case SEEK_END:
+			offset += file->real_length;
+			break;
+		default:
+			return -1;
 	}
 
 	if( offset < 0 || offset > file->real_length )
+	{
 		return -1;
+	}
 
+#if 1
 	// if we have the data in our read buffer, we don't need to actually seek
 	if( file->position - file->buff_len <= offset && offset <= file->position )
 	{
 		file->buff_ind = offset + file->buff_len - file->position;
 		return 0;
 	}
-
+#endif
 	FS_EnsureOpenFile( file );
 	// Purge cached data
 	FS_Purge( file );
-
+	
+#if XASH_DREAMCAST
 	if( fs_seek( file->handle, file->offset + offset, SEEK_SET ) == -1 )
+#else
+	if( seek( file->handle, file->offset + offset, SEEK_SET ) == -1 )
+#endif
+	{
 		return -1;
+	}
+	
 	file->position = offset;
 
 	return 0;
@@ -2445,7 +2609,11 @@ Give the current position in a file
 fs_offset_t FS_Tell( dc_file_t *file )
 {
 	if( !file ) return 0;
+#if 0
+	return file->position;
+#else
 	return file->position - file->buff_len + file->buff_ind;
+#endif
 }
 
 /*
@@ -2458,7 +2626,11 @@ indicates at reached end of file
 qboolean FS_Eof( dc_file_t *file )
 {
 	if( !file ) return true;
+#if 0
+	return ( file->position == file->real_length ) ? true : false;
+#else
 	return (( file->position - file->buff_len + file->buff_ind ) == file->real_length ) ? true : false;
+#endif
 }
 
 /*
@@ -2495,12 +2667,16 @@ static byte *FS_LoadFileFromArchive( searchpath_t *sp, const char *path, int pac
 
 	// custom load file function for compressed files
 	if( sp->pfnLoadFile )
+	{
 		return sp->pfnLoadFile( sp, path, pack_ind, filesizeptr, pfnAlloc, pfnFree );
+	}
 
 	file = sp->pfnOpenFile( sp, path, "rb", pack_ind );
 
 	if( !file ) // TODO: indicate errors
+	{
 		return NULL;
+	}
 
 	filesize = file->real_length;
 	buf = (byte *)pfnAlloc( filesize + 1 );
@@ -2535,18 +2711,26 @@ static byte *FS_LoadFile_( const char *path, fs_offset_t *filesizeptr, const qbo
 
 	// some mappers used leading '/' or '\' in path to models or sounds
 	if( path[0] == '/' || path[0] == '\\' )
+	{
 		path++;
+	}
 
 	if( path[0] == '/' || path[0] == '\\' )
+	{
 		path++;
+	}
 #ifndef XASH_DREAMCAST
 	if( !fs_searchpaths || FS_CheckNastyPath( path ))
+	{
 		return NULL;
+	}
 #endif
 	search = FS_FindFile( path, &pack_ind, netpath, sizeof( netpath ), gamedironly );
 
 	if( !search )
+	{
 		return NULL;
+	}
 
 	return FS_LoadFileFromArchive( search, netpath, pack_ind, filesizeptr, !custom_alloc );
 }
@@ -2562,13 +2746,14 @@ byte *FS_LoadFile( const char *path, fs_offset_t *filesizeptr, qboolean gamediro
 	return FS_LoadFile_( path, filesizeptr, gamedironly, g_engfuncs._Mem_Alloc != _Mem_Alloc );
 }
 
-qboolean CRC32_File( dword *crcvalue, const char *filename )
+qboolean CRC32_File( uint32_t *crcvalue, const char *filename )
 {
 	char	buffer[1024];
 	int	num_bytes;
 	dc_file_t	*f;
 
 	f = FS_Open( filename, "rb", false );
+	
 	if( !f ) return false;
 
 	CRC32_Init( crcvalue );
@@ -2578,7 +2763,9 @@ qboolean CRC32_File( dword *crcvalue, const char *filename )
 		num_bytes = FS_Read( f, buffer, sizeof( buffer ));
 
 		if( num_bytes > 0 )
+		{
 			CRC32_ProcessBuffer( crcvalue, buffer, num_bytes );
+		}
 
 		if( FS_Eof( f )) break;
 	}
@@ -2595,7 +2782,9 @@ qboolean MD5_HashFile( byte digest[16], const char *pszFileName, uint seed[4] )
 	int		bytes;
 
 	if(( file = FS_Open( pszFileName, "rb", false )) == NULL )
+	{
 		return false;
+	}
 
 	memset( &MD5_Hash, 0, sizeof( MD5Context_t ));
 
@@ -2611,10 +2800,14 @@ qboolean MD5_HashFile( byte digest[16], const char *pszFileName, uint seed[4] )
 		bytes = FS_Read( file, buffer, sizeof( buffer ));
 
 		if( bytes > 0 )
+		{
 			MD5Update( &MD5_Hash, buffer, bytes );
+		}
 
 		if( FS_Eof( file ))
+		{
 			break;
+		}
 	}
 
 	FS_Close( file );
@@ -2640,7 +2833,9 @@ byte *FS_LoadDirectFile( const char *path, fs_offset_t *filesizeptr )
 	file = FS_SysOpen( path, "rb" );
 
 	if( !file )
+	{
 		return NULL;
+	}
 
 	// Try to load
 	filesize = file->real_length;
@@ -2650,7 +2845,9 @@ byte *FS_LoadDirectFile( const char *path, fs_offset_t *filesizeptr )
 	FS_Close( file );
 
 	if( filesizeptr )
+	{
 		*filesizeptr = filesize;
+	}
 
 	return buf;
 }
@@ -2713,7 +2910,9 @@ const char *FS_GetDiskPath( const char *name, qboolean gamedironly )
 	static char diskpath[MAX_SYSPATH];
 
 	if( FS_GetFullDiskPath( diskpath, sizeof( diskpath ), name, gamedironly ))
+	{
 		return diskpath;
+	}
 
 	return NULL;
 }
@@ -2812,14 +3011,20 @@ qboolean FS_Rename( const char *oldname, const char *newname )
 	int ret;
 
 	if( !fs_writepath )
+	{
 		return false;
+	}
 
 	if( !COM_CheckString( oldname ) || !COM_CheckString( newname ))
+	{
 		return false;
+	}
 
 	// no work done
 	if( !Q_stricmp( oldname, newname ))
+	{
 		return true;
+	}
 
 	// fix up slashes
 	Q_strncpy( oldname2, oldname, sizeof( oldname2 ));
@@ -2830,11 +3035,15 @@ qboolean FS_Rename( const char *oldname, const char *newname )
 
 	// file does not exist
 	if( !FS_FixFileCase( fs_writepath->dir, oldname2, oldpath, sizeof( oldpath ), false ))
+	{
 		return false;
+	}
 
 	// exit if overflowed
 	if( !FS_FixFileCase( fs_writepath->dir, newname2, newpath, sizeof( newpath ), true ))
+	{
 		return false;
+	}
 
 	ret = rename( oldpath, newpath );
 	if( ret < 0 )
@@ -2860,13 +3069,17 @@ qboolean GAME_EXPORT FS_Delete( const char *path )
 	int ret;
 
 	if( !fs_writepath || !COM_CheckString( path ))
+	{
 		return false;
+	}
 
 	Q_strncpy( path2, path, sizeof( path2 ));
 	COM_FixSlashes( path2 );
 
 	if( !FS_FixFileCase( fs_writepath->dir, path2, real_path, sizeof( real_path ), true ))
+	{
 		return true;
+	}
 
 	ret = remove( real_path );
 	if( ret < 0 && errno != ENOENT )
@@ -2893,8 +3106,13 @@ qboolean FS_FileCopy( dc_file_t *pOutput, dc_file_t *pInput, int fileSize )
 	while( fileSize > 0 )
 	{
 		if( fileSize > FILE_COPY_SIZE )
+		{
 			size = FILE_COPY_SIZE;
-		else size = fileSize;
+		}
+		else 
+		{
+			size = fileSize;
+		}
 
 		if(( readSize = FS_Read( pInput, buf, size )) < size )
 		{
@@ -2939,7 +3157,9 @@ search_t *FS_Search( const char *pattern, int caseinsensitive, int gamedironly )
 	for( searchpath = fs_searchpaths; searchpath; searchpath = searchpath->next )
 	{
 		if( gamedironly && !FBitSet( searchpath->flags, FS_GAMEDIRONLY_SEARCH_FLAGS ))
+		{
 			continue;
+		}
 
 		searchpath->pfnSearch( searchpath, &resultlist, pattern, caseinsensitive );
 	}
@@ -2951,7 +3171,9 @@ search_t *FS_Search( const char *pattern, int caseinsensitive, int gamedironly )
 		numchars = 0;
 
 		for( i = 0; i < resultlist.numstrings; i++ )
+		{
 			numchars += (int)Q_strlen( resultlist.strings[i]) + 1;
+		}
 		search = Mem_Calloc( fs_mempool, sizeof(search_t) + numchars + numfiles * sizeof( char* ));
 		search->filenames = (char **)((char *)search + sizeof( search_t ));
 		search->filenamesbuffer = (char *)((char *)search + sizeof( search_t ) + numfiles * sizeof( char* ));
@@ -2979,7 +3201,9 @@ search_t *FS_Search( const char *pattern, int caseinsensitive, int gamedironly )
 static const char *FS_ArchivePath( dc_file_t *f )
 {
 	if( f->searchpath )
+	{
 		return f->searchpath->filename;
+	}
 
 	return "plain";
 }
@@ -2994,10 +3218,14 @@ static qboolean FS_IsArchiveExtensionSupported( const char *ext, uint flags )
 	for( i = 0; i < ( sizeof( g_archives ) / sizeof( g_archives[0] )) - 1; i++ )
 	{
 		if( FBitSet( flags, IAES_ONLY_REAL_ARCHIVES ) && !g_archives[i].real_archive )
+		{
 			continue;
+		}
 
 		if( !Q_stricmp( ext, g_archives[i].ext ))
+		{
 			return true;
+		}
 	}
 
 	return false;
@@ -3009,7 +3237,9 @@ static searchpath_t *FS_GetArchiveByName( const char *name, searchpath_t *prev )
 	for( ; sp; sp = sp->next )
 	{
 		if( !Q_stricmp( COM_FileWithoutPath( sp->filename ), name ))
+		{
 			return sp;
+		}
 	}
 	return NULL;
 }
@@ -3054,16 +3284,24 @@ static qboolean FS_InitInterface( int version, const fs_interface_t *engfuncs )
 	}
 
 	if( engfuncs->_Con_Printf )
+	{
 		g_engfuncs._Con_Printf = engfuncs->_Con_Printf;
+	}
 
 	if( engfuncs->_Con_DPrintf )
+	{
 		g_engfuncs._Con_DPrintf = engfuncs->_Con_DPrintf;
+	}
 
 	if( engfuncs->_Con_Reportf )
+	{
 		g_engfuncs._Con_Reportf = engfuncs->_Con_Reportf;
+	}
 
 	if( engfuncs->_Sys_Error )
+	{
 		g_engfuncs._Sys_Error = engfuncs->_Sys_Error;
+	}
 
 	if( engfuncs->_Mem_AllocPool && engfuncs->_Mem_FreePool )
 	{
@@ -3170,3 +3408,4 @@ int EXPORT GetFSAPI( int version, fs_api_t *api, fs_globals_t **globals, fs_inte
 
 	return FS_API_VERSION;
 }
+

@@ -313,7 +313,7 @@ stream_t *Stream_OpenMPG( const char *filename )
 #if XASH_DREAMCAST
 	char direct_path[MAX_SYSPATH] = "/cd/valve/";
 	Q_strncat(direct_path, filename, sizeof(direct_path));
-	file = FS_SysOpen(direct_path, "rb");
+	file = FS_Open(direct_path, "rb", false);
 	if( !file ) return NULL;
 #else
 	file = FS_Open( filename, "rb", false );

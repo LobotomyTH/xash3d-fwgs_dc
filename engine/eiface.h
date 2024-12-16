@@ -94,7 +94,7 @@ typedef struct
 	int	fPlayTrack;
 } CDStatus;
 
-typedef unsigned int	CRC32_t;
+typedef uint32_t	CRC32_t;
 
 typedef struct delta_s delta_t;
 struct entity_state_s;

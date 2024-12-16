@@ -834,7 +834,7 @@ void SV_WriteEntityPatch( const char *filename )
 	byte		buf[MAX_TOKEN]; // 1 kb
 	string		bspfilename;
 	dlump_t entities;
-	file_t		*f;
+	dc_file_t		*f;
 
 	Q_snprintf( bspfilename, sizeof( bspfilename ), "maps/%s.bsp", filename );
 

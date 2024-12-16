@@ -66,7 +66,7 @@ const char *Q_buildbranch( void );
 // crtlib.c
 //
 void Q_strnlwr( const char *in, char *out, size_t size_out );
-#define Q_strlen( str ) (( str ) ? strlen(( str )) : 0 )
+#define Q_strlen( str ) (( str != NULL ) ? strlen(( str )) : 0 )
 size_t Q_colorstr( const char *string );
 int Q_atoi( const char *str );
 float Q_atof( const char *str );
@@ -97,7 +97,7 @@ void COM_PathSlashFix( char *path );
 char COM_Hex2Char( uint8_t hex );
 void COM_Hex2String( uint8_t hex, char *str );
 // return 0 on empty or null string, 1 otherwise
-#define COM_CheckString( string ) ( ( !string || !*string ) ? 0 : 1 )
+#define COM_CheckString( string ) ( ( string == NULL || !*string ) ? 0 : 1 )
 #define COM_CheckStringEmpty( string ) ( ( !*string ) ? 0 : 1 )
 char *COM_ParseFileSafe( char *data, char *token, const int size, unsigned int flags, int *len, qboolean *quoted );
 #define COM_ParseFile( data, token, size ) COM_ParseFileSafe( data, token, size, 0, NULL, NULL )
@@ -130,7 +130,7 @@ static inline qboolean Q_isdigit( const char *str )
 {
 	if( likely( str && *str ))
 	{
-		while( isdigit( *str )) str++;
+		while( isdigit((int) *str )) str++;
 		if( !*str ) return true;
 	}
 	return false;
@@ -140,7 +140,7 @@ static inline qboolean Q_isspace( const char *str )
 {
 	if( likely( str && *str ))
 	{
-		while( isspace( *str ) ) str++;
+		while( isspace((int) *str ) ) str++;
 		if( !*str ) return true;
 	}
 	return false;

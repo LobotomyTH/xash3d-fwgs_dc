@@ -24,6 +24,9 @@ GNU General Public License for more details.
 #include "client.h"
 #include "server.h"			// LUMP_ error codes
 #include "ref_common.h"
+#if XASH_DREAMCAST
+#include "arch/timer.h"
+#endif
 #if defined( HAVE_OPENMP )
 #include <omp.h>
 #endif // HAVE_OPENMP

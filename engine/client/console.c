@@ -553,7 +553,7 @@ static void Con_LoadConsoleFont( int fontNumber, cl_font_t *font )
 	else
 	{
 		string path;
-		dword crc = 0;
+		uint32_t crc = 0;
 
 		// replace default fonts.wad textures by current charset's font
 		if( !CRC32_File( &crc, "fonts.wad" ) || crc == 0x3c0a0029 )

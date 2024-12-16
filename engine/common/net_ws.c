@@ -1457,7 +1457,7 @@ static qboolean NET_QueuePacket( netsrc_t sock, netadr_t *from, byte *data, size
 			continue;
 
 		addr_len = sizeof( addr );
-		ret = recvfrom( net_socket, buf, sizeof( buf ), 0, (struct sockaddr *)&addr, &addr_len );
+		ret = recvfrom( net_socket, buf, sizeof( buf ), 0, (struct sockaddr *)&addr, (socklen_t*) &addr_len );
 
 		NET_SockadrToNetadr( &addr, from );
 
@@ -1912,7 +1912,7 @@ static void NET_GetLocalAddress( void )
 		{
 			namelen = sizeof( struct sockaddr_in );
 
-			if( !NET_IsSocketError( getsockname( net.ip_sockets[NS_SERVER], (struct sockaddr *)&address, &namelen )))
+			if( !NET_IsSocketError( getsockname( net.ip_sockets[NS_SERVER], (struct sockaddr *)&address,(socklen_t*) &namelen )))
 			{
 				net_local.port = ((struct sockaddr_in *)&address)->sin_port;
 				net_addr_string = NET_AdrToString( net_local );
@@ -1938,7 +1938,7 @@ static void NET_GetLocalAddress( void )
 		{
 			namelen = sizeof( struct sockaddr_in6 );
 
-			if( !NET_IsSocketError( getsockname( net.ip6_sockets[NS_SERVER], (struct sockaddr *)&address, &namelen )))
+			if( !NET_IsSocketError( getsockname( net.ip6_sockets[NS_SERVER], (struct sockaddr *)&address,(socklen_t*) &namelen )))
 			{
 				net6_local.port = ((struct sockaddr_in6 *)&address)->sin6_port;
 				net_addr_string = NET_AdrToString( net6_local );
@@ -2577,7 +2577,7 @@ void HTTP_Run( void )
 			// but download will lock engine, maybe you will need to add manual returns
 			mode = 1;
 #if XASH_DREAMCAST
-			return -1;
+			return;
 #else
 			ioctlsocket( curfile->socket, FIONBIO, (void*)&mode );
 #endif									   

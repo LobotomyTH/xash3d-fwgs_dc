@@ -71,7 +71,7 @@ static char **pfnGetFilesList( const char *pattern, int *numFiles, int gamediron
 
 static uint pfnFileBufferCRC32( const void *buffer, const int length )
 {
-	uint	modelCRC = 0;
+	uint32_t modelCRC = 0;
 
 	if( !buffer || length <= 0 )
 		return modelCRC;

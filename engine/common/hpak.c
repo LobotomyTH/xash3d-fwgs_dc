@@ -594,7 +594,7 @@ static qboolean HPAK_ResourceForIndex( const char *filename, int index, resource
 	hpak_header_t	header;
 	hpak_info_t	directory;
 	string		pakname;
-	file_t		*f;
+	dc_file_t		*f;
 
 	if( !COM_CheckString( filename ) )
 		return false;
@@ -658,7 +658,7 @@ qboolean HPAK_GetDataPointer( const char *filename, resource_t *pResource, byte 
 	hpak_info_t	directory;
 	hpak_lump_t	*entry;
 	hash_pack_queue_t	*p;
-	file_t		*f;
+	dc_file_t		*f;
 	int		i;
 
 	if( !COM_CheckString( filename ))

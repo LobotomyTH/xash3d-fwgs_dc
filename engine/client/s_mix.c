@@ -90,9 +90,9 @@ static void S_TransferPaintBuffer( int endtime )
 	int	lpos, lpaintedtime;
 	int	i, val, sampleMask;
 	short	*snd_out;
-	dword	*pbuf;
+	uint32_t	*pbuf;
 
-	pbuf = (dword *)dma.buffer;
+	pbuf = (uint32_t *)dma.buffer;
 	snd_p = (int *)g_curpaintbuffer;
 	lpaintedtime = paintedtime;
 	sampleMask = ((dma.samples >> 1) - 1);

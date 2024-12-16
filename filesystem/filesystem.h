@@ -127,7 +127,7 @@ typedef struct gameinfo_s
 
 typedef struct fs_dllinfo_t
 {
-	char fullPath[2048]; // absolute disk path
+	char fullPath[32]; // absolute disk path
 	string shortPath; // vfs path
 	qboolean encrypted; // do we need encrypted DLL loader?
 	qboolean custom_loader; // do we need memory DLL loader?
@@ -184,7 +184,7 @@ typedef struct fs_api_t
 	qboolean (*WriteFile)( const char *filename, const void *data, fs_offset_t len );
 
 	// file hashing
-	qboolean (*CRC32_File)( dword *crcvalue, const char *filename );
+	qboolean (*CRC32_File)( uint32_t *crcvalue, const char *filename );
 	qboolean (*MD5_HashFile)( byte digest[16], const char *pszFileName, uint seed[4] );
 
 	// filesystem ops
