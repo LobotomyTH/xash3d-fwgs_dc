@@ -67,8 +67,8 @@ const fs_archive_t g_archives[] =
 { "pak",    SEARCHPATH_PAK,    FS_AddPak_Fullpath, true, true },
 #ifndef XASH_DREAMCAST
 { "pk3",    SEARCHPATH_ZIP,    FS_AddZip_Fullpath, true, true },
+{ "pk3dir", SEARCHPATH_PK3DIR, FS_AddDir_Fullpath, true, false
 #endif
-{ "pk3dir", SEARCHPATH_PK3DIR, FS_AddDir_Fullpath, true, false },
 { "wad",    SEARCHPATH_WAD,    FS_AddWad_Fullpath, false, true },
 { NULL }, // end marker
 };
