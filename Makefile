@@ -34,7 +34,8 @@ LIBS = -L$(SV_DLL_DIR) \
        -lfilesystem_stdio \
        -lcl_dll \
        -lref_gldc \
-       -l:libGL.a 
+       -l:libGL.a \
+       -lppp
 	   
 
 # Build module libraries
