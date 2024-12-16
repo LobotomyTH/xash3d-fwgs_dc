@@ -28,24 +28,34 @@ GNU General Public License for more details.
 #include "vid_common.h"
 
 #define DC_MAX_KEYS	sizeof(dc_keymap) / sizeof(struct dc_keymap_s)
+#define DC_MAX_MSKEY	sizeof(dc_mousemap) / sizeof(struct dc_mousemap_s)
 
 static struct dc_keymap_s {
     int srckey;     
     int dstkey;      
-    qboolean stdpressed; 
-    qboolean shiftpressed; 
 } dc_keymap[] = {
-	{ CONT_START,    K_START_BUTTON, false, false }, // start
-	{ CONT_B,        K_B_BUTTON,    false, false }, // Jump
-    { CONT_A,        K_A_BUTTON,    false, false }, // Attack
-    { CONT_DPAD_DOWN, K_DPAD_DOWN,  false, false }, // Back
-	{ CONT_DPAD_UP,  K_DPAD_UP,     false, false },
-    { CONT_DPAD_LEFT, K_DPAD_LEFT,  false, false }, // Left
-    { CONT_DPAD_RIGHT, K_DPAD_RIGHT, false, false }, // Right
-	{ CONT_Y,        K_Y_BUTTON,    false, false },
-    { CONT_X,        K_X_BUTTON,    false, false }, // Invprev
+	{ CONT_START,      K_START_BUTTON }, // start
+	{ CONT_B,          K_B_BUTTON }, 	 // Jump
+    { CONT_A,          K_A_BUTTON }, 	 // Attack
+    { CONT_DPAD_DOWN,  K_DPAD_DOWN },	 // Back
+	{ CONT_DPAD_UP,    K_DPAD_UP },
+    { CONT_DPAD_LEFT,  K_DPAD_LEFT },	 // Left
+    { CONT_DPAD_RIGHT, K_DPAD_RIGHT },	 // Right
+	{ CONT_Y,          K_Y_BUTTON },
+    { CONT_X,          K_X_BUTTON},		 // Invprev
 };
 
+
+static struct dc_mousemap_s {
+    int srckey;
+    int dstkey;
+} dc_mousemap[] = {
+	{ MOUSE_LEFTBUTTON, 0 },
+	{ MOUSE_RIGHTBUTTON, 1 },
+	{ MOUSE_SIDEBUTTON, 2 },
+	{ 1 << 4, 3 },
+	{ 1 << 5, 4 },
+};
 
 /*
 =============
@@ -56,6 +66,7 @@ Platform_GetMousePos
 void GAME_EXPORT Platform_GetMousePos(int *x, int *y) 
 {
    // TODO: mouse
+   *x = *y = 0;
 }
 
 /*
@@ -78,6 +89,19 @@ Platform_MouseMove
 void Platform_MouseMove( float *x, float *y )
 {
 	// TODO: mouse
+	maple_device_t *joy = maple_enum_type(0, MAPLE_FUNC_MOUSE);
+    mouse_state_t *mouse;
+    
+    if (joy)
+	{
+		mouse = (mouse_state_t *)maple_dev_status(joy);
+		
+		if (mouse)
+		{
+			*x = (float) mouse->dx;
+			*y = (float) mouse->dy;
+		}
+	}
 }
 
 /*
@@ -192,10 +216,12 @@ void Platform_RunEvents(void)
 {
     int i;
     signed short curr_X, curr_Y;
-    static unsigned int last_buttons;
+    static unsigned int last_buttons, last_msbtn;
+    
     static signed short last_X, last_Y;
-    maple_device_t *joy = maple_enum_type(0, MAPLE_FUNC_CONTROLLER);
+	maple_device_t *joy = maple_enum_type(0, MAPLE_FUNC_CONTROLLER);
     cont_state_t *state;
+    mouse_state_t *mouse;
 
     // Check if the joystick device is available
     if (joy) 
@@ -224,7 +250,7 @@ void Platform_RunEvents(void)
             }
 
 			//Special case for triggers
-            if (state->ltrig > 0) 
+            if (state->ltrig > 0xB0) 
 			{
                 Key_Event(K_JOY1, true); 
             }
@@ -233,7 +259,7 @@ void Platform_RunEvents(void)
                 Key_Event(K_JOY1, false); 
             }
 
-            if (state->rtrig > 0)
+            if (state->rtrig > 0xB0)
 			{
                 Key_Event(K_JOY2, true); 
             } 
@@ -260,7 +286,44 @@ void Platform_RunEvents(void)
 			last_Y = curr_Y;
 		}
 	}
-
+	
+	joy = maple_enum_type(0, MAPLE_FUNC_MOUSE);
+	
+	if (joy)
+	{
+		mouse = (mouse_state_t *)maple_dev_status(joy);
+		
+		if (mouse)
+		{
+			if (mouse->dz > 0)
+			{
+				IN_MWheelEvent(1);
+			}
+			else if (mouse->dz < 0)
+			{
+				IN_MWheelEvent(-1);
+			}
+			
+			for (i = 0; i < DC_MAX_MSKEY; i++) 
+            {
+                if (mouse->buttons & dc_mousemap[i].srckey)
+                {
+                    if (!(last_msbtn & dc_mousemap[i].srckey)) 
+                    {
+                        IN_MouseEvent(dc_mousemap[i].dstkey, true); 
+                    }
+                } 
+                else
+                {
+                    if (last_msbtn & dc_mousemap[i].srckey) 
+                    {
+                        IN_MouseEvent(dc_mousemap[i].dstkey, false); 
+                    }
+                }
+            }
+            last_msbtn = mouse->buttons;
+		}
+	}
 }
 /*
 ========================
