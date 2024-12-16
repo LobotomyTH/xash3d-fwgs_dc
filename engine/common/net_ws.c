@@ -31,6 +31,9 @@ static const struct in6_addr in6addr_any;
 #endif
 #if XASH_DREAMCAST
 #include <kos/net.h>
+#include <sys/socket.h>
+#include <ppp/ppp.h>
+#include "dc/modem/modem.h"
 #define IP_TOS 1
 #define IP_MULTICAST_LOOP 34
 #endif
@@ -2138,6 +2141,44 @@ void NET_Init( void )
 	{
 		Con_DPrintf( S_ERROR "network initialization failed.\n" );
 		return;
+	}
+#elif XASH_DREAMCAST
+	if (!net_default_dev)
+	{
+		if(!modem_init())
+		{
+			//Con_DPrintf( S_ERROR "modem_init failed!\n");
+			printf("modem_init failed!\n");
+			return;
+		}
+		
+		ppp_init();
+		//Con_DPrintf("Dialing connection\n");
+		printf("Dialing connection\n");
+		int err;
+		
+		err = ppp_modem_init("11111", 0, NULL);
+		if(err != 0) 
+		{
+			//Con_DPrintf( S_ERROR "Couldn't dial a connection (%d)\n", err);
+			printf("Couldn't dial a connection (%d)\n", err);
+			return;
+		}
+		//Con_DPrintf("Establishing PPP link\n");
+		printf("Establishing PPP link\n");
+		ppp_set_login("dream", "dreamcast");
+		
+		err = ppp_connect();
+		if(err != 0) 
+		{
+			//Con_DPrintf( S_ERROR "Couldn't establish PPP link (%d)\n", err);
+			printf( "Couldn't establish PPP link (%d)\n", err);
+			return;
+		}
+	}
+	else
+	{
+		printf("BBA found\n");
 	}
 #endif
 
