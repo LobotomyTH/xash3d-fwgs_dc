@@ -57,6 +57,34 @@ static struct dc_mousemap_s {
 	{ 1 << 5, 4 },
 };
 
+const static uint8_t dc_kbd_map[] =
+{
+	  0,   0,   0,   0, 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 
+	'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z', '1', '2', 
+	'3', '4', '5', '6', '7', '8', '9', '0', K_ENTER, K_ESCAPE, K_BACKSPACE, K_TAB, K_SPACE, '-', '=', '[', 
+	']','\\',   0, ';', '\'', '`', ',', '.', '/', K_CAPSLOCK, K_F1, K_F2, K_F3, K_F4, K_F5, K_F6, 
+	K_F7, K_F8, K_F9, K_F10, K_F11, K_F12, 0, K_SCROLLOCK, 0, K_INS, K_HOME, K_PGUP, K_DEL, K_END, K_PGDN, K_RIGHTARROW, 
+	K_LEFTARROW, K_DOWNARROW, K_UPARROW, K_KP_NUMLOCK, K_KP_SLASH, K_KP_MUL, K_KP_MINUS, K_KP_PLUS, K_KP_ENTER, K_KP_END, K_KP_DOWNARROW, K_KP_PGDN, K_KP_LEFTARROW, K_KP_5, K_KP_RIGHTARROW, K_KP_HOME, 
+	K_KP_UPARROW, K_KP_PGUP, K_KP_INS, K_KP_DEL, 0 /* S3 */
+};
+
+const static uint8_t dc_kbd_map_shift[] =
+{
+	'!', '@', '#', '$', '%', '^', '&', '*', 
+	'(', ')',  0 ,  0 ,  0 ,  0 ,  0 , '_', 
+	'+', '{', '}', '|',  0 , ':', '"', '~', 
+	'<', '>', '?'
+};
+
+const static uint8_t dc_kbd_map_numlock[] =
+{
+	'1', '2', '3', '4', '5', '6', '7', '8', '9', '0', '.'
+};
+
+static qboolean text_in_en = 1;
+static qboolean numlock_en = 0;
+static qboolean capslock_en = 0;
+
 /*
 =============
 Platform_GetMousePos
@@ -89,12 +117,12 @@ Platform_MouseMove
 void Platform_MouseMove( float *x, float *y )
 {
 	// TODO: mouse
-	maple_device_t *joy = maple_enum_type(0, MAPLE_FUNC_MOUSE);
+	maple_device_t *dev = maple_enum_type(0, MAPLE_FUNC_MOUSE);
     mouse_state_t *mouse;
     
-    if (joy)
+    if (dev)
 	{
-		mouse = (mouse_state_t *)maple_dev_status(joy);
+		mouse = (mouse_state_t *)maple_dev_status(dev);
 		
 		if (mouse)
 		{
@@ -146,7 +174,7 @@ Platform_EnableTextInput
 */
 void Platform_EnableTextInput(qboolean enable) 
 {
-    // TODO: keyboard
+	text_in_en = enable;
 }
     
 
@@ -215,25 +243,25 @@ Processes input events from the keyboard, mouse, and joystick.
 void Platform_RunEvents(void)
 {
     int i;
-    signed short curr_X, curr_Y;
     static unsigned int last_buttons, last_msbtn;
-    
+    static kbd_state_t old_kbd;
     static signed short last_X, last_Y;
-	maple_device_t *joy = maple_enum_type(0, MAPLE_FUNC_CONTROLLER);
-    cont_state_t *state;
+	maple_device_t *dev = maple_enum_type(0, MAPLE_FUNC_CONTROLLER);
+    cont_state_t *cont;
     mouse_state_t *mouse;
+    kbd_state_t	*kbd;
 
     // Check if the joystick device is available
-    if (joy) 
+    if (dev) 
     {
-        state = (cont_state_t *)maple_dev_status(joy);
+        cont = (cont_state_t *) maple_dev_status(dev);
 
-        if (state) 
+        if (cont) 
         {
             // Handle button presses
             for (i = 0; i < DC_MAX_KEYS; i++) 
             {
-                if (state->buttons & dc_keymap[i].srckey)
+                if (cont->buttons & dc_keymap[i].srckey)
                  {
                     if (!(last_buttons & dc_keymap[i].srckey)) 
                     {
@@ -250,7 +278,7 @@ void Platform_RunEvents(void)
             }
 
 			//Special case for triggers
-            if (state->ltrig > 0xB0) 
+            if (cont->ltrig > 0xB0) 
 			{
                 Key_Event(K_JOY1, true); 
             }
@@ -259,7 +287,7 @@ void Platform_RunEvents(void)
                 Key_Event(K_JOY1, false); 
             }
 
-            if (state->rtrig > 0xB0)
+            if (cont->rtrig > 0xB0)
 			{
                 Key_Event(K_JOY2, true); 
             } 
@@ -268,10 +296,10 @@ void Platform_RunEvents(void)
                 Key_Event(K_JOY2, false); 
             }
 
-            last_buttons = state->buttons;
+            last_buttons = cont->buttons;
 
-			signed short curr_X = state->joyx; 
-			signed short curr_Y = state->joyy; 
+			short curr_X = cont->joyx; 
+			short curr_Y = cont->joyy; 
             float sensitivity = 99.0f; // HACK HACK FIX ME 
 
 			if (last_X != curr_X) {
@@ -287,11 +315,11 @@ void Platform_RunEvents(void)
 		}
 	}
 	
-	joy = maple_enum_type(0, MAPLE_FUNC_MOUSE);
+	dev = maple_enum_type(0, MAPLE_FUNC_MOUSE);
 	
-	if (joy)
+	if (dev)
 	{
-		mouse = (mouse_state_t *)maple_dev_status(joy);
+		mouse = (mouse_state_t *)maple_dev_status(dev);
 		
 		if (mouse)
 		{
@@ -322,6 +350,90 @@ void Platform_RunEvents(void)
                 }
             }
             last_msbtn = mouse->buttons;
+		}
+	}
+	
+	dev = maple_enum_type(0, MAPLE_FUNC_KEYBOARD);
+	
+	if(dev)
+	{
+		kbd = (kbd_state_t *) maple_dev_status(dev);
+		
+		if (kbd)
+		{
+			int shiftkeys = kbd->shift_keys ^ old_kbd.shift_keys;
+			
+			if (shiftkeys & (KBD_MOD_LCTRL | KBD_MOD_RCTRL))
+			{
+				Key_Event(K_CTRL , ((kbd->shift_keys & (KBD_MOD_LCTRL | KBD_MOD_RCTRL)) != 0));
+			}
+			
+			if (shiftkeys & (KBD_MOD_LSHIFT | KBD_MOD_RSHIFT))
+			{
+				Key_Event(K_SHIFT , ((kbd->shift_keys & (KBD_MOD_LSHIFT | KBD_MOD_RSHIFT)) != 0));
+			}
+			
+			if (shiftkeys & (KBD_MOD_LALT | KBD_MOD_RALT))
+			{
+				Key_Event(K_ALT , ((kbd->shift_keys & (KBD_MOD_LALT | KBD_MOD_RALT)) != 0));
+			}
+			
+			if (shiftkeys & (KBD_MOD_S1 | KBD_MOD_S2))
+			{
+				Key_Event(K_WIN , ((kbd->shift_keys & (KBD_MOD_S1 | KBD_MOD_S2)) != 0));
+			}
+			
+			for(i = 0; i < sizeof(dc_kbd_map); ++i) 
+			{
+				if(kbd->matrix[i] != old_kbd.matrix[i]) 
+				{
+					if (i == KBD_KEY_PAD_NUMLOCK && kbd->matrix[i])
+					{
+						numlock_en ^= 1;
+					}
+					else if (i == KBD_KEY_CAPSLOCK && kbd->matrix[i])
+					{
+						capslock_en ^= 1;
+					}
+					
+					uint8_t key = dc_kbd_map[i];
+
+					if(key) 
+					{
+						Key_Event( key , (kbd->matrix[i] != 0) );
+						
+						if (numlock_en && i >= KBD_KEY_PAD_1 && i <= KBD_KEY_PAD_PERIOD)
+						{
+							key = dc_kbd_map_numlock[i-KBD_KEY_PAD_1];
+						}
+						
+						if (text_in_en && kbd->matrix[i] && (key >= 32 && key < 127))
+						{
+							if( (kbd->shift_keys & (KBD_MOD_LSHIFT | KBD_MOD_RSHIFT)))
+							{
+								if (i >= KBD_KEY_1 && i <= KBD_KEY_SLASH )
+								{
+									key = dc_kbd_map_shift[i-KBD_KEY_1];
+								}
+								else
+								{
+									key = Key_ToUpper(key);
+								}
+							}
+							else if (capslock_en)
+							{
+								key = Key_ToUpper(key);
+							}
+							
+							if (key)
+							{
+								CL_CharEvent( key );
+							}
+						}
+					}
+				}
+			}
+			old_kbd = *kbd;
 		}
 	}
 }
