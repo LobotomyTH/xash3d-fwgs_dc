@@ -2,9 +2,10 @@
 
 
 basedir		"valve"
-gamedir		"valve"
-title		"New Game"
-startmap		"newmap"
+gamedir		"VALVE"
+title		"Half-Life"
+startmap		"c0a0"
+trainmap		"t0a0"
 version		1
 dllpath		"cl_dlls"
 gamedll		"dlls/hl.dll"
@@ -13,10 +14,11 @@ gamedll_osx		"dlls/hl.dylib"
 icon		"game.ico"
 sp_entity		"info_player_start"
 mp_entity		"info_player_deathmatch"
-max_edicts	1200
-max_tempents	500
-max_beams		128
-max_particles	4096
+secure		"1"
+max_edicts	512
+max_tempents	300
+max_beams		64
+max_particles	1024
 quicksave_aged_count		0
 autosave_aged_count		0
 internal_vgui_support		0
