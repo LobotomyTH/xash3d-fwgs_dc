@@ -27,6 +27,9 @@ GNU General Public License for more details.
 #include "sound.h"
 #include "vid_common.h"
 
+#define DC_MWHELL_UP	(1 << 8)
+#define DC_MWHELL_DOWN	(1 << 9)
+
 #define DC_MAX_KEYS	sizeof(dc_keymap) / sizeof(struct dc_keymap_s)
 #define DC_MAX_MSKEY	sizeof(dc_mousemap) / sizeof(struct dc_mousemap_s)
 
@@ -93,8 +96,7 @@ Platform_GetMousePos
 */
 void GAME_EXPORT Platform_GetMousePos(int *x, int *y) 
 {
-   // TODO: mouse
-   *x = *y = 0;
+	// not used
 }
 
 /*
@@ -105,7 +107,7 @@ Platform_SetMousePos
 */
 void GAME_EXPORT Platform_SetMousePos(int x, int y) 
 {
-    // TODO: mouse
+	// not used
 }
 
 /*
@@ -116,20 +118,17 @@ Platform_MouseMove
 */
 void Platform_MouseMove( float *x, float *y )
 {
-	// TODO: mouse
 	maple_device_t *dev = maple_enum_type(0, MAPLE_FUNC_MOUSE);
     mouse_state_t *mouse;
     
-    if (dev)
+    if (!dev || !(mouse = (mouse_state_t *)maple_dev_status(dev)))
 	{
-		mouse = (mouse_state_t *)maple_dev_status(dev);
-		
-		if (mouse)
-		{
-			*x = (float) mouse->dx;
-			*y = (float) mouse->dy;
-		}
+		*x = *y = 0.0;
+		return;
 	}
+	
+	*x = (float) mouse->dx;
+	*y = (float) mouse->dy;
 }
 
 /*
@@ -243,9 +242,10 @@ Processes input events from the keyboard, mouse, and joystick.
 void Platform_RunEvents(void)
 {
     int i;
-    static unsigned int last_buttons, last_msbtn;
+    static uint32_t last_buttons, last_msbtn;
     static kbd_state_t old_kbd;
-    static signed short last_X, last_Y;
+    static int last_X = 0, last_Y = 0;
+    int curr_X, curr_Y;
 	maple_device_t *dev = maple_enum_type(0, MAPLE_FUNC_CONTROLLER);
     cont_state_t *cont;
     mouse_state_t *mouse;
@@ -298,8 +298,8 @@ void Platform_RunEvents(void)
 
             last_buttons = cont->buttons;
 
-			short curr_X = cont->joyx; 
-			short curr_Y = cont->joyy; 
+			curr_X = cont->joyx; 
+			curr_Y = cont->joyy; 
             float sensitivity = 99.0f; // HACK HACK FIX ME 
 
 			if (last_X != curr_X) {
@@ -321,35 +321,44 @@ void Platform_RunEvents(void)
 	{
 		mouse = (mouse_state_t *)maple_dev_status(dev);
 		
-		if (mouse)
+		if (mouse != NULL)
 		{
+			uint32_t msbtn = mouse->buttons;
+			
 			if (mouse->dz > 0)
 			{
-				IN_MWheelEvent(1);
+				msbtn |= DC_MWHELL_DOWN;
+				
+				if (!(last_msbtn & DC_MWHELL_DOWN))
+				{
+					IN_MWheelEvent(1);
+				}
 			}
 			else if (mouse->dz < 0)
 			{
-				IN_MWheelEvent(-1);
+				msbtn |= DC_MWHELL_UP;
+				
+				if (!(last_msbtn & DC_MWHELL_UP))
+				{
+					IN_MWheelEvent(-1);
+				}
 			}
 			
 			for (i = 0; i < DC_MAX_MSKEY; i++) 
-            {
-                if (mouse->buttons & dc_mousemap[i].srckey)
-                {
-                    if (!(last_msbtn & dc_mousemap[i].srckey)) 
-                    {
-                        IN_MouseEvent(dc_mousemap[i].dstkey, true); 
-                    }
-                } 
-                else
-                {
-                    if (last_msbtn & dc_mousemap[i].srckey) 
-                    {
-                        IN_MouseEvent(dc_mousemap[i].dstkey, false); 
-                    }
-                }
+			{
+				if (msbtn & dc_mousemap[i].srckey)
+				{
+					if (!(last_msbtn & dc_mousemap[i].srckey)) 
+					{
+						IN_MouseEvent(dc_mousemap[i].dstkey, true); 
+					}
+				} 
+                else if (last_msbtn & dc_mousemap[i].srckey) 
+				{
+					IN_MouseEvent(dc_mousemap[i].dstkey, false); 
+				}
             }
-            last_msbtn = mouse->buttons;
+            last_msbtn = msbtn;
 		}
 	}
 	
@@ -447,11 +456,11 @@ TODO: kill mouse in win32 clients too
 */
 void Platform_PreCreateMove(void)
 {
-    if( m_ignore.value )
+	// not used
+	/*if( m_ignore.value )
 	{
 		Platform_GetMousePos( NULL, NULL );
-		
-	}
+	}*/
 }
 
 #endif // XASH_INPUT == INPUT_KOS
