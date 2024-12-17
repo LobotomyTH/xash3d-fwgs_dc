@@ -30,22 +30,33 @@ GNU General Public License for more details.
 #define DC_MWHELL_UP	(1 << 8)
 #define DC_MWHELL_DOWN	(1 << 9)
 
+#define DC_CONT_LT		(1 << 16)
+#define DC_CONT_RT		(1 << 17)
+
 #define DC_MAX_KEYS	sizeof(dc_keymap) / sizeof(struct dc_keymap_s)
 #define DC_MAX_MSKEY	sizeof(dc_mousemap) / sizeof(struct dc_mousemap_s)
 
 static struct dc_keymap_s {
     int srckey;     
     int dstkey;      
-} dc_keymap[] = {
-	{ CONT_START,      K_START_BUTTON }, // start
-	{ CONT_B,          K_B_BUTTON }, 	 // Jump
-    { CONT_A,          K_A_BUTTON }, 	 // Attack
-    { CONT_DPAD_DOWN,  K_DPAD_DOWN },	 // Back
-	{ CONT_DPAD_UP,    K_DPAD_UP },
-    { CONT_DPAD_LEFT,  K_DPAD_LEFT },	 // Left
-    { CONT_DPAD_RIGHT, K_DPAD_RIGHT },	 // Right
-	{ CONT_Y,          K_Y_BUTTON },
-    { CONT_X,          K_X_BUTTON},		 // Invprev
+} dc_keymap[] = 
+{
+	{ CONT_START,		K_START_BUTTON },
+	{ CONT_B,			K_B_BUTTON },
+	{ CONT_A,			K_A_BUTTON },
+	{ CONT_DPAD_DOWN,	K_DPAD_DOWN },
+	{ CONT_DPAD_UP,		K_DPAD_UP },
+	{ CONT_DPAD_LEFT,	K_DPAD_LEFT },
+	{ CONT_DPAD_RIGHT,	K_DPAD_RIGHT },
+	{ CONT_Y,			K_Y_BUTTON },
+	{ CONT_X,			K_X_BUTTON},
+	{ CONT_C,			K_R1_BUTTON },
+	{ CONT_Z,			K_L1_BUTTON },
+	{ CONT_D,			K_BACK_BUTTON },
+	{ CONT_DPAD2_LEFT,	K_LSTICK },
+	{ CONT_DPAD2_RIGHT,	K_RSTICK },
+	{ DC_CONT_LT,		K_JOY1 },
+	{ DC_CONT_RT,		K_JOY2 },
 };
 
 
@@ -244,8 +255,7 @@ void Platform_RunEvents(void)
     int i;
     static uint32_t last_buttons, last_msbtn;
     static kbd_state_t old_kbd;
-    static int last_X = 0, last_Y = 0;
-    int curr_X, curr_Y;
+    static int last_X = 0, last_Y = 0, last_X2 = 0, last_Y2 = 0;
 	maple_device_t *dev = maple_enum_type(0, MAPLE_FUNC_CONTROLLER);
     cont_state_t *cont;
     mouse_state_t *mouse;
@@ -258,10 +268,22 @@ void Platform_RunEvents(void)
 
         if (cont) 
         {
+			uint32_t buttons = cont->buttons;
+			
+			if (cont->ltrig > 0xB0)
+			{
+				buttons |= DC_CONT_LT;
+			}
+			
+			if (cont->rtrig > 0xB0)
+			{
+				buttons |= DC_CONT_RT;
+			}
+			
             // Handle button presses
             for (i = 0; i < DC_MAX_KEYS; i++) 
             {
-                if (cont->buttons & dc_keymap[i].srckey)
+                if (buttons & dc_keymap[i].srckey)
                  {
                     if (!(last_buttons & dc_keymap[i].srckey)) 
                     {
@@ -276,42 +298,41 @@ void Platform_RunEvents(void)
                     }
                 }
             }
+            
+            last_buttons = buttons;
 
-			//Special case for triggers
-            if (cont->ltrig > 0xB0) 
+			int curr_X = cont->joyx; 
+			int curr_Y = cont->joyy; 
+            float sensitivity = 256.0f; // HACK HACK FIX ME 
+
+			if (last_X != curr_X) 
 			{
-                Key_Event(K_JOY1, true); 
-            }
-            else 
-			{
-                Key_Event(K_JOY1, false); 
-            }
-
-            if (cont->rtrig > 0xB0)
-			{
-                Key_Event(K_JOY2, true); 
-            } 
-            else
-			{
-                Key_Event(K_JOY2, false); 
-            }
-
-            last_buttons = cont->buttons;
-
-			curr_X = cont->joyx; 
-			curr_Y = cont->joyy; 
-            float sensitivity = 99.0f; // HACK HACK FIX ME 
-
-			if (last_X != curr_X) {
-				Joy_AxisMotionEvent(2, -curr_X * sensitivity); 
+				Joy_AxisMotionEvent(0, curr_X * sensitivity); 
 			}
 
-			if (last_Y != curr_Y) {
-				Joy_AxisMotionEvent(3, -curr_Y * sensitivity); 
+			if (last_Y != curr_Y) 
+			{
+				Joy_AxisMotionEvent(1, curr_Y * sensitivity); 
 			}
 
 			last_X = curr_X;
 			last_Y = curr_Y;
+			
+			curr_X = cont->joy2x; 
+			curr_Y = cont->joy2y; 
+			
+			if (last_X2 != curr_X) 
+			{
+				Joy_AxisMotionEvent(2, curr_X * sensitivity); 
+			}
+
+			if (last_Y2 != curr_Y) 
+			{
+				Joy_AxisMotionEvent(3, curr_Y * sensitivity); 
+			}
+
+			last_X2 = curr_X;
+			last_Y2 = curr_Y;
 		}
 	}
 	
