@@ -33,12 +33,12 @@ extern poolhandle_t sndpool;
 #define SOUND_44k       48000 // 44khz sample rate
 #endif // XASH_AUDIO_CD_QUALITY
 
-#define SOUND_DMA_SPEED SOUND_44k // hardware playback rate
+#define SOUND_DMA_SPEED SOUND_11k // hardware playback rate
 
 // NOTE: clipped sound at 32760 to avoid overload
 #define CLIP( x ) (( x ) > 32760 ? 32760 : (( x ) < -32760 ? -32760 : ( x )))
 
-#define PAINTBUFFER_SIZE 1024	// 44k: was 512
+#define PAINTBUFFER_SIZE 512	// 44k: was 512
 
 #define S_RAW_SOUND_IDLE_SEC         10 // time interval for idling raw sound before it's freed
 #define S_RAW_SOUND_BACKGROUNDTRACK  -2
