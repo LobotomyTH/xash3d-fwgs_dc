@@ -79,12 +79,12 @@ static int pfnDrawScaledCharacter( int x, int y, int number, int r, int g, int b
 
 static void pfnTouch_HideButtons( const char *name, byte state )
 {
-	Touch_HideButtons( name, state, true );
+//	Touch_HideButtons( name, state, true );
 }
 
 static void pfnTouch_RemoveButton( const char *name )
 {
-	Touch_RemoveButton( name, true );
+//	Touch_RemoveButton( name, true );
 }
 
 static char *pfnParseFileSafe( char *data, char *buf, const int size, unsigned int flags, int *len )
@@ -97,12 +97,12 @@ static const mobile_engfuncs_t gMobileEngfuncs =
 	MOBILITY_API_VERSION,
 	pfnVibrate,
 	pfnEnableTextInput,
-	Touch_AddClientButton,
-	Touch_AddDefaultButton,
-	pfnTouch_HideButtons,
-	pfnTouch_RemoveButton,
-	Touch_SetClientOnly,
-	Touch_ResetDefaultButtons,
+//	Touch_AddClientButton,
+//	Touch_AddDefaultButton,
+//	pfnTouch_HideButtons,
+//	pfnTouch_RemoveButton,
+//	Touch_SetClientOnly,
+//	Touch_ResetDefaultButtons,
 	pfnDrawScaledCharacter,
 	Sys_Warn,
 	Sys_GetNativeObject,

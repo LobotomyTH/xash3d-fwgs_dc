@@ -414,29 +414,6 @@ static void FS_Search_DIR( searchpath_t *search, stringlist_t *list, const char 
 	if( basepathlength ) memcpy( basepath, pattern, basepathlength );
 	basepath[basepathlength] = '\0';
 
-#if XASH_DREAMCAST
-			// get a directory listing and look at each name
-	Q_snprintf( netpath,  sizeof (netpath), "%s%s",  search->dir->name, basepath );
-	stringlistinit( &dirlist );
-	listdirectory( &dirlist, netpath);
-
-	for( dirlistindex = 0; dirlistindex < dirlist.numstrings; dirlistindex++ )
-	{
-		Q_snprintf( temp, sizeof(temp), "%s%s", basepath, dirlist.strings[dirlistindex] );
-
-		if( matchpattern( temp, (char *)pattern, true ))
-		{
-			for( resultlistindex = 0; resultlistindex < list->numstrings; resultlistindex++ )
-			{
-				if( !Q_strcmp( list->strings[resultlistindex], temp ))
-							break;
-			}
-
-			if( resultlistindex == list->numstrings )
-				stringlistappend( list, temp );
-		}
-	}
-#else
 	if( !FS_FixFileCase( search->dir, basepath, netpath, sizeof( netpath ), false ))
 	{
 		Mem_Free( basepath );
@@ -464,7 +441,7 @@ static void FS_Search_DIR( searchpath_t *search, stringlist_t *list, const char 
 				stringlistappend( list, temp );
 		}
 	}
-#endif
+	
 	stringlistfreecontents( &dirlist );
 
 	Mem_Free( basepath );
