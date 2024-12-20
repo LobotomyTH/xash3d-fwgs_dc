@@ -3834,6 +3834,10 @@ static void R_StudioLoadTexture( model_t *mod, studiohdr_t *phdr, mstudiotexture
 				size = sizeof(mstudiotexture_t) + (ptexture->width * ptexture->height * 2);
 			}
 		}
+		else
+		{
+			size = sizeof( mstudiotexture_t ) + ptexture->width * ptexture->height + 768;
+		}
 
 		// build the texname
 		Q_snprintf( texname, sizeof( texname ), "#%s/%s.mdl", mdlname, name );
