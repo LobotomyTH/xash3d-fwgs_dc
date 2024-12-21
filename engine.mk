@@ -43,7 +43,6 @@ XASH_CLIENT_OBJS = \
 	engine/client/s_mouth.o \
 	engine/client/s_stream.o \
 	engine/client/s_utils.o \
-	engine/client/s_vox.o \
 	engine/client/titles.o \
 	engine/client/vid_common.o \
 	engine/client/voice.o \

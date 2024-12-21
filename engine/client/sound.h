@@ -281,6 +281,7 @@ int S_ZeroCrossingBefore( wavdata_t *pWaveData, int sample );
 int S_ConvertLoopedPosition( wavdata_t *pSource, int samplePosition, qboolean use_loop );
 int S_GetOutputData( wavdata_t *pSource, void **pData, int samplePosition, int sampleCount, qboolean use_loop );
 
+#ifndef XASH_DREAMCAST
 //
 // s_vox.c
 //
@@ -290,5 +291,6 @@ void VOX_SetChanVol( channel_t *ch );
 void VOX_LoadSound( channel_t *pchan, const char *psz );
 float VOX_ModifyPitch( channel_t *ch, float pitch );
 int VOX_MixDataToDevice( channel_t *pChannel, int sampleCount, int outputRate, int outputOffset );
+#endif
+#endif //SOUND_H
 
-#endif//SOUND_H
