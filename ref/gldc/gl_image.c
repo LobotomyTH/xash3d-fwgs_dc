@@ -317,6 +317,7 @@ static size_t GL_CalcImageSize( pixformat_t format, int width, int height, int d
 	case PF_RGB_332:
 		size = width * height * depth;
 		break;
+	case PF_RGB_5650_TWID:
 	case PF_RGB_5650:
 	#if 1
 		size = ((width + 3) & ~3) * ((height + 3) & ~3) * 2;
@@ -397,7 +398,7 @@ static size_t GL_CalcTextureSize( GLenum format, int width, int height, int dept
 	case GL_RGB8:
 	case GL_RGB4:
 	case GL_RGB:
-		size = width * height * depth * 3;
+		size = width * height * depth * 2;
 		break;
 	case GL_RGB5:
 		size = (width * height * depth * 3) / 2;
@@ -405,6 +406,7 @@ static size_t GL_CalcTextureSize( GLenum format, int width, int height, int dept
 	case GL_RGBA4:
 		size = (width * height * depth * 4) / 2;
 		break;
+	case GL_RGB565_TWID_KOS:
 	case GL_RGB565_KOS:
 	#if 1
 		size = ((width + 3) & ~3) * ((height + 3) & ~3) * 2;
@@ -632,6 +634,7 @@ static void GL_SetTextureFormat( gl_texture_t *tex, pixformat_t format, int chan
 			case PF_ARGB_4444: tex->format = GL_ARGB4444_KOS; break;
 			case PF_ARGB_1555: tex->format = GL_ARGB1555_KOS; break;
 			case PF_RGB_5650: tex->format = GL_RGB565_KOS; break;
+			case PF_RGB_5650_TWID: tex->format = GL_RGB565_TWID_KOS; break;
 			case PF_INDEXED_24:
 			case PF_INDEXED_32:
 			case PF_RGBA_32: tex->format = GL_RGBA; break;
@@ -640,7 +643,7 @@ static void GL_SetTextureFormat( gl_texture_t *tex, pixformat_t format, int chan
 			case PF_BGR_24: tex->format = GL_BGR; break;
 
 			default:
-			gEngfuncs_gl.Host_Error( "GL_SetTextureFormat: unknown format %i\n", format );
+			gEngfuncs_gl.Host_Error( "GL_SetTextureFormat: %s unknown format %i\n", tex->name, format );
 			break;
 			
 		} 
@@ -952,6 +955,12 @@ static void GL_TextureImageRAW( gl_texture_t *tex, GLint side, GLint level, GLin
         inFormat = GL_RGB; // force informat for RGB565 
 		dataType = GL_UNSIGNED_SHORT_5_6_5;
 	}
+
+	if(tex->format == GL_RGB565_TWID_KOS) {
+        inFormat = GL_RGB; // force informat for RGB565 
+		dataType = GL_UNSIGNED_SHORT_5_6_5_TWID_KOS;
+	}
+
 #endif // XASH_DREAMCAST
 	Assert( tex != NULL );
 

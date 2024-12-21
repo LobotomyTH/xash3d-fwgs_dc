@@ -26,10 +26,20 @@ GNU General Public License for more details.
 
 
 
-#define PVR_TWIDDLE	0x01
-#define PVR_VQ		0x03
-#define PVR_RECT	0x09
-#define PVR_VQ_MIPMAP 0x04
+#define PVR_TWIDDLE           0x01
+#define PVR_TWIDDLED_MIPMAP   0x02
+#define PVR_VQ                0x03
+#define PVR_VQ_MIPMAP         0x04
+#define PVR_CLUT8_TWIDDLED    0x05
+#define PVR_CLUT4_TWIDDLED    0x06
+#define PVR_DIRECT8_TWIDDLED  0x07
+#define PVR_DIRECT4_TWIDDLED  0x08
+#define PVR_RECT              0x09
+#define PVR_RECTANGULAR_STRIDE 0x0B
+#define PVR_RECTANGULAR_TWIDDLED 0x0D
+#define PVR_SMALL_VQ          0x10
+#define PVR_SMALL_VQ_MIPMAP   0x11
+#define PVR_TWIDDLED_MIPMAP2  0x12
 
 
 

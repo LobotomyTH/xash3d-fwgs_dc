@@ -63,8 +63,9 @@ typedef enum
 	PF_VQ_ARGB_1555,	// 16-bit A1 R5 G5 B5 VQ compressed
 	PF_RGB_332,		// 8-bit  R3 G3 B2
 	PF_RGB_5650,	// 8-bit R5 G6 B5
-	PF_VQ_RGB_5650,	// 8-bit R5 G6 B5 VQ coMPRESSED
-	PF_VQ_MIPMAP_RGB_5650, // 8-bit R5 G6 B5 VQ Mipmap COMPRESSED
+	PF_VQ_RGB_5650,	// 8-bit R5 G6 B5 VQ compressed
+	PF_VQ_MIPMAP_RGB_5650, // 8-bit R5 G6 B5 VQ Mipmap compressed
+	PF_RGB_5650_TWID, // // 8-bit R5 G6 B5 Twiddled
 	PF_RGBA_5551,	// 16-bit R5 G5 B5 A1
 	PF_RGBA_4444,	// 16-bit R4 G4 B4 A4
 #endif

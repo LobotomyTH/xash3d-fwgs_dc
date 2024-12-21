@@ -185,7 +185,8 @@ qboolean Image_LoadMDL( const char *name, const byte *buffer, fs_offset_t filesi
 		uint8_t color_format = format & 0xFF;
 
 
-		if (texture_format == PVR_RECT || texture_format == PVR_TWIDDLE || texture_format == PVR_VQ)
+
+		if (texture_format == PVR_RECT || texture_format == PVR_TWIDDLE || texture_format == PVR_VQ || texture_format == PVR_RECTANGULAR_TWIDDLED || texture_format == PVR_TWIDDLED_MIPMAP)
 		{
 			if (texture_format == PVR_VQ)
 			{
@@ -199,6 +200,13 @@ qboolean Image_LoadMDL( const char *name, const byte *buffer, fs_offset_t filesi
 			{
 				image.type = PF_RGB_5650;
 				image.size = image.width * image.height * 2;
+				SetBits(image.flags, TF_KEEP_SOURCE);
+			}
+			else if (texture_format == PVR_TWIDDLE || texture_format == PVR_RECTANGULAR_TWIDDLED || texture_format == PVR_TWIDDLED_MIPMAP)
+			{
+				image.type = PF_RGB_5650_TWID;
+				image.size = image.width * image.height * 2;  
+				memcpy(image.rgba, texture_data, image.size);
 				SetBits(image.flags, TF_KEEP_SOURCE);
 			}
 			else 
