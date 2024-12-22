@@ -24,11 +24,32 @@ GNU General Public License for more details.
 #if XASH_SOUND == SOUND_KOS
 
 static snd_stream_hnd_t stream = SND_STREAM_INVALID;
-static char pcm_buffer[2*1024] __attribute__((aligned(32)));
+static char pcm_buffer[8*1024] __attribute__((aligned(32)));
 
-static void* sound_callback(snd_stream_hnd_t hnd, int len, int *actual)
+static void* sound_callback(snd_stream_hnd_t hnd, int size, int *actual)
 {
-	const int size = dma.samples << 1;
+	const int sz = dma.samples << 1;
+	int pos;
+	
+	pos = dma.samplepos << 1;
+	
+	if( pos >= sz )
+	{
+		pos = dma.samplepos = 0;
+	}
+	
+	dma.samplepos += size >> 1;
+	
+	*actual = size;
+	
+	if( dma.samplepos >= sz )
+	{
+		dma.samplepos = 0;
+	}
+	
+	return &dma.buffer[pos];
+	
+	/*const int size = dma.samples << 1;
 	int pos;
 	int wrapped;
 	
@@ -58,7 +79,7 @@ static void* sound_callback(snd_stream_hnd_t hnd, int len, int *actual)
 	if( dma.samplepos >= size )
 		dma.samplepos = 0;
 	
-	return pcm_buffer;
+	return pcm_buffer;*/
 }
 
 qboolean SNDDMA_Init(void)
@@ -74,13 +95,14 @@ qboolean SNDDMA_Init(void)
 	dma.format.channels = 2;
 	dma.format.width    = 2;
 	dma.samples         = 2048 * 2;
-	dma.buffer          = Z_Calloc( dma.samples * 2 );
+	dma.buffer          = pcm_buffer;//Z_Calloc( dma.samples * 2 );
 	dma.samplepos       = 0;
 	dma.initialized = true;
 	dma.backendName = "AICA SPU";
 	snd_stream_volume(stream, 240);
 	snd_stream_start(stream, SOUND_DMA_SPEED, 0);
 	return true;
+	//return false;
 }
 
 void SNDDMA_Shutdown(void)

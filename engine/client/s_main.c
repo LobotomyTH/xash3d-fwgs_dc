@@ -219,6 +219,7 @@ static int SND_GetChannelTimeLeft( const channel_t *ch )
 
 	if( ch->isSentence ) // sentences are special, count all remaining words
 	{
+#ifndef XASH_DREAMCAST
 		int i;
 
 		if( !ch->currentWord )
@@ -247,6 +248,9 @@ static int SND_GetChannelTimeLeft( const channel_t *ch )
 				remaining += sc->samples * 0.01f * end;
 			else remaining += sc->samples;
 		}
+#else
+		return 0;
+#endif
 	}
 	else
 	{
@@ -533,8 +537,10 @@ static void SND_Spatialize( channel_t *ch )
 	// fill out channel volumes for single location
 	S_SpatializeChannel( &ch->leftvol, &ch->rightvol, ch->master_vol, gain, dot, dist * ch->dist_mult );
 
+#ifndef XASH_DREAMCAST
 	// if playing a word, set volume
 	VOX_SetChanVol( ch );
+#endif
 }
 
 /*
@@ -618,10 +624,12 @@ void S_StartSound( const vec3_t pos, int ent, int chan, sound_t handle, float fv
 		// NOTE: sentence names stored in the cache lookup are
 		// prepended with a '!'.  Sentence names stored in the
 		// sentence file do not have a leading '!'.
+#ifndef XASH_DREAMCAST
 		VOX_LoadSound( target_chan, S_SkipSoundChar( sfx->name ));
 		Q_strncpy( target_chan->name, sfx->name, sizeof( target_chan->name ));
 		sfx = target_chan->sfx;
 		if( sfx ) pSource = sfx->cache;
+#endif
 	}
 	else
 	{
@@ -716,6 +724,7 @@ void S_RestoreSound( const vec3_t pos, int ent, int chan, sound_t handle, float 
 		// NOTE: sentence names stored in the cache lookup are
 		// prepended with a '!'.  Sentence names stored in the
 		// sentence file do not have a leading '!'.
+#ifndef XASH_DREAMCAST
 		VOX_LoadSound( target_chan, S_SkipSoundChar( sfx->name ));
 		Q_strncpy( target_chan->name, sfx->name, sizeof( target_chan->name ));
 
@@ -738,6 +747,7 @@ void S_RestoreSound( const vec3_t pos, int ent, int chan, sound_t handle, float 
 			sfx = target_chan->sfx;
 			if( sfx ) pSource = sfx->cache;
 		}
+#endif
 	}
 	else
 	{
@@ -817,11 +827,13 @@ void S_AmbientSound( const vec3_t pos, int ent, sound_t handle, float fvol, floa
 		// sentence file do not have a leading '!'.
 
 		// link all words and load the first word
+#ifndef XASH_DREAMCAST
 		VOX_LoadSound( ch, S_SkipSoundChar( sfx->name ));
 		Q_strncpy( ch->name, sfx->name, sizeof( ch->name ));
 		sfx = ch->sfx;
 		if( sfx ) pSource = sfx->cache;
 		fvox = 1;
+#endif
 	}
 	else
 	{
@@ -2033,8 +2045,9 @@ qboolean S_Init( void )
 	S_InitScaletable ();
 	S_StopAllSounds ( true );
 	S_InitSounds ();
+#ifndef XASH_DREAMCAST
 	VOX_Init ();
-
+#endif
 	return true;
 }
 
@@ -2060,7 +2073,9 @@ void S_Shutdown( void )
 	S_StopAllSounds (false);
 	S_FreeRawChannels ();
 	S_FreeSounds ();
+#ifndef XASH_DREAMCAST
 	VOX_Shutdown ();
+#endif
 	SX_Free ();
 
 	SNDDMA_Shutdown ();
