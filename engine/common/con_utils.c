@@ -81,7 +81,9 @@ int Cmd_ListMaps( search_t *t, char *lastmapname, size_t len )
 		if( f )
 		{
 			dheader_t *header;
+#if !XASH_DREAMCAST
 			dextrahdr_t	*hdrext;
+#endif
 			dlump_t entities;
 
 			memset( buf, 0, sizeof( buf ));
@@ -96,9 +98,10 @@ int Cmd_ListMaps( search_t *t, char *lastmapname, size_t len )
 				lumplen = entities.filelen;
 				ver = header->version;
 			}
-
+#if !XASH_DREAMCAST
 			hdrext = (dextrahdr_t *)((byte *)buf + sizeof( dheader_t ));
 			if( hdrext->id == IDEXTRAHEADER ) version = hdrext->version;
+#endif
 
 			Q_strncpy( entfilename, t->filenames[i], sizeof( entfilename ));
 			COM_ReplaceExtension( entfilename, ".ent", sizeof( entfilename ));
