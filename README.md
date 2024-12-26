@@ -16,7 +16,7 @@ This port was originally authored by maximqaxd and megavolt85. This fork is for 
 
 ## Building
 #### Dreamcast
-Currently it runs only on 32MB modded Dreamcast, 16 MB RAM support will come later.
+Currently it is only fully functional on 32MB modded Dreamcast, 16 MB RAM support has begun, complete with networking stack, but is still experiencing Out Of Memory issues on BSP maps greater than 650kb in size, and more than two players to a server.
 
 0) Build GPFTroy/SDL1.2 and GLDC by Kazade, replace at GLDC's texture.c:1700  FASTCPY(targetData, conversionBuffer, destBytes); to memcpy;
 1) Build filesystem `cd filesystem && make` and ref_gldc `cd ref/gldc && make`
