@@ -4,6 +4,8 @@ Xash3D (pronounced `[ksɑʂ]`) FWGS is a game engine, aimed to provide compatibi
 
 Xash3D FWGS is a heavily modified fork of an original [Xash3D Engine](https://www.moddb.com/engines/xash3d-engine) by Uncle Mike.
 
+This port was originally authored by maximqaxd and megavolt85. This fork is for archival, but who knows what may happen later.
+
 ## Installation & Running (Dreamcast)
 0) Build the binaries
 1) Copy engine binaries to some directory
