@@ -4,7 +4,7 @@ Xash3D (pronounced `[ksɑʂ]`) FWGS is a game engine, aimed to provide compatibi
 
 Xash3D FWGS is a heavily modified fork of an original [Xash3D Engine](https://www.moddb.com/engines/xash3d-engine) by Uncle Mike.
 
-This port was originally authored by maximqaxd and megavolt85. This fork is for archival, but who knows what may happen later.
+This port was originally authored by maximqaxd and megavolt85. This fork is for archival, but who knows what may happen later. The current most up-to-date branch of this project is ``mem_reduction``.
 
 ## Installation & Running (Dreamcast)
 0) Build the binaries
@@ -22,5 +22,8 @@ Currently it is only fully functional on 32MB modded Dreamcast, 16 MB RAM suppor
 1) Build filesystem `cd filesystem && make` and ref_gldc `cd ref/gldc && make`
 2) Compile engine at root dir: `make 1ST_READ.BIN`
 
-
 You can support port for acquering dev tools at https://boosty.to/maximqad
+
+## What can be done:
+
+-OGG and Opus sound support. This will likely be superior in every way to the currently available sound system in this version of Xash3d_FWGS. Support for these formats has been added to FWGS in late 2024, but has not been implemented here
