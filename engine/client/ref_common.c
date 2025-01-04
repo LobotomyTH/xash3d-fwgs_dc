@@ -88,6 +88,7 @@ static qboolean CheckSkybox( const char *name, char out[SKYBOX_MAX_SIDES][MAX_ST
 
 void R_SetupSky( const char *name )
 {
+#if 0
 	string loadname;
 	char sidenames[SKYBOX_MAX_SIDES][MAX_STRING];
 	int skyboxTextures[SKYBOX_MAX_SIDES] = { 0 };
@@ -147,7 +148,7 @@ void R_SetupSky( const char *name )
 		if( skyboxTextures[i] )
 			ref.dllFuncs.GL_FreeTexture( skyboxTextures[i] );
 	}
-
+#endif
 }
 
 void GAME_EXPORT GL_FreeImage( const char *name )

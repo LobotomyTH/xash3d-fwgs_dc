@@ -190,9 +190,7 @@ GNU General Public License for more details.
 #undef MAX_RESOURCES
 #undef MAX_LIGHTSTYLES
 #undef MAX_CLIENTS
-#undef MAX_WEAPONS
-#define MAX_WEAPONS				32
-#define MAX_CLIENTS 			16
+#define MAX_CLIENTS 			8
 #define DC_MAX_EDICTS				256
 #define MAX_VISIBLE_PACKET      128     
 #define MAX_VISIBLE_PACKET_VIS_BYTES    ((MAX_VISIBLE_PACKET + 7) / 8)

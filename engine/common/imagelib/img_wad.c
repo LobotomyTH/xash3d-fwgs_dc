@@ -152,97 +152,169 @@ Image_LoadMDL
 */
 qboolean Image_LoadMDL( const char *name, const byte *buffer, fs_offset_t filesize )
 {
-	byte		*fin;
-	size_t		pixels;
-	mstudiotexture_t	*pin;
-	int		flags;
+ 	byte        *fin;
+    size_t      pixels;
+    mstudiotexture_t    *pin;
+    int         flags;
+    uint32_t    format;
 
-	pin = (mstudiotexture_t *)buffer;
-	flags = pin->flags;
+    pin = (mstudiotexture_t *)buffer;
+    flags = pin->flags;
 
-	image.width = pin->width;
-	image.height = pin->height;
-	pixels = image.width * image.height;
-	fin = (byte *)g_mdltexdata;
-	ASSERT(fin);
-	g_mdltexdata = NULL;
+    image.width = pin->width;
+    image.height = pin->height;
+    pixels = image.width * image.height;
+    fin = (byte *)g_mdltexdata;
+    ASSERT(fin);
+    g_mdltexdata = NULL;
 
-	if (!Image_ValidSize(name))
-			return false;
+    if (!Image_ValidSize(name))
+        return false;
 
-	 // Check for PVR texture by looking for GBIX signature
-    if (*(uint32_t*)fin == GBIXHEADER)
-    {
-        gbix_t *gbix = (gbix_t*)fin;
-        byte *texture_data = fin + sizeof(gbix_t) + gbix->nextTagOffset;
-
-		image.width = pin->width;
-		image.height = pin->height;
-
-		uint32_t format = *(uint32_t*)texture_data;
-		
-		uint8_t texture_format = (format >> 8) & 0xFF;
-		uint8_t color_format = format & 0xFF;
-
-
-
-		if (texture_format == PVR_RECT || texture_format == PVR_TWIDDLE || texture_format == PVR_VQ || texture_format == PVR_RECTANGULAR_TWIDDLED || texture_format == PVR_TWIDDLED_MIPMAP)
+	if (*(uint32_t*)fin == GBIXHEADER || *(uint32_t*)fin == PVRTSIGN)
 		{
-			if (texture_format == PVR_VQ)
+			byte *texture_data;
+			byte *format_data;
+			uint32_t format;
+			uint8_t texture_format, color_format;
+			
+			 if (*(uint32_t*)fin == GBIXHEADER)
 			{
-				texture_data += 8; // Skip format header for VQ
-
-    			image.size = 2048 + ((image.width * image.height) / 4);
-				image.type = PF_VQ_RGB_5650;
-				
+				gbix_t *gbix = (gbix_t*)fin;
+				texture_data = fin + sizeof(gbix_t) + gbix->nextTagOffset;
+				format = *(uint32_t*)texture_data;
 			}
-			else if (texture_format == PVR_RECT)
+			else  // standalone PVRT
+			{
+
+				format = *(uint32_t*)(fin + 8);
+				texture_data = fin;
+			}
+
+			texture_format = (format >> 8) & 0xFF;
+			color_format = format & 0xFF;
+
+			Con_Printf("Loading PVR texture: format=0x%X, texture_format=0x%X, color_format=0x%X\n", 
+					format, texture_format, color_format);
+
+			Con_Printf("Before VQ offset - First bytes: %02X %02X %02X %02X\n",
+    texture_data[0], texture_data[1], texture_data[2], texture_data[3]);
+
+
+			// Add more specific format information
+			const char* format_name = "Unknown";
+			switch(texture_format)
+			{
+				case PVR_RECT: format_name = "PVR_RECT"; break;
+				case PVR_TWIDDLE: format_name = "PVR_TWIDDLE"; break;
+				case PVR_VQ: format_name = "PVR_VQ"; break;
+				case PVR_RECTANGULAR_TWIDDLED: format_name = "PVR_RECTANGULAR_TWIDDLED"; break;
+				case PVR_TWIDDLED_MIPMAP: format_name = "PVR_TWIDDLED_MIPMAP"; break;
+				case PVR_SMALL_VQ: format_name = "PVR_SMALL_VQ"; break;
+			}
+
+			Con_Printf("Image: %s, Texture format name: %s, dimensions: %dx%d\n", 
+					name, format_name, image.width, image.height);
+		if (texture_format == PVR_RECT || texture_format == PVR_TWIDDLE || texture_format == PVR_VQ)
+		{
+			if (texture_format == PVR_TWIDDLE || texture_format == 0x80)
+			{
+				image.type = PF_RGB_5650_TWID;
+				image.size = image.width * image.height * 2;
+				SetBits(image.flags, TF_KEEP_SOURCE);
+			}
+			else if (texture_format == PVR_RECT || texture_format == PVR_SMALL_VQ || 
+					texture_format == 0x40 || texture_format == 0x20)
 			{
 				image.type = PF_RGB_5650;
 				image.size = image.width * image.height * 2;
 				SetBits(image.flags, TF_KEEP_SOURCE);
 			}
-			else if (texture_format == PVR_TWIDDLE || texture_format == PVR_RECTANGULAR_TWIDDLED || texture_format == PVR_TWIDDLED_MIPMAP)
+			else if (texture_format == PVR_VQ)
 			{
-				image.type = PF_RGB_5650_TWID;
-				image.size = image.width * image.height * 2;  
-				memcpy(image.rgba, texture_data, image.size);
-				SetBits(image.flags, TF_KEEP_SOURCE);
+				if (*(uint32_t*)fin == GBIXHEADER)
+				{
+					texture_data += 8; // Original GBIX VQ offset
+				}
+				else
+				{
+					texture_data += 20; // Adjusted offset for standalone PVRT VQ
+				}
+				 // Debug print after VQ offset
+			Con_Printf("After VQ offset - First bytes: %02X %02X %02X %02X\n",
+				texture_data[0], texture_data[1], texture_data[2], texture_data[3]);
+				image.type = PF_VQ_RGB_5650;
+				const int codebook_size = 2048;  // 1024 entries * 2 bytes each
+				const int indices_size = (image.width * image.height) / 4;  // Each index covers 2x2 pixels
+				image.size = codebook_size + indices_size;
+				Con_Printf("VQ texture: %dx%d, codebook: %d, indices: %d, total: %d\n",
+        image.width, image.height, codebook_size, indices_size, image.size);
 			}
 			else 
-			{	
-				Con_DPrintf("Unsupported PVR format: 0x%X\n", texture_format);	
+			{    
+				Con_DPrintf("Unsupported PVR format: 0x%X\n", texture_format);    
 				return false;
 			}
 
 			Image_GetPaletteLMP(NULL, LUMP_VQ);
 			image.rgba = Mem_Malloc(host.imagepool, image.size);
 			memcpy(image.rgba, texture_data, image.size);
-
-
+			return true;
 		}
-    }
-    else if (image.hint == IL_HINT_HL)
-    {
-            size_t pixels = image.width * image.height;
-            if (filesize < (sizeof(*pin) + pixels + 768))
-                return false;
+		}
+  	 else if (image.hint == IL_HINT_HL)
+	{
+		int orig_width = image.width;
+		int orig_height = image.height;
+		
+		if (orig_width >= 256 || orig_height >= 256)
+		{
+			// Very large textures: reduce by 16
+			image.width = Q_max(8, (image.width >> 4) & ~7);
+			image.height = Q_max(8, (image.height >> 4) & ~7);
+		}
+		else if (orig_width >= 128 || orig_height >= 128)
+		{
+			// Large textures: reduce by 8
+			image.width = Q_max(8, (image.width >> 3) & ~7);
+			image.height = Q_max(8, (image.height >> 3) & ~7);
+		}
+		else if (orig_width >= 64 || orig_height >= 64)
+		{
+			// Medium textures: reduce by 4
+			image.width = Q_max(8, (image.width >> 2) & ~7);
+			image.height = Q_max(8, (image.height >> 2) & ~7);
+		}
+		else if (orig_width >= 32 || orig_height >= 32)
+		{
+			// Small-medium textures: reduce by 2
+			image.width = Q_max(8, (image.width >> 1) & ~7);
+			image.height = Q_max(8, (image.height >> 1) & ~7);
+		}
+		else
+		{
+			// Very small textures: just align
+			image.width = (image.width + 7) & ~7;
+			image.height = (image.height + 7) & ~7;
+		}
 
-			Con_DPrintf("%s: loading IL_HINT_HL texture %s\n", __func__, name);
+		size_t pixels = image.width * image.height;
+		if (filesize < (sizeof(*pin) + pixels + 768))
+			return false;
 
-            if (FBitSet(pin->flags, STUDIO_NF_MASKED))
-            {
-                byte *pal = fin + pixels;
-                Image_GetPaletteLMP(pal, LUMP_MASKED);
-                image.flags |= IMAGE_HAS_ALPHA|IMAGE_ONEBIT_ALPHA;
-            }
-            else Image_GetPaletteLMP(fin + pixels, LUMP_NORMAL);
+		if (FBitSet(pin->flags, STUDIO_NF_MASKED))
+		{
+			byte *pal = fin + pixels;
+			Image_GetPaletteLMP(pal, LUMP_MASKED);
+			image.flags |= IMAGE_HAS_ALPHA|IMAGE_ONEBIT_ALPHA;
+		}
+		else Image_GetPaletteLMP(fin + pixels, LUMP_NORMAL);
 
-        image.type = PF_INDEXED_32;
-        image.depth = 1;
+		image.type = PF_INDEXED_32;
+		image.depth = 1;
 
-        return Image_AddIndexedImageToPack(fin, image.width, image.height);
-    }
+		return Image_AddIndexedImageToPack(fin, image.width, image.height);
+	}
 	else 
  	{
 		Con_DPrintf("%s: unsupported texture %s should be PVR or indexed\n", __func__, name);

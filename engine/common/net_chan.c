@@ -686,7 +686,7 @@ static void Netchan_CreateFragments_( netchan_t *chan, sizebuf_t *msg )
 	else chunksize = FRAGMENT_MAX_SIZE; // fallback
 
 	wait = (fragbufwaiting_t *)Mem_Calloc( net_mempool, sizeof( fragbufwaiting_t ));
-#if !XASH_DREAMCAST
+	
 	if( !LZSS_IsCompressed( MSG_GetData( msg )))
 	{
 		uint	uCompressedSize = 0;
@@ -701,7 +701,7 @@ static void Netchan_CreateFragments_( netchan_t *chan, sizebuf_t *msg )
 		}
 		if( pbOut ) free( pbOut );
 	}
-#endif // XASH_DREAMCAST disabled LZSS compression for now
+
 	remaining = MSG_GetNumBytesWritten( msg );
 	pos = 0;	// current position in bytes
 

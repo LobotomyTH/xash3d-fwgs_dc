@@ -1127,7 +1127,6 @@ static qboolean GL_UploadTexture( gl_texture_t *tex, rgbdata_t *pic )
 	GL_SetTextureDimensions( tex, pic->width, pic->height, pic->depth );
 	GL_SetTextureFormat( tex, pic->type, pic->flags );
 
-
 	tex->fogParams[0] = pic->fogParams[0];
 	tex->fogParams[1] = pic->fogParams[1];
 	tex->fogParams[2] = pic->fogParams[2];

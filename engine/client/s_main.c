@@ -1982,11 +1982,15 @@ S_Init
 */
 qboolean S_Init( void )
 {
+#if 1
+	return false;
+#else
 	if( Sys_CheckParm( "-nosound" ))
 	{
 		Con_Printf( "Audio: Disabled\n" );
 		return false;
 	}
+#endif
 
 	Cvar_RegisterVariable( &s_volume );
 	Cvar_RegisterVariable( &s_musicvolume );
