@@ -86,7 +86,7 @@ extern poolhandle_t r_temppool;
 	#undef MAX_LIGHTMAPS
 	#define MAX_LIGHTMAPS 64
 	#define BLOCK_SIZE_MAX 128
-	#define MAX_TEXTURES 512
+	#define MAX_TEXTURES 1024
 	#define MAX_DECAL_SURFS 64
 	#define MAX_DETAILTEXTURES 16		
 #endif
