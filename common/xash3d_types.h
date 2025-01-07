@@ -217,7 +217,7 @@ typedef void *(*pfnCreateInterface_t)( const char *, int * );
 #if XASH_LOW_MEMORY == 0
 #define MAX_QPATH		64	// max length of a game pathname
 #elif XASH_LOW_MEMORY == 2
-#define MAX_QPATH		32 // should be enough for singleplayer
+#define MAX_QPATH		48 // should be enough for singleplayer
 #elif XASH_LOW_MEMORY == 1
 #define MAX_QPATH 48
 #endif
