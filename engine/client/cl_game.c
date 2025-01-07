@@ -2763,7 +2763,7 @@ static const char *pfnGetGameDirectory( void )
 {
 	static char	szGetGameDir[MAX_SYSPATH];
 #if XASH_DREAMCAST
-	Q_strncpy( szGetGameDir, "valve", sizeof( szGetGameDir ));
+	Q_strncpy( szGetGameDir, "cstrike", sizeof( szGetGameDir ));
 #else
 	Q_strncpy( szGetGameDir, GI->gamefolder, sizeof( szGetGameDir ));
 #endif
@@ -4247,15 +4247,16 @@ qboolean CL_LoadProgs( const char *name )
 	clgame.maxRemapInfos = 0; // will be alloc on first call CL_InitEdicts();
 	clgame.maxEntities = 2; // world + localclient (have valid entities not in game)
 
+
 	CL_InitCDAudio( "media/cdaudio.txt" );
 	CL_InitTitles( "titles.txt" );
 	
 	if( !R_InitRenderAPI())	// Xash3D extension
 		Con_Reportf( S_WARN "%s: couldn't get render API\n", __func__ );
-#if !XASH_DREAMCAST	
+
 	if( !Mobile_Init() ) // Xash3D FWGS extension: mobile interface
 		Con_Reportf( S_WARN "%s: couldn't get mobility API\n", __func__ );
-#endif
+		
 	CL_InitEdicts( cl.maxclients );		// initailize local player and world
 	CL_InitClientMove();	// initialize pm_shared
 

@@ -62,10 +62,8 @@ uint IN_CollectInputDevices( void )
 
 	if( !m_ignore.value ) // no way to check is mouse connected, so use cvar only
 		ret |= INPUT_DEVICE_MOUSE;
-#if !XASH_DREAMCAST
 	if( touch_enable.value )
 		ret |= INPUT_DEVICE_TOUCH;
-#endif
 	if( Joy_IsActive() ) // connected or enabled
 		ret |= INPUT_DEVICE_JOYSTICK;
 
@@ -345,14 +343,12 @@ static void IN_MouseMove( void )
 
 	if( !in_mouseinitialized )
 		return;
-#if !XASH_DREAMCAST
 	if( Touch_Emulated( ))
 	{
 		// touch emulation overrides all input
 		Touch_KeyEvent( 0, 0 );
 		return;
 	}
-#endif
 	// find mouse movement
 	Platform_GetMousePos( &x, &y );
 
@@ -376,14 +372,13 @@ void IN_MouseEvent( int key, int down )
 		SetBits( in_mstate, BIT( key ));
 	else ClearBits( in_mstate, BIT( key ));
 
-#if !XASH_DREAMCAST
 	// touch emulation overrides all input
 	if( Touch_Emulated( ))
 	{
 		Touch_KeyEvent( K_MOUSE1 + key, down );
 	}
 	else 
-#endif
+#
 	if ( cls.key_dest == key_game )
 	{
 		// perform button actions
@@ -431,9 +426,8 @@ void IN_Shutdown( void )
 #if XASH_USE_EVDEV
 	Evdev_Shutdown();
 #endif
-#if !XASH_DREAMCAST
 	Touch_Shutdown();
-#endif
+
 }
 
 
@@ -453,9 +447,7 @@ void IN_Init( void )
 		IN_StartupMouse( );
 
 		Joy_Init(); // common joystick support init
-#if !XASH_DREAMCAST
 		Touch_Init();
-#endif
 #if XASH_USE_EVDEV
 		Evdev_Init();
 #endif
@@ -568,9 +560,7 @@ static void IN_CollectInput( float *forward, float *side, float *pitch, float *y
 	}
 
 	Joy_FinalizeMove( forward, side, yaw, pitch );
-#if !XASH_DREAMCAST
 	Touch_GetMove( forward, side, yaw, pitch );
-#endif 
 	if( look_filter.value )
 	{
 		*pitch = ( inputstate.lastpitch + *pitch ) / 2;

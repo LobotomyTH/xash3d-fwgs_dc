@@ -33,6 +33,7 @@ XASH_CLIENT_OBJS = \
 	engine/client/console.o \
 	engine/client/gamma.o \
 	engine/client/in_joy.o \
+	engine/client/in_touch.o \
 	engine/client/input.o \
 	engine/client/keys.o \
 	engine/client/mod_dbghulls.o \

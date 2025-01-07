@@ -191,7 +191,7 @@ GNU General Public License for more details.
 #undef MAX_LIGHTSTYLES
 #undef MAX_CLIENTS
 #define MAX_CLIENTS 			8
-#define DC_MAX_EDICTS				256
+#define DC_MAX_EDICTS				128
 #define MAX_VISIBLE_PACKET      128     
 #define MAX_VISIBLE_PACKET_VIS_BYTES    ((MAX_VISIBLE_PACKET + 7) / 8)
 #define MAX_EVENTS          32      

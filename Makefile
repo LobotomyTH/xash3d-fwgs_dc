@@ -14,7 +14,7 @@ include engine.mk
 FILESYSTEM_DIR = filesystem
 GLDC_DIR = ref/gldc
 MAINUI_DIR = mainui_cpp
-CS_DLL_DIR = ../cs16-client/cl_dll
+CS_DLL_DIR = ../fork/cs16-client/cl_dll
 
 MAINUI_LIB = $(MAINUI_DIR)/libmenu.a
 FILESYSTEM_LIB = $(FILESYSTEM_DIR)/libfilesystem_stdio.a

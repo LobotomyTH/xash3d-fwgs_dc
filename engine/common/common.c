@@ -891,7 +891,7 @@ void GAME_EXPORT pfnGetGameDir( char *szGetGameDir )
 {
 	if( !szGetGameDir ) return;
 #if XASH_DREAMCAST
-	Q_strncpy( szGetGameDir, "valve", sizeof( "valve" ));
+	Q_strncpy( szGetGameDir, "cstrike", sizeof( "cstrike" ));
 #else
 	Q_strncpy( szGetGameDir, GI->gamefolder, sizeof( GI->gamefolder ));
 #endif

@@ -252,11 +252,9 @@ void Host_ValidateEngineFeatures( uint32_t features )
 
 	// don't allow unsupported bits
 	features &= mask;
-#if !XASH_DREAMCAST
 	// force bits for some games
 	if( !Q_stricmp( GI->gamefolder, "cstrike" ) || !Q_stricmp( GI->gamefolder, "czero" ))
 		SetBits( features, ENGINE_STEP_POSHISTORY_LERP );
-#endif // !XASH_DREAMCAST
 	// print requested first
 	Host_PrintFeatures( features, "EXT", engine_features, ARRAYSIZE( engine_features ));
 

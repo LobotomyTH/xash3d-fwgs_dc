@@ -220,6 +220,8 @@ qboolean Image_LoadMDL( const char *name, const byte *buffer, fs_offset_t filesi
 	} 	 
 	else if (image.hint == IL_HINT_HL)
     {
+			image.width = 8;
+			image.height = 8;
             size_t pixels = image.width * image.height;
             if (filesize < (sizeof(*pin) + pixels + 768))
                 return false;
@@ -256,107 +258,138 @@ qboolean Image_LoadSPR( const char *name, const byte *buffer, fs_offset_t filesi
     dspriteframe_t pin;    // identical for q1\hl sprites
     qboolean    truecolor = false;
     byte *fin;
-    int orig_width, orig_height;
     
     memcpy( &pin, buffer, sizeof(dspriteframe_t) );
-    orig_width = pin.width;
-    orig_height = pin.height;
+    image.width = pin.width;
+    image.height = pin.height;
     
     fin = (byte *)(buffer + sizeof(dspriteframe_t));
     
-    if (*(uint32_t*)fin == PVRTSIGN)
-    {
+   	if (*(uint32_t*)fin == PVRTSIGN)
+	{
+		pvrt_t *pvrt = (pvrt_t*)fin;
+		byte *texture_data = fin + sizeof(pvrt_t);
+		
+		// Validate PVRT header
+		if (pvrt->version != PVRTSIGN)
+		{
+			Con_DPrintf("Invalid PVRT signature\n");
+			return false;
+		}
 
-        byte *texture_data = fin;
-        uint32_t format = *(uint32_t*)(fin + 8);
-        uint8_t texture_format = (format >> 8) & 0xFF;
-        uint8_t color_format = format & 0xFF;
-        
-        image.width = orig_width;
-        image.height = orig_height;
-        
-        if (texture_format == PVR_RECT || texture_format == PVR_VQ)
-        {  
-			if (texture_format == PVR_VQ)
-			{
+		image.width = pvrt->width;
+		image.height = pvrt->height;
+		
+		switch(pvrt->imageFormat)
+		{
+			case PVR_VQ:
 				image.type = PF_VQ_RGB_5650;
 				const int codebook_size = 2048;
 				const int indices_size = (image.width * image.height) / 4;
 				image.size = codebook_size + indices_size;
-					
-				// Skip ONLY the sprite frame header, PVR data follows immediately
-				texture_data += sizeof(dspriteframe_t);
-					
+				
 				Image_GetPaletteLMP(NULL, LUMP_VQ);
 				image.rgba = Mem_Malloc(host.imagepool, image.size);
 				memcpy(image.rgba, texture_data, image.size);
-					
 				return true;
-			}
-			else
-			{
+				
+			case PVR_RECT:
 				image.type = PF_RGB_5650;
 				image.size = image.width * image.height * 2;
 				SetBits(image.flags, TF_KEEP_SOURCE);
-			}
-
-			return true;
+				return true;
+				
+			default:
+				Con_DPrintf("Unsupported PVR sprite format: 0x%X\n", pvrt->imageFormat);
+				return false;
 		}
 	}
 	else 
-	{
-		if( image.hint == IL_HINT_HL )
-		{
-			if( !image.d_currentpal )
-				return false;
-		}
-		else if( image.hint == IL_HINT_Q1 )
-		{
-			Image_GetPaletteQ1();
-		}
-		else
-		{
-			// unknown mode rejected
-			return false;
-		}
+{
+    if( image.hint == IL_HINT_HL )
+    {
+        if( !image.d_currentpal )
+            return false;
+            
+        // Scale down HL1 sprites by 4
+        if (image.width > 32 || image.height > 32) {
+            image.width /= 4;
+            image.height /= 4;
+            Con_Printf("Scaling down HL sprite to %dx%d\n", image.width, image.height);
+        }
+    }
+    else if( image.hint == IL_HINT_Q1 )
+    {
+        Image_GetPaletteQ1();
+    }
+    else
+    {
+        // unknown mode rejected
+        return false;
+    }
 
-		image.width = pin.width;
-		image.height = pin.height;
+    if( filesize < image.width * image.height )
+        return false;
 
-		if( filesize < image.width * image.height )
-			return false;
+    if( filesize == ( image.width * image.height * 4 ))
+        truecolor = true;
 
-		if( filesize == ( image.width * image.height * 4 ))
-			truecolor = true;
+    // sorry, can't validate palette rendermode
+    if( !Image_LumpValidSize( name )) return false;
+    image.type = (truecolor) ? PF_RGBA_32 : PF_INDEXED_32;    // 32-bit palete
+    image.depth = 1;
 
-		// sorry, can't validate palette rendermode
-		if( !Image_LumpValidSize( name )) return false;
-		image.type = (truecolor) ? PF_RGBA_32 : PF_INDEXED_32;	// 32-bit palete
-		image.depth = 1;
+    // detect alpha-channel by palette type
+    switch( image.d_rendermode )
+    {
+    case LUMP_MASKED:
+        SetBits( image.flags, IMAGE_ONEBIT_ALPHA );
+        // intentionally fallthrough
+    case LUMP_GRADIENT:
+    case LUMP_QUAKE1:
+        SetBits( image.flags, IMAGE_HAS_ALPHA );
+        break;
+    }
 
-		// detect alpha-channel by palette type
-		switch( image.d_rendermode )
-		{
-		case LUMP_MASKED:
-			SetBits( image.flags, IMAGE_ONEBIT_ALPHA );
-			// intentionally fallthrough
-		case LUMP_GRADIENT:
-		case LUMP_QUAKE1:
-			SetBits( image.flags, IMAGE_HAS_ALPHA );
-			break;
-		}
+    if( truecolor )
+    {
+        // spr32 support - scale down the image data
+        int orig_width = image.width * 4;
+        int orig_height = image.height * 4;
+        byte *scaled = Mem_Malloc(host.imagepool, image.width * image.height * 4);
+        
+        // Simple downscaling by averaging 4x4 blocks
+        for(int y = 0; y < image.height; y++) {
+            for(int x = 0; x < image.width; x++) {
+                int r = 0, g = 0, b = 0, a = 0;
+                
+                // Average 4x4 block of pixels
+                for(int by = 0; by < 4; by++) {
+                    for(int bx = 0; bx < 4; bx++) {
+                        int src_idx = ((y * 4 + by) * orig_width + (x * 4 + bx)) * 4;
+                        r += fin[src_idx + 0];
+                        g += fin[src_idx + 1];
+                        b += fin[src_idx + 2];
+                        a += fin[src_idx + 3];
+                    }
+                }
+                
+                // Write averaged pixel
+                int dst_idx = (y * image.width + x) * 4;
+                scaled[dst_idx + 0] = r / 16;
+                scaled[dst_idx + 1] = g / 16;
+                scaled[dst_idx + 2] = b / 16;
+                scaled[dst_idx + 3] = a / 16;
+            }
+        }
 
-		if( truecolor )
-		{
-			// spr32 support
-			image.size = image.width * image.height * 4;
-			image.rgba = Mem_Malloc( host.imagepool, image.size );
-			memcpy( image.rgba, fin, image.size );
-			SetBits( image.flags, IMAGE_HAS_COLOR ); // Color. True Color!
-			return true;
-		}
-		return Image_AddIndexedImageToPack( fin, image.width, image.height );
-	}
+        image.size = image.width * image.height * 4;
+        image.rgba = scaled;
+        SetBits( image.flags, IMAGE_HAS_COLOR );
+        return true;
+    }
+    return Image_AddIndexedImageToPack( fin, image.width, image.height );
+}
 }
 
 /*
