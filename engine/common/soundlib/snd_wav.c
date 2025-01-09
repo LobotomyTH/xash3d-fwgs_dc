@@ -24,7 +24,7 @@ static const byte *iff_lastChunk;
 static int iff_chunkLen;
 
 #if XASH_DREAMCAST
-#define CLAMP(x, low, high) (((x) > (high)) ? (high) : (((x) < (low)) ? (low) : (x)))
+#define CLAMP(x, low, high)  (((x) > (high)) ? (high) : (((x) < (low)) ? (low) : (x)))
 
 static const int aica_step_table[8] = {
     230, 230, 230, 230, 307, 409, 512, 614
@@ -36,24 +36,27 @@ typedef struct {
     int16_t history;
 } aica_state_t;
 
-static inline int16_t ymz_step(uint8_t step, int16_t* history, int16_t* step_size)
-{
+static inline int16_t ymz_step(uint8_t step, int16_t *history, int16_t *step_size) {
+    static const int step_table[8] = {
+        230, 230, 230, 230, 307, 409, 512, 614
+    };
+
     int sign = step & 8;
     int delta = step & 7;
-    int diff = ((1+(delta<<1)) * *step_size) >> 3;
+    int diff = ((1 + (delta << 1)) * *step_size) >> 3;
     int newval = *history;
-    int nstep = (aica_step_table[delta] * *step_size) >> 8;
+    int nstep = (step_table[delta] * *step_size) >> 8;
 
+    /* Only found in the official AICA encoder
+       but it's possible all chips (including ADPCM-B) does this. */
     diff = CLAMP(diff, 0, 32767);
-    
-    if (sign > 0)
+    if(sign > 0)
         newval -= diff;
     else
         newval += diff;
 
     *step_size = CLAMP(nstep, 127, 24576);
     *history = newval = CLAMP(newval, -32768, 32767);
-    
     return newval;
 }
 
@@ -79,28 +82,30 @@ static void aica_decode_stream(const uint8_t *buffer, int16_t *outbuffer, long l
 }
 
 
-static void aica_decode(const uint8_t *buffer, int16_t *outbuffer, long len)
+static void aica_decode(uint8_t *outbuffer, int16_t *buffer, size_t bytes)
 {
 
    	long i;
     int16_t step_size = 127;
     int16_t history = 0;
-    uint8_t nibble = 4;
+    uint8_t buf_sample = 0, nibble = 0;
+    uint32_t adpcm_sample;
+    size_t num_samples = bytes / 2; /* Divide by 2 to get the number of 16-bit samples */
 
-
-    for(i = 0; i < len; i++)
-    {
-        int8_t step = (*(int8_t*)buffer) << nibble;
-        step >>= 4;
-        
+    for(i = 0;i < num_samples;i++) {
+        /* We remove a few bits_per_sample of accuracy to reduce some noise. */
+        int step = ((*buffer++) & -8) - history;
+        adpcm_sample = (abs(step) << 16) / (step_size << 14);
+        adpcm_sample = CLAMP(adpcm_sample, 0, 7);
+        if(step < 0)
+            adpcm_sample |= 8;
         if(!nibble)
-            buffer++;
-            
-        nibble ^= 4;
-        
-        history = history * 254 / 256;
-        *outbuffer++ = ymz_step(step, &history, &step_size);
-	}
+            *outbuffer++ = buf_sample | (adpcm_sample<<4);
+        else
+            buf_sample = (adpcm_sample & 15);
+        nibble ^= 1;
+        ymz_step(adpcm_sample, &history, &step_size);
+    }
 
 }
 
@@ -250,7 +255,7 @@ static qboolean StreamFindNextChunk( dc_file_t *file, const char *name, int *las
 	return false;
 }
 #if XASH_DREAMCAST
-qboolean Sound_LoadWAV(const char *name, const byte *buffer, fs_offset_t filesize)
+qboolean Sound_LoadWAV( const char *name, const byte *buffer, fs_offset_t filesize )
 {
     int samples, fmt;
     qboolean mpeg_stream = false;
@@ -282,10 +287,12 @@ qboolean Sound_LoadWAV(const char *name, const byte *buffer, fs_offset_t filesiz
     fmt = GetLittleShort();
 
 #if XASH_DREAMCAST
-    if(fmt != 1 && fmt != 2 && fmt != 85 && fmt != 32)
+    if(fmt != 1 && fmt != 2 && fmt != 85 && fmt != 32 && fmt != 20)
+#else
+    if(fmt != 1 && fmt != 2)
 #endif
     {
-        if(fmt != 85)
+        if(fmt != 85 && fmt != 20)
         {
             Con_DPrintf(S_ERROR "%s: %s format %d not supported\n", __func__, name, fmt);
             return false;
@@ -304,16 +311,15 @@ qboolean Sound_LoadWAV(const char *name, const byte *buffer, fs_offset_t filesiz
     }
 
     sound.rate = GetLittleLong();
-
     iff_dataPtr += 6;
-
     sound.width = GetLittleShort() / 8;
+
     if(mpeg_stream) sound.width = 2;
 
 #if XASH_DREAMCAST
-    if(fmt == 32)
+    if(fmt == 32 || fmt == 20)
     {
-        sound.width = 2;
+        sound.width = 2;  // ADPCM will decode to 16-bit
     }
     else if(sound.width != 1 && sound.width != 2)
     {
@@ -361,110 +367,152 @@ qboolean Sound_LoadWAV(const char *name, const byte *buffer, fs_offset_t filesiz
     }
 
     iff_dataPtr += 4;
+
 #if XASH_DREAMCAST
-		if(fmt == 32) {
-		// For ADPCM, handle as unsigned
-   		uint32_t raw_samples = GetLittleLong();
-		  samples = raw_samples;
-		// Convert to actual PCM samples (2 samples per byte)
-		sound.samples = raw_samples * 2;
-	} else {
-		samples = GetLittleLong() / sound.width;
-	}
-#endif
-    samples = GetLittleLong() / sound.width;
-
-    if(sound.samples)
+      if(fmt == 32 || fmt == 20)  // Yamaha ADPCM format
     {
-        if(samples < sound.samples)
+        uint32_t raw_samples = GetLittleLong();
+        
+        // ADPCM block alignment
+        #define ADPCM_BLOCK_SIZE 32
+        #define ADPCM_SAMPLES_PER_BLOCK 64
+
+        // Calculate aligned size (keep original size)
+        size_t aligned_size = ALIGN(raw_samples, ADPCM_BLOCK_SIZE);
+        sound.samples = raw_samples;
+        sound.size = raw_samples;
+
+        Con_Printf("AICA: Loading %s (raw=%d aligned=%d)\n", 
+            name, raw_samples, aligned_size);
+
+        // Try to allocate AICA memory
+        uint32_t aica_addr = snd_mem_malloc(aligned_size);
+        
+        if(aica_addr)
         {
-            Con_DPrintf(S_ERROR "%s: %s has a bad loop length\n", __func__, name);
-            return false;
-        }
-    }    if(sound.samples <= 0)
-    {
-        Con_Reportf(S_ERROR "%s: file with %i samples (%s)\n", __func__, sound.samples, name);
-        return false;
-    }
-
-    sound.type = WF_PCMDATA;
-
-    if(mpeg_stream)
-    {
-        int hdr_size = (iff_dataPtr - buffer);
-
-        if((filesize - hdr_size) < FRAME_SIZE)
-        {
-            sound.tempbuffer = (byte *)Mem_Realloc(host.soundpool, sound.tempbuffer, FRAME_SIZE);
-            memcpy(sound.tempbuffer, buffer + (iff_dataPtr - buffer), filesize - hdr_size);
-            return Sound_LoadMPG(name, sound.tempbuffer, FRAME_SIZE);
-        }
-
-        return Sound_LoadMPG(name, buffer + hdr_size, filesize - hdr_size);
-    }
-
-	if(fmt == 32)  // Yamaha ADPCM format
-	{
-		uint32_t rawDataSize = GetLittleLong();
-		int total_samples = sound.samples;
-		uint32_t dataSize = (total_samples + 1) / 2;
-		
-		sound.size = total_samples * sizeof(int16_t);
-		sound.wav = Mem_Malloc(host.soundpool, sound.size);
-		
-		const byte *src = buffer + (iff_dataPtr - buffer);
-		int16_t *dst = (int16_t *)sound.wav;
-		
-		// Initial decode
-		aica_decode(src, dst, total_samples);
-		
-		// Apply sample smoothing
-		int16_t prev = 0;
-		for(int i = 0; i < total_samples; i++)
-		{
-			int32_t current = dst[i];
-			int32_t smoothed = (current + prev) >> 1;
-			dst[i] = (int16_t)smoothed;
-			prev = current;
-		}
-		
-		// Simple 8-sample ramp at the end
-		const int ramp_samples = 8;
-		for(int i = 0; i < ramp_samples && i < total_samples; i++)
-		{
-			float scale = 1.0f - ((float)i / ramp_samples);
-			dst[total_samples - 1 - i] = (int16_t)(dst[total_samples - 1 - i] * scale);
-		}
-		
-		sound.samples = total_samples;
-		return true;
-	}
-
-
-
-
-	sound.samples /= sound.channels;
-    sound.size = sound.samples * sound.width * sound.channels;
-    sound.wav = Mem_Malloc(host.soundpool, sound.size);
-
-    memcpy(sound.wav, buffer + (iff_dataPtr - buffer), sound.size);
-
-    if(sound.width == 1)
-    {
-        int i, j;
-        signed char *pData = (signed char *)sound.wav;
-
-        for(i = 0; i < sound.samples; i++)
-        {
-            for(j = 0; j < sound.channels; j++)
+            // Allocate aligned buffer for DMA
+            void* aligned_buffer = memalign(32, aligned_size);
+            if(!aligned_buffer)
             {
-                *pData = (byte)((int)((byte)*pData) - 128);
-                pData++;
+                Con_DPrintf(S_ERROR "AICA: Failed to allocate aligned buffer for %s\n", name);
+                snd_mem_free(aica_addr);
+                return false;
+            }
+
+            // Copy ADPCM data to aligned buffer
+            const byte* src = buffer + (iff_dataPtr - buffer);
+            memcpy(aligned_buffer, src, raw_samples);
+            if(aligned_size > raw_samples)
+                memset((uint8_t*)aligned_buffer + raw_samples, 0, aligned_size - raw_samples);
+
+            // Flush cache before DMA
+            dcache_flush_range(aligned_buffer, aligned_size);
+
+            // Transfer using DMA
+            if(spu_dma_transfer(aligned_buffer, aica_addr, aligned_size, 1, NULL, NULL) < 0)
+            {
+                Con_DPrintf(S_ERROR "AICA: DMA transfer failed for %s\n", name);
+                free(aligned_buffer);
+                snd_mem_free(aica_addr);
+                return false;
+            }
+
+            free(aligned_buffer);
+
+            // Store AICA position and type
+            sound.aica_pos = aica_addr;
+            sound.type = WF_ADPCMDATA;
+            sound.wav = (void*)aica_addr;
+            
+            Con_Printf("AICA: Loaded at 0x%x\n", aica_addr);
+            return true;
+        }
+        else
+        {
+            // Fallback to PCM decoding in main memory
+            sound.size = sound.samples * sizeof(int16_t);
+            sound.wav = Mem_Malloc(host.soundpool, sound.size);
+            
+            const byte *src = buffer + (iff_dataPtr - buffer);
+            int16_t *dst = (int16_t *)sound.wav;
+            
+            // Decode ADPCM to PCM
+            aica_decode(src, dst, sound.samples);
+            
+            // Apply sample smoothing
+            int16_t prev = 0;
+            for(int i = 0; i < sound.samples; i++)
+            {
+                int32_t current = dst[i];
+                int32_t smoothed = (current + prev) >> 1;
+                dst[i] = (int16_t)smoothed;
+                prev = current;
+            }
+            
+            // Simple 8-sample ramp at the end
+            const int ramp_samples = 8;
+            for(int i = 0; i < ramp_samples && i < sound.samples; i++)
+            {
+                float scale = 1.0f - ((float)i / ramp_samples);
+                dst[sound.samples - 1 - i] = (int16_t)(dst[sound.samples - 1 - i] * scale);
+            }
+            
+            sound.type = WF_PCMDATA;
+            sound.aica_pos = 0;  // Mark as main memory
+            Con_Printf("AICA: Using main RAM for %s (%d bytes)\n", name, sound.size);
+            return true;
+        }
+    }
+    else
+#endif
+    {
+        samples = GetLittleLong() / sound.width;
+
+        if(sound.samples)
+        {
+            if(samples < sound.samples)
+            {
+                Con_DPrintf(S_ERROR "%s: %s has a bad loop length\n", __func__, name);
+                return false;
             }
         }
+        else sound.samples = samples;
+
+        if(sound.samples <= 0)
+        {
+            Con_Reportf(S_ERROR "%s: file with %i samples (%s)\n", __func__, sound.samples, name);
+            return false;
+        }
+
+        sound.type = WF_PCMDATA;
+        sound.samples /= sound.channels;
+        sound.size = sound.samples * sound.width * sound.channels;
+        sound.wav = Mem_Malloc(host.soundpool, sound.size);
+#ifdef XASH_DREAMCAST
+        sound.aica_pos = 0;  // Mark as main memory
+#endif
+
+        memcpy(sound.wav, buffer + (iff_dataPtr - buffer), sound.size);
+
+        if(sound.width == 1)
+        {
+            int i, j;
+            signed char *pData = (signed char *)sound.wav;
+
+            for(i = 0; i < sound.samples; i++)
+            {
+                for(j = 0; j < sound.channels; j++)
+                {
+                    *pData = (byte)((int)((byte)*pData) - 128);
+                    pData++;
+                }
+            }
+        }
+
+        return true;
     }
 
-    return true;
+    return false;
 }
 #else
 /*
@@ -697,7 +745,7 @@ stream_t *Stream_OpenWAV(const char *filename)
     FS_Read(file, &fmt, sizeof(fmt));
     Con_DPrintf("Format: %d\n", fmt);
 
-    if(fmt != 1 && fmt != 32)
+    if(fmt != 1 && fmt != 32 && fmt != 20)
     {
         Con_DPrintf(S_ERROR "%s: %s format %d not supported\n", __func__, filename, fmt);
         FS_Close(file);
@@ -717,7 +765,7 @@ stream_t *Stream_OpenWAV(const char *filename)
     sound.width = t / 8;
     Con_DPrintf("Bits: %d\n", t);
 
-    if(fmt == 32)
+    if(fmt == 32 || fmt == 20)
     {
         sound.width = 2;  // Force 16-bit for ADPCM
     }
@@ -743,7 +791,7 @@ stream_t *Stream_OpenWAV(const char *filename)
     stream->width = sound.width;
     stream->rate = sound.rate;
 
-	if(fmt == 32)
+	if(fmt == 32 || fmt == 20)
 	{
 		uint32_t raw_samples = sound.samples;
 		stream->size = raw_samples;  // Keep original size

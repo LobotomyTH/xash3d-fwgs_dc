@@ -19,6 +19,9 @@ GNU General Public License for more details.
 extern poolhandle_t sndpool;
 
 #include "xash3d_mathlib.h"
+#if XASH_DREAMCAST
+#include <dc/sound/aica_comm.h>
+#endif
 
 #define XASH_AUDIO_CD_QUALITY 1 // some platforms might need this
 
@@ -123,6 +126,13 @@ typedef struct channel_s
 {
 	char     name[16];    // keep sentence name
 	sfx_t   *sfx;         // sfx number
+
+#ifdef XASH_DREAMCAST
+	aica_channel_t aica;      // AICA channel data
+	qboolean    active;       // Is AICA channel in use?
+	qboolean    temp_aica; 
+	int         aica_channel;  
+#endif
 
 	int      leftvol;     // 0-255 left volume
 	int      rightvol;    // 0-255 right volume

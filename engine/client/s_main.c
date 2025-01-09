@@ -114,6 +114,32 @@ S_FreeChannel
 */
 void S_FreeChannel( channel_t *ch )
 {
+
+#ifdef XASH_DREAMCAST
+    if(ch->active)
+    {
+        uint8_t cmdstr[AICA_CMD_MAX_SIZE];
+        aica_cmd_t *cmd = (aica_cmd_t *)cmdstr;
+        aica_channel_t *ch_params = (aica_channel_t *)(cmd + 1);
+
+        cmd->cmd = AICA_CMD_CHAN;
+        cmd->timestamp = 0;
+        cmd->size = sizeof(aica_channel_t);
+        cmd->cmd_id = ch->aica_channel;
+
+        memset(ch_params, 0, sizeof(*ch_params));
+        ch_params->cmd = AICA_CH_CMD_STOP;
+
+        if(snd_sh4_to_aica(cmdstr, cmd->size + sizeof(aica_cmd_t)) >= 0)
+        {
+            Con_Printf("AICA: Freeing channel %d\n", ch->aica_channel);
+            // Add a small delay after stopping
+            thd_sleep(1);
+        }
+        ch->active = false;
+    }
+#endif
+
 	ch->sfx = NULL;
 	ch->name[0] = '\0';
 	ch->use_loop = false;
@@ -344,9 +370,23 @@ channel_t *SND_PickDynamicChannel( int entnum, int channel, sfx_t *sfx, qboolean
 			}
 		}
 
-		// be sure and release previous channel if sentence.
-		S_FreeChannel( &( channels[first_to_die] ));
+
+#ifdef XASH_DREAMCAST
+        // Stop the current AICA playback before freeing the channel
+        if(channels[first_to_die].active)
+        {
+            S_FreeChannel(&channels[first_to_die]);
+        }
+#else
+        S_FreeChannel(&channels[first_to_die]);
+#endif
 	}
+
+#ifdef XASH_DREAMCAST
+    // Assign a unique channel number
+    int aica_chan = first_to_die;
+    channels[first_to_die].aica_channel = aica_chan;
+#endif
 
 	return &channels[first_to_die];
 }
@@ -363,38 +403,50 @@ already playing.
 */
 channel_t *SND_PickStaticChannel( const vec3_t pos, sfx_t *sfx )
 {
-	channel_t	*ch = NULL;
-	int	i;
+    channel_t    *ch = NULL;
+    int i;
 
-	// check for replacement sound, or find the best one to replace
- 	for( i = MAX_DYNAMIC_CHANNELS; i < total_channels; i++ )
- 	{
-		if( channels[i].sfx == NULL )
-			break;
+    // check for replacement sound, or find the best one to replace
+    for( i = MAX_DYNAMIC_CHANNELS; i < total_channels; i++ )
+    {
+        if( channels[i].sfx == NULL )
+            break;
 
-		if( VectorCompare( pos, channels[i].origin ) && channels[i].sfx == sfx )
-			break;
-	}
+        if( VectorCompare( pos, channels[i].origin ) && channels[i].sfx == sfx )
+            break;
+    }
 
-	if( i < total_channels )
-	{
-		// reuse an empty static sound channel
-		ch = &channels[i];
-	}
-	else
-	{
-		// no empty slots, alloc a new static sound channel
-		if( total_channels == MAX_CHANNELS )
-		{
-			Con_DPrintf( S_ERROR "%s: no free channels\n", __func__ );
-			return NULL;
-		}
+    if( i < total_channels )
+    {
+        // reuse an empty static sound channel
+        ch = &channels[i];
+#ifdef XASH_DREAMCAST
+        if(ch->active)
+        {
+            // Stop the previous sound on this channel
+            S_FreeChannel(ch);
+        }
+        ch->aica_channel = i;  // Use channel index as AICA channel
+#endif
+    }
+    else
+    {
+        // no empty slots, alloc a new static sound channel
+        if( total_channels == MAX_CHANNELS )
+        {
+            Con_DPrintf( S_ERROR "%s: no free channels\n", __func__ );
+            return NULL;
+        }
 
-		// get a channel for the static sound
-		ch = &channels[total_channels];
-		total_channels++;
-	}
-	return ch;
+        // get a channel for the static sound
+        ch = &channels[total_channels];
+#ifdef XASH_DREAMCAST
+        ch->aica_channel = total_channels;  // Use new index as AICA channel
+        ch->active = false;
+#endif
+        total_channels++;
+    }
+    return ch;
 }
 
 /*
@@ -574,6 +626,9 @@ void S_StartSound( const vec3_t pos, int ent, int chan, sound_t handle, float fv
 	vol = bound( 0, fvol * 255, 255 );
 	if( pitch <= 1 ) pitch = PITCH_NORM; // Invasion issues
 
+	 Con_Printf("S_StartSound: %s (ent=%d chan=%d vol=%.2f attn=%.2f pitch=%d flags=0x%x)\n",
+        sfx->name, ent, chan, fvol, attn, pitch, flags);
+
 	if( flags & ( SND_STOP|SND_CHANGE_VOL|SND_CHANGE_PITCH ))
 	{
 		if( S_AlterChannel( ent, chan, sfx, vol, pitch, flags ))
@@ -600,12 +655,19 @@ void S_StartSound( const vec3_t pos, int ent, int chan, sound_t handle, float fv
 		return;
 	}
 
+	Con_Printf("  Selected channel %d for sound %s\n", target_chan->aica_channel, sfx->name);
+
+#ifdef XASH_DREAMCAST
+    int saved_aica_channel = target_chan->aica_channel;
+#endif
+
+
 	// spatialize
 	memset( target_chan, 0, sizeof( *target_chan ));
 
 	VectorCopy( pos, target_chan->origin );
 	target_chan->staticsound = ( ent == 0 ) ? true : false;
-	target_chan->use_loop = (flags & SND_STOP_LOOPING) ? false : true;
+    target_chan->use_loop = false;  // Default to non-looping
 	target_chan->localsound = (flags & SND_LOCALSOUND) ? true : false;
 	target_chan->dist_mult = (attn / SND_CLIP_DISTANCE);
 	target_chan->master_vol = vol;
@@ -614,6 +676,8 @@ void S_StartSound( const vec3_t pos, int ent, int chan, sound_t handle, float fv
 	target_chan->basePitch = pitch;
 	target_chan->isSentence = false;
 	target_chan->sfx = sfx;
+	target_chan->aica_channel = saved_aica_channel;
+
 
 	pSource = NULL;
 
@@ -645,6 +709,72 @@ void S_StartSound( const vec3_t pos, int ent, int chan, sound_t handle, float fv
 	}
 
 	SND_Spatialize( target_chan );
+
+#ifdef XASH_DREAMCAST
+	if(pSource && (pSource->flags & SOUND_LOOPED) && !(flags & SND_STOP_LOOPING))
+    {
+        target_chan->use_loop = true;
+    }
+   if(pSource && pSource->aica_pos)
+    {
+        uint8_t cmdstr[AICA_CMD_MAX_SIZE];
+        aica_cmd_t *cmd = (aica_cmd_t *)cmdstr;
+        aica_channel_t *ch_params = (aica_channel_t *)(cmd + 1);
+
+        cmd->cmd = AICA_CMD_CHAN;
+        cmd->timestamp = 0;
+        cmd->size = sizeof(aica_channel_t);
+        cmd->cmd_id = target_chan->aica_channel;
+
+        Con_Printf("  AICA setup: chan=%d pos=0x%x size=%d\n", 
+            target_chan->aica_channel, pSource->aica_pos, pSource->size);
+
+        memset(ch_params, 0, sizeof(*ch_params));
+        ch_params->cmd = flags & SND_STOP ? AICA_CH_CMD_STOP : AICA_CH_CMD_START;
+        ch_params->base = pSource->aica_pos;
+        ch_params->type = AICA_SM_ADPCM;
+        ch_params->length = pSource->size;
+        ch_params->freq = pSource->rate;
+        
+        ch_params->vol = bound(0, Q_max(target_chan->leftvol, target_chan->rightvol), 255);
+
+        Con_Printf("  AICA params: cmd=%d base=0x%x len=%d freq=%d vol=%d\n",
+            ch_params->cmd, ch_params->base, ch_params->length, 
+            ch_params->freq, ch_params->vol);
+
+
+        if(target_chan->leftvol || target_chan->rightvol)
+        {
+            float pan = (float)target_chan->rightvol / (target_chan->leftvol + target_chan->rightvol);
+            ch_params->pan = bound(0, (int)(pan * 255.0f), 255);
+        }
+        else
+        {
+            ch_params->pan = 0x80;
+        }
+
+        ch_params->loop = target_chan->use_loop;
+        if(ch_params->loop)
+        {
+            ch_params->loopstart = pSource->loopStart;
+            ch_params->loopend = pSource->size;
+        }
+        else
+        {
+            ch_params->loopstart = 0;
+            ch_params->loopend = pSource->size;
+        }
+
+        Con_Printf("  Starting new sound on channel %d\n", target_chan->aica_channel);
+
+        if(snd_sh4_to_aica(cmdstr, cmd->size + sizeof(aica_cmd_t)) >= 0)
+        {
+            target_chan->active = true;
+            Con_Printf("  AICA channel %d activated for %s\n", 
+                target_chan->aica_channel, sfx->name);
+        }
+    }
+#endif
 
 	// If a client can't hear a sound when they FIRST receive the StartSound message,
 	// the client will never be able to hear that sound. This is so that out of

@@ -117,7 +117,8 @@ void SNDDMA_Shutdown(void)
 void SNDDMA_Submit(void)
 {
     // TODO: implement sound
-    snd_stream_poll(stream);
+// 	snd_stream_poll(stream);
+
 }
 
 void SNDDMA_BeginPainting(void)
