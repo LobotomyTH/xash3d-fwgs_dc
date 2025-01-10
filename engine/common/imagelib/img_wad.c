@@ -248,67 +248,101 @@ Image_LoadSPR
 */
 qboolean Image_LoadSPR( const char *name, const byte *buffer, fs_offset_t filesize )
 {
-	dspriteframe_t	pin;	// identical for q1\hl sprites
-	qboolean		truecolor = false;
-	byte *fin;
+    dspriteframe_t pin;    // identical for q1\hl sprites
+    qboolean truecolor = false;
+    byte *fin;
+    
+    if( image.hint == IL_HINT_HL )
+    {
+        if( !image.d_currentpal )
+            return false;
+    }
+    else if( image.hint == IL_HINT_Q1 )
+    {
+        Image_GetPaletteQ1();
+    }
+    else
+    {
+        // unknown mode rejected
+        return false;
+    }
 
-	if( image.hint == IL_HINT_HL )
-	{
-		if( !image.d_currentpal )
-			return false;
-	}
-	else if( image.hint == IL_HINT_Q1 )
-	{
-		Image_GetPaletteQ1();
-	}
-	else
-	{
-		// unknown mode rejected
-		return false;
-	}
+    memcpy( &pin, buffer, sizeof(dspriteframe_t) );
+    image.width = pin.width;
+    image.height = pin.height;
 
-	memcpy( &pin, buffer, sizeof(dspriteframe_t) );
-	image.width = pin.width;
-	image.height = pin.height;
+    if( filesize < image.width * image.height )
+        return false;
 
-	if( filesize < image.width * image.height )
-		return false;
+    fin = (byte *)(buffer + sizeof(dspriteframe_t));
 
-	if( filesize == ( image.width * image.height * 4 ))
-		truecolor = true;
+    uint32_t sign;
+    memcpy(&sign, fin, sizeof(uint32_t)); 
+    if (sign == PVRTSIGN)
+    {
+        uint32_t format;
+        memcpy(&format, fin + 8, sizeof(uint32_t));
+        uint8_t texture_format = (format >> 8) & 0xFF;
+        
+        image.width = pin.width;
+        image.height = pin.height;
+        
+        if (texture_format == PVR_RECT || texture_format == PVR_VQ)
+        {  
+            if (texture_format == PVR_VQ)
+            {
+                image.type = PF_VQ_RGB_5650;
+                const int codebook_size = 2048;
+                const int indices_size = (image.width * image.height) / 4;
+                image.size = codebook_size + indices_size;
+				fin += sizeof(dspriteframe_t);
+                Image_GetPaletteLMP(NULL, LUMP_VQ);
+                image.rgba = Mem_Malloc(host.imagepool, image.size);
+                memcpy(image.rgba, fin, image.size);
+                return true;
+            }
+            else
+            {
+                image.type = PF_RGB_5650;
+                image.size = image.width * image.height * 2;
+                SetBits(image.flags, TF_KEEP_SOURCE);
+                return true;
+            }
+        }
+    }
 
-	// sorry, can't validate palette rendermode
-	if( !Image_LumpValidSize( name )) return false;
-	image.type = (truecolor) ? PF_RGBA_32 : PF_INDEXED_32;	// 32-bit palete
-	image.depth = 1;
 
-	// detect alpha-channel by palette type
-	switch( image.d_rendermode )
-	{
-	case LUMP_MASKED:
-		SetBits( image.flags, IMAGE_ONEBIT_ALPHA );
-		// intentionally fallthrough
-	case LUMP_GRADIENT:
-	case LUMP_QUAKE1:
-		SetBits( image.flags, IMAGE_HAS_ALPHA );
-		break;
-	}
+    if( filesize == ( image.width * image.height * 4 ))
+        truecolor = true;
 
-	fin =  (byte *)(buffer + sizeof(dspriteframe_t));
+    if( !Image_LumpValidSize( name )) 
+        return false;
 
-	if( truecolor )
-	{
-		// spr32 support
-		image.size = image.width * image.height * 4;
-		image.rgba = Mem_Malloc( host.imagepool, image.size );
-		memcpy( image.rgba, fin, image.size );
-		SetBits( image.flags, IMAGE_HAS_COLOR ); // Color. True Color!
-		return true;
-	}
-	return Image_AddIndexedImageToPack( fin, image.width, image.height );
+    image.type = (truecolor) ? PF_RGBA_32 : PF_INDEXED_32;
+    image.depth = 1;
+
+    switch( image.d_rendermode )
+    {
+    case LUMP_MASKED:
+        SetBits( image.flags, IMAGE_ONEBIT_ALPHA );
+        // intentionally fallthrough
+    case LUMP_GRADIENT:
+    case LUMP_QUAKE1:
+        SetBits( image.flags, IMAGE_HAS_ALPHA );
+        break;
+    }
+
+    if( truecolor )
+    {
+        image.size = image.width * image.height * 4;
+        image.rgba = Mem_Malloc( host.imagepool, image.size );
+        memcpy( image.rgba, fin, image.size );
+        SetBits( image.flags, IMAGE_HAS_COLOR );
+        return true;
+    }
+
+    return Image_AddIndexedImageToPack( fin, image.width, image.height );
 }
-
-
 /*
 ============
 Image_LoadLMP

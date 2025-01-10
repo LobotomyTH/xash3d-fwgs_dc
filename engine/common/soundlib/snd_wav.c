@@ -382,9 +382,6 @@ qboolean Sound_LoadWAV( const char *name, const byte *buffer, fs_offset_t filesi
         sound.samples = raw_samples;
         sound.size = raw_samples;
 
-        Con_Printf("AICA: Loading %s (raw=%d aligned=%d)\n", 
-            name, raw_samples, aligned_size);
-
         // Try to allocate AICA memory
         uint32_t aica_addr = snd_mem_malloc(aligned_size);
         
@@ -424,7 +421,6 @@ qboolean Sound_LoadWAV( const char *name, const byte *buffer, fs_offset_t filesi
             sound.type = WF_ADPCMDATA;
             sound.wav = (void*)aica_addr;
             
-            Con_Printf("AICA: Loaded at 0x%x\n", aica_addr);
             return true;
         }
         else

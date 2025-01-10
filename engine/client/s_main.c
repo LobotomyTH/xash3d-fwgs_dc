@@ -240,19 +240,18 @@ TODO: this function needs to be removed after whole sound subsystem rewrite
 static int SND_GetChannelTimeLeft( const channel_t *ch )
 {
 #ifdef XASH_DREAMCAST
-      if (!ch->active || !ch->sfx || !ch->sfx->cache)
+   if (!ch->active || !ch->sfx || !ch->sfx->cache)
         return 0;
 
     // Calculate remaining samples
     if (ch->use_loop)
         return ch->sfx->cache->samples; // Return full sample count for looped sounds
     
-    double current_time = cl.time;
-    double elapsed = current_time - ch->start_time;
-    int elapsed_samples = (int)(elapsed * ch->sfx->cache->rate);
-    int remaining = ch->sfx->cache->samples - elapsed_samples;
+    int samples = ch->sfx->cache->samples;
+    int curpos = (cl.time - ch->start_time) * ch->sfx->cache->rate;
+    int remaining = bound(0, samples - curpos, samples);
     
-    return Q_max(0, remaining);
+    return remaining;
 #else
     int remaining;
 
@@ -290,16 +289,12 @@ exceptions).
 channel_t *SND_PickDynamicChannel( int entnum, int channel, sfx_t *sfx, qboolean *ignore )
 {
     int ch_idx;
-    int first_to_die;
-    int life_left;
-    int timeleft;
+    int first_to_die = -1;
+    int life_left = 0x7fffffff;
 #ifdef XASH_DREAMCAST
     static int next_aica_channel = 0;
 #endif
 
-    // check for replacement sound, or find the best one to replace
-    first_to_die = -1;
-    life_left = 0x7fffffff;
     if( ignore ) *ignore = false;
 
     for( ch_idx = NUM_AMBIENTS; ch_idx < MAX_DYNAMIC_CHANNELS; ch_idx++ )
@@ -310,48 +305,51 @@ channel_t *SND_PickDynamicChannel( int entnum, int channel, sfx_t *sfx, qboolean
         if( ch->sfx && ( ch->entchannel == CHAN_STREAM ))
             continue;
 
-        if( channel != CHAN_AUTO && ch->entnum == entnum && 
-            (ch->entchannel == channel || channel == -1))
+        // Don't override active sounds unless they're from the same entity/channel
+        if( ch->active )
         {
-            // always override sound from same entity
-            first_to_die = ch_idx;
-            break;
+            if( channel != CHAN_AUTO && ch->entnum == entnum && 
+                (ch->entchannel == channel || channel == -1))
+            {
+                // Override same entity/channel
+                first_to_die = ch_idx;
+                break;
+            }
+            continue;  // Let active sounds finish
         }
 
-        // don't let monster sounds override player sounds
-        if( ch->sfx && S_IsClient( ch->entnum ) && !S_IsClient( entnum ))
-            continue;
+        // Found an inactive channel
+        first_to_die = ch_idx;
+        break;
+    }
 
-        timeleft = SND_GetChannelTimeLeft( ch );
-
-        if( timeleft < life_left )
+    // If no free channels, find oldest non-looping sound
+    if( first_to_die == -1 )
+    {
+        for( ch_idx = NUM_AMBIENTS; ch_idx < MAX_DYNAMIC_CHANNELS; ch_idx++ )
         {
-            life_left = timeleft;
-            first_to_die = ch_idx;
+            channel_t *ch = &channels[ch_idx];
+            
+            // Skip looped sounds
+            if( ch->sfx && ch->sfx->cache && FBitSet( ch->sfx->cache->flags, SOUND_LOOPED ))
+                continue;
+
+            int timeleft = SND_GetChannelTimeLeft( ch );
+            if( timeleft < life_left )
+            {
+                life_left = timeleft;
+                first_to_die = ch_idx;
+            }
         }
     }
 
     if( first_to_die == -1 )
         return NULL;
 
+    // Free the channel if it was in use
     if( channels[first_to_die].sfx )
     {
-        // don't restart looping sounds for the same entity
-        wavdata_t *sc = channels[first_to_die].sfx->cache;
-
-        if( sc && FBitSet( sc->flags, SOUND_LOOPED ))
-        {
-            channel_t *ch = &channels[first_to_die];
-
-            if( ch->entnum == entnum && ch->entchannel == channel && ch->sfx == sfx )
-            {
-                if( ignore ) *ignore = true;
-                return NULL;
-            }
-        }
-
 #ifdef XASH_DREAMCAST
-        // Properly stop the current sound before reusing channel
         if(channels[first_to_die].active)
         {
             S_FreeChannel(&channels[first_to_die]);
@@ -362,10 +360,9 @@ channel_t *SND_PickDynamicChannel( int entnum, int channel, sfx_t *sfx, qboolean
     }
 
 #ifdef XASH_DREAMCAST
-    // Assign next available AICA channel
     channels[first_to_die].aica_channel = next_aica_channel;
-    next_aica_channel = (next_aica_channel + 1) % 64;  // AICA has 64 channels
-    channels[first_to_die].active = false;  // Will be set to true when sound starts
+    next_aica_channel = (next_aica_channel + 1) % 64;
+    channels[first_to_die].active = false;
 #endif
 
     return &channels[first_to_die];
@@ -521,15 +518,15 @@ static void S_SpatializeChannel( int *left_vol, int *right_vol, int master_vol, 
 
     scale = ( 1.0f - dist ) * lscale;
     *left_vol = (int)( master_vol * scale );
+	
 
 #ifdef XASH_DREAMCAST
     // AICA uses 0-255 for volume and pan
     // Convert volumes to AICA format
-    *right_vol = bound( 0, *right_vol, 255 );
-    *left_vol = bound( 0, *left_vol, 255 );
+ 	*right_vol = bound( 0, *right_vol * 0.65f, 255 );
+    *left_vol = bound( 0, *left_vol * 0.65f, 255 );
 
-    // Calculate pan based on volume difference
-    // Pan: 0 = full left, 128 = center, 255 = full right
+     // Calculate pan based on volume difference
     if (*right_vol == *left_vol)
         *pan = 128;  // Center
     else if (*right_vol > *left_vol)
@@ -537,9 +534,9 @@ static void S_SpatializeChannel( int *left_vol, int *right_vol, int master_vol, 
     else
         *pan = 128 - ((*left_vol - *right_vol) * 128 / 255);
 
-    // Use the higher of the two volumes for AICA
-    *right_vol = Q_max(*right_vol, *left_vol);
-    *left_vol = *right_vol;
+    // Use average of volumes instead of maximum
+    int avg_vol = (*right_vol + *left_vol) / 2;
+    *right_vol = *left_vol = avg_vol;
 #else
     *right_vol = bound( 0, *right_vol, 255 );
     *left_vol = bound( 0, *left_vol, 255 );
@@ -597,12 +594,12 @@ static void SND_Spatialize( channel_t *ch )
     }
 
 #ifdef XASH_DREAMCAST
-    // Calculate spatialization for AICA
+     // Calculate spatialization for AICA
     S_SpatializeChannel( &ch->leftvol, &ch->rightvol, ch->master_vol, gain, dot, dist * ch->dist_mult, &pan );
 
-    if(ch->active)
+    // Only update AICA if the channel is already playing
+    if(ch->active && ch->sfx && ch->sfx->cache)
     {
-        // Update AICA channel with new volume and pan
         AICA_CMDSTR_CHANNEL(tmp, cmd, chan);
         
         cmd->cmd = AICA_CMD_CHAN;
@@ -611,7 +608,7 @@ static void SND_Spatialize( channel_t *ch )
         cmd->cmd_id = ch->aica_channel;
         
         chan->cmd = AICA_CH_CMD_UPDATE;
-        chan->vol = ch->leftvol;  // Use left volume as main volume
+        chan->vol = ch->leftvol;
         chan->pan = pan;
         
         snd_sh4_to_aica(tmp, cmd->size);
@@ -654,6 +651,7 @@ void S_StartSound( const vec3_t pos, int ent, int chan, sound_t handle, float fv
     if( !sfx ) return;
 
     vol = bound( 0, fvol * 255, 255 );
+
     if( pitch <= 1 ) pitch = PITCH_NORM; // Invasion issues
 
     if( flags & ( SND_STOP|SND_CHANGE_VOL|SND_CHANGE_PITCH ))
@@ -689,6 +687,7 @@ void S_StartSound( const vec3_t pos, int ent, int chan, sound_t handle, float fv
     target_chan->localsound = (flags & SND_LOCALSOUND) ? true : false;
     target_chan->dist_mult = (attn / SND_CLIP_DISTANCE);
     target_chan->master_vol = vol;
+
     target_chan->entnum = ent;
     target_chan->entchannel = chan;
     target_chan->basePitch = pitch;
@@ -705,6 +704,7 @@ void S_StartSound( const vec3_t pos, int ent, int chan, sound_t handle, float fv
     }
 
     SND_Spatialize( target_chan );
+
 
     // If a client can't hear a sound when they FIRST receive the StartSound message,
     // the client will never be able to hear that sound.
@@ -741,7 +741,7 @@ void S_StartSound( const vec3_t pos, int ent, int chan, sound_t handle, float fv
 		chan->loopend = pSource->size;
         
         chan->freq = pSource->rate;
-        chan->vol = target_chan->leftvol;
+      	chan->vol = (target_chan->leftvol + target_chan->rightvol) / 2;
         chan->pan = 128;  // Will be updated by spatialize
         
         snd_sh4_to_aica(tmp, cmd->size);
