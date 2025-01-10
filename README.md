@@ -12,7 +12,7 @@ Xash3D (pronounced `[ksɑʂ]`) FWGS is a game engine, aimed to provide compatibi
 
 1. Create a development directory (e.g., `Xash3D_DC`)
 2. Clone the following repositories in the same directory:
-   ```bash
+   ```
    git clone https://github.com/maximqaxd/hlsdk-portable_dc.git
    git clone https://github.com/maximqaxd/xash3d-fwgs_dc
    ```
@@ -28,11 +28,13 @@ Xash3D (pronounced `[ksɑʂ]`) FWGS is a game engine, aimed to provide compatibi
 ## Building Dependencies
 
 1. Build GLDC:
+    ```
    cd GLdc/GL
    # Modify texture.c line 1700:
    # Replace FASTCPY(targetData, conversionBuffer, destBytes);
    # With memcpy(targetData, conversionBuffer, destBytes);
-   # comment out #define GL_TEXTURE_LOD_BIAS               0x8501 in glext.h
+   # in include/GL/glext.h
+   # remove or comment #define GL_TEXTURE_LOD_BIAS 0x8501 
    ```
 
 ## Building Xash3D
