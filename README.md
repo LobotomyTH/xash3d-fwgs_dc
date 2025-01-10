@@ -1,21 +1,73 @@
 # Xash3D FWGS Engine Dreamcast port <img align="right" width="128" height="128" src="https://github.com/FWGS/xash3d-fwgs/raw/master/game_launch/icon-xash-material.png" alt="Xash3D FWGS icon" />
 
-Xash3D (pronounced `[ksɑʂ]`) FWGS is a game engine, aimed to provide compatibility with Half-Life Engine and extend it, as well as to give game developers well known workflow.
+Xash3D (pronounced `[ksɑʂ]`) FWGS is a game engine, aimed to provide compatibility with Half-Life Engine and extend it. This is a Dreamcast port of the engine.
 
-Xash3D FWGS is a heavily modified fork of an original [Xash3D Engine](https://www.moddb.com/engines/xash3d-engine) by Uncle Mike.
+## Prerequisites
 
-## Installation & Running (Dreamcast)
-0) Build the binaries
-1) Copy engine binaries to some directory
-2) Copy Half-Life game data (valve) to same directory with engine binaries
-3) Copy build/valve folder to valve folder which you copied to directory with engine binaries, overwrite all if asked
-4) Run
+1. KallistiOS (KOS) development environment
+2. GLDC
+3. HLSDK-portable 
 
-## Building
-#### Dreamcast
-Currently it runs only on 32MB modded Dreamcast, 16 MB RAM support is coming, you can run a few MP maps (dm_office, snark_pit).
+## Repository Setup
 
-0) Build GLDC by Kazade: before building replace at GLDC's texture.c:1700  FASTCPY(targetData, conversionBuffer, destBytes) to memcpy.
-1) Compile engine at root dir: with `make all` script will build binaries and CDI/ISO, be sure to put Half-Life Dreamcast valve folder data to build/valve before running make.
+1. Create a development directory (e.g., `Xash3D_DC`)
+2. Clone the following repositories in the same directory:
+   ```bash
+   git clone https://github.com/maximqaxd/hlsdk-portable_dc.git
+   git clone https://github.com/maximqaxd/xash3d-fwgs_dc
+   ```
 
-You can support me and this port at https://boosty.to/maximqad
+## Required Modifications
+
+1. Modify KOS `include/kos/opts.h`:
+   ```c
+   // Change this line
+   #define FS_CD_MAX_FILES 48
+   ```
+
+## Building Dependencies
+
+1. Build GLDC:
+   ```bash
+   cd GLdc/GL
+   # Modify texture.c line 1700:
+   # Replace FASTCPY(targetData, conversionBuffer, destBytes);
+   # With memcpy(targetData, conversionBuffer, destBytes);
+   ```
+
+## Building Xash3D
+
+This will build:
+- Filesystem
+- GL renderer
+- Main engine (1ST_READ.BIN)
+- HLSDK
+
+## Installation & Running
+
+1. Copy engine binaries to a directory
+2. Copy Half-Life game data (valve folder) to the same directory
+3. Copy `build/valve` folder to the valve directory, overwrite when prompted
+4. Build the engine and all components (make all)
+5. Run on your Dreamcast
+
+## Hardware Requirements
+
+Currently we support multiplayer. It requires BBA. Modem tested, but seems it won't work for now.
+
+## Support Development
+
+You can support the port development for acquiring dev tools at https://boosty.to/maximqad
+
+## Notes
+
+- This is a work in progress
+- Some features may be unstable or missing
+- Performance optimizations are ongoing
+
+## Credits
+
+- Original Xash3D Engine by Uncle Mike
+- FWGS team for Xash3D FWGS fork
+- Kazade for GLdc
+- KallistiOS team
