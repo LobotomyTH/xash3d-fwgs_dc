@@ -132,6 +132,7 @@ typedef struct channel_s
 	qboolean    active;       // Is AICA channel in use?
 	qboolean    temp_aica; 
 	int         aica_channel;  
+	double      start_time;
 #endif
 
 	int      leftvol;     // 0-255 left volume
