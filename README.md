@@ -24,17 +24,40 @@ Xash3D (pronounced `[ksɑʂ]`) FWGS is a game engine, aimed to provide compatibi
    // Change this line
    #define FS_CD_MAX_FILES 48
    ```
+2. Modify KOS environ.sh:
+   ```c
+   # Optimization Level
+   #
+   # Controls the baseline optimization level to use when building.
+   # Typically this is -Og (debugging), -O0, -O1, -O2, or -O3.
+   # NOTE: For our target, -O4 is a valid optimization level that has
+   # been seen to have some performance impact as well.
+   #
+   //set 
+   export KOS_CFLAGS="${KOS_CFLAGS} -Os"
+   # Stack Protector
+   #
+   # Controls whether GCC emits extra code to check for buffer overflows or stack
+   # smashing, which can be very useful for debugging. -fstack-protector only
+   # covers vulnerable objects, while -fstack-protector-strong provides medium
+   # coverage, and -fstack-protector-all provides full coverage. You may also
+   # override the default stack excepton handler by providing your own
+   # implementation of "void __stack_chk_fail(void)."
+   #
+   // disable stack protector
+   #export KOS_CFLAGS="${KOS_CFLAGS} -fstack-protector-all"
+   ```
+3. Rebuild KOS
 
 ## Building Dependencies
 
 1. Build GLDC:
     ```
-   cd GLdc/GL
    # Modify texture.c line 1700:
-   # Replace FASTCPY(targetData, conversionBuffer, destBytes);
-   # With memcpy(targetData, conversionBuffer, destBytes);
-   # in include/GL/glext.h
-   # remove or comment #define GL_TEXTURE_LOD_BIAS 0x8501 
+   Replace FASTCPY(targetData, conversionBuffer, destBytes);
+   With memcpy(targetData, conversionBuffer, destBytes);
+   # In include/GL/glext.h
+   Remove or comment #define GL_TEXTURE_LOD_BIAS 0x8501
    ```
 
 ## Building Xash3D
