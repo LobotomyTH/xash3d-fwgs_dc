@@ -46,10 +46,9 @@ This will build:
 ## Installation & Running
 
 1. Copy engine binaries to a directory
-2. Copy Half-Life game data (valve folder) to the same directory
-3. Copy `build/valve` folder to the valve directory, overwrite when prompted
-4. Build the engine and all components (make all)
-5. Run on your Dreamcast
+2. Copy Half-Life game data (valve folder) to the build/valve directory don't overwrite when prompted.
+3. Build the engine and all components (make all)
+4. Run on your Dreamcast
 
 ## Hardware Requirements
 
