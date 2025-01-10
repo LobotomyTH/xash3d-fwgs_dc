@@ -28,11 +28,11 @@ Xash3D (pronounced `[ksɑʂ]`) FWGS is a game engine, aimed to provide compatibi
 ## Building Dependencies
 
 1. Build GLDC:
-   ```bash
    cd GLdc/GL
    # Modify texture.c line 1700:
    # Replace FASTCPY(targetData, conversionBuffer, destBytes);
    # With memcpy(targetData, conversionBuffer, destBytes);
+   # comment out #define GL_TEXTURE_LOD_BIAS               0x8501 in glext.h
    ```
 
 ## Building Xash3D
