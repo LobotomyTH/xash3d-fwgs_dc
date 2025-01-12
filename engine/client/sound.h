@@ -186,7 +186,7 @@ typedef struct
 
 #if XASH_DREAMCAST
 #define MAX_DYNAMIC_CHANNELS	(8 + NUM_AMBIENTS)
-#define MAX_CHANNELS	(64 + MAX_DYNAMIC_CHANNELS)
+#define MAX_CHANNELS	64
 #else
 #define MAX_DYNAMIC_CHANNELS	(60 + NUM_AMBIENTS)
 #define MAX_CHANNELS	(256 + MAX_DYNAMIC_CHANNELS)	// Scourge Of Armagon has too many static sounds on hip2m4.bsp
