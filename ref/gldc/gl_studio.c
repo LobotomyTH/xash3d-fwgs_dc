@@ -1920,6 +1920,54 @@ generic path
 */
 static void R_StudioDrawNormalMesh( short *ptricmds, vec3_t *pstudionorms, float s, float t )
 {
+#if XASH_DREAMCAST
+    int i;
+    static fast_vert_aligned_t vertices[MAXSTUDIOVERTS];
+    
+    glEnableClientState(GL_VERTEX_ARRAY);
+    glEnableClientState(GL_TEXTURE_COORD_ARRAY);
+    glEnableClientState(GL_COLOR_ARRAY);
+    
+    while ((i = *(ptricmds++)))
+    {
+        int vertCount = abs(i);
+        if (vertCount > MAXSTUDIOVERTS) continue;
+        
+        GLenum primType = (i < 0) ? GL_TRIANGLE_FAN : GL_TRIANGLE_STRIP;
+        short *tempptricmds = ptricmds;  // Store start of vertex data
+        
+        // First pass: fill vertices sequentially
+        for (int j = 0; j < vertCount; j++, ptricmds += 4)
+        {
+            byte color[4];
+            R_StudioSetColorArray(ptricmds, pstudionorms, color);
+            
+            vertices[j] = (fast_vert_aligned_t){
+                .flags = (j == vertCount-1) ? VERTEX_EOL : VERTEX,
+                .vert = {
+                    g_studio.verts[ptricmds[0]][0],
+                    g_studio.verts[ptricmds[0]][1],
+                    g_studio.verts[ptricmds[0]][2]
+                },
+                .texture = {
+                    ptricmds[2] * s,
+                    ptricmds[3] * t
+                },
+                .color = {color[2], color[1], color[0], color[3]},
+                .pad0 = {0}
+            };
+        }
+
+        glVertexPointer(3, GL_FLOAT, sizeof(fast_vert_aligned_t), &vertices[0].vert);
+        glTexCoordPointer(2, GL_FLOAT, sizeof(fast_vert_aligned_t), &vertices[0].texture);
+        glColorPointer(GL_BGRA, GL_UNSIGNED_BYTE, sizeof(fast_vert_aligned_t), &vertices[0].color);
+        glDrawArrays(primType, 0, vertCount);
+    }
+
+    glDisableClientState(GL_VERTEX_ARRAY);
+    glDisableClientState(GL_TEXTURE_COORD_ARRAY);
+    glDisableClientState(GL_COLOR_ARRAY);
+#else
 	int	i;
 
 	while(( i = *( ptricmds++ )))
@@ -1941,6 +1989,7 @@ static void R_StudioDrawNormalMesh( short *ptricmds, vec3_t *pstudionorms, float
 
 		glEnd();
 	}
+#endif
 }
 
 /*
@@ -1950,28 +1999,75 @@ R_StudioDrawNormalMesh
 generic path
 ===============
 */
-static void R_StudioDrawFloatMesh( short *ptricmds, vec3_t *pstudionorms )
+static void R_StudioDrawFloatMesh(short *ptricmds, vec3_t *pstudionorms)
 {
-	int	i;
+#if XASH_DREAMCAST
+    int i;
+    static fast_vert_aligned_t vertices[MAXSTUDIOVERTS];
+    
+    glEnableClientState(GL_VERTEX_ARRAY);
+    glEnableClientState(GL_TEXTURE_COORD_ARRAY);
+    glEnableClientState(GL_COLOR_ARRAY);
+    
+	 while ((i = *(ptricmds++)))
+    {
+        int vertCount = abs(i);
+        if (vertCount > MAXSTUDIOVERTS) continue;
+        
+        GLenum primType = (i < 0) ? GL_TRIANGLE_FAN : GL_TRIANGLE_STRIP;
+        
+        for (int j = 0; j < vertCount; j++, ptricmds += 4)
+        {
+            byte color[4];
+            R_StudioSetColorArray(ptricmds, pstudionorms, color);
+            
+            vertices[j] = (fast_vert_aligned_t){
+                .flags = (j == vertCount-1) ? VERTEX_EOL : VERTEX,
+                .vert = {
+                    g_studio.verts[ptricmds[0]][0],
+                    g_studio.verts[ptricmds[0]][1],
+                    g_studio.verts[ptricmds[0]][2]
+                },
+                .texture = {
+                    HalfToFloat(ptricmds[2]),
+                    HalfToFloat(ptricmds[3])
+                },
+                .color = {color[2], color[1], color[0], color[3]},
+                .pad0 = {0}
+            };
+        }
 
-	while(( i = *( ptricmds++ )))
-	{
-		if( i < 0 )
-		{
-			glBegin( GL_TRIANGLE_FAN );
-			i = -i;
-		}
-		else glBegin( GL_TRIANGLE_STRIP );
+        glVertexPointer(3, GL_FLOAT, sizeof(fast_vert_aligned_t), &vertices[0].vert);
+        glTexCoordPointer(2, GL_FLOAT, sizeof(fast_vert_aligned_t), &vertices[0].texture);
+        glColorPointer(GL_BGRA, GL_UNSIGNED_BYTE, sizeof(fast_vert_aligned_t), &vertices[0].color);
+        glDrawArrays(primType, 0, vertCount);
+    }
 
-		for( ; i > 0; i--, ptricmds += 4 )
-		{
-			R_StudioSetColorBegin( ptricmds, pstudionorms );
-			glTexCoord2f( HalfToFloat( ptricmds[2] ), HalfToFloat( ptricmds[3] ));
-			glVertex3fv( g_studio.verts[ptricmds[0]] );
-		}
+		glDisableClientState(GL_VERTEX_ARRAY);
+		glDisableClientState(GL_TEXTURE_COORD_ARRAY);
+		glDisableClientState(GL_COLOR_ARRAY);
+	#else
+    int i;
 
-		glEnd();
-	}
+    while ((i = *(ptricmds++)))
+    {
+        if (i < 0)
+        {
+            glBegin(GL_TRIANGLE_FAN);
+            i = -i;
+        }
+        else glBegin(GL_TRIANGLE_STRIP);
+
+        for (; i > 0; i--, ptricmds += 4)
+        {
+            R_StudioSetColorBegin(ptricmds, pstudionorms);
+            glTexCoord2f(HalfToFloat(ptricmds[2]), HalfToFloat(ptricmds[3]));
+            glVertex3fv(g_studio.verts[ptricmds[0]]);
+        }
+
+        glEnd();
+    }
+#endif
 }
 
 /*
@@ -1983,6 +2079,76 @@ generic path
 */
 static void R_StudioDrawChromeMesh( short *ptricmds, vec3_t *pstudionorms, float s, float t, float scale )
 {
+#if XASH_DREAMCAST
+ 	int i;
+    static fast_vert_aligned_t vertices[MAXSTUDIOVERTS];
+    qboolean glowShell = (scale > 0.0f) ? true : false;
+    vec3_t vert;
+    
+    glEnableClientState(GL_VERTEX_ARRAY);
+    glEnableClientState(GL_TEXTURE_COORD_ARRAY);
+    glEnableClientState(GL_COLOR_ARRAY);
+    
+        while ((i = *(ptricmds++)))
+    {
+        int vertCount = abs(i);
+        if (vertCount > MAXSTUDIOVERTS) continue;
+        
+        GLenum primType = (i < 0) ? GL_TRIANGLE_FAN : GL_TRIANGLE_STRIP;
+        
+        for (int j = 0; j < vertCount; j++, ptricmds += 4)
+        {
+            if (glowShell)
+            {
+                color24 *clr = &RI.currententity->curstate.rendercolor;
+                int idx = g_studio.normaltable[ptricmds[0]];
+                VectorMA(g_studio.verts[ptricmds[0]], scale, g_studio.norms[ptricmds[0]], vert);
+
+                vertices[j] = (fast_vert_aligned_t){
+                    .flags = (j == vertCount-1) ? VERTEX_EOL : VERTEX,
+                    .vert = {vert[0], vert[1], vert[2]},
+                    .texture = {
+                        g_studio.chrome[idx][0] * s,
+                        g_studio.chrome[idx][1] * t
+                    },
+                    .color = {clr->b, clr->g, clr->r, 255},
+                    .pad0 = {0}
+                };
+            }
+            else
+            {
+                int idx = ptricmds[1];
+                byte color[4];
+                R_StudioSetColorArray(ptricmds, pstudionorms, color);
+
+                vertices[j] = (fast_vert_aligned_t){
+                    .flags = (j == vertCount-1) ? VERTEX_EOL : VERTEX,
+                    .vert = {
+                        g_studio.verts[ptricmds[0]][0],
+                        g_studio.verts[ptricmds[0]][1],
+                        g_studio.verts[ptricmds[0]][2]
+                    },
+                    .texture = {
+                        g_studio.chrome[idx][0] * s,
+                        g_studio.chrome[idx][1] * t
+                    },
+                    .color = {color[2], color[1], color[0], color[3]},
+                    .pad0 = {0}
+                };
+            }
+        }
+
+        glVertexPointer(3, GL_FLOAT, sizeof(fast_vert_aligned_t), &vertices[0].vert);
+        glTexCoordPointer(2, GL_FLOAT, sizeof(fast_vert_aligned_t), &vertices[0].texture);
+        glColorPointer(GL_BGRA, GL_UNSIGNED_BYTE, sizeof(fast_vert_aligned_t), &vertices[0].color);
+        glDrawArrays(primType, 0, vertCount);
+    }
+
+
+    glDisableClientState(GL_VERTEX_ARRAY);
+    glDisableClientState(GL_TEXTURE_COORD_ARRAY);
+    glDisableClientState(GL_COLOR_ARRAY);
+#else
 	float	*lv, *av;
 	int	i, idx;
 	qboolean	glowShell = (scale > 0.0f) ? true : false;
@@ -2023,6 +2189,7 @@ static void R_StudioDrawChromeMesh( short *ptricmds, vec3_t *pstudionorms, float
 
 		glEnd();
 	}
+#endif
 }
 
 

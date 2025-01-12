@@ -32,19 +32,21 @@ static void Sound_Reset( void )
 
 static wavdata_t *SoundPack( void )
 {
-	wavdata_t	*pack = Mem_Calloc( host.soundpool, sizeof( wavdata_t ));
+    wavdata_t    *pack = Mem_Calloc( host.soundpool, sizeof( wavdata_t ));
 
-	pack->buffer = sound.wav;
-	pack->width = sound.width;
-	pack->rate = sound.rate;
-	pack->type = sound.type;
-	pack->size = sound.size;
-	pack->loopStart = sound.loopstart;
-	pack->samples = sound.samples;
-	pack->channels = sound.channels;
-	pack->flags = sound.flags;
-
-	return pack;
+    pack->buffer = sound.wav;
+    pack->width = sound.width;
+    pack->rate = sound.rate;
+    pack->type = sound.type;
+    pack->size = sound.size;
+    pack->loopStart = sound.loopstart;
+    pack->samples = sound.samples;
+    pack->channels = sound.channels;
+    pack->flags = sound.flags;
+#ifdef XASH_DREAMCAST
+    pack->aica_pos = sound.aica_pos;
+#endif
+    return pack;
 }
 
 /*

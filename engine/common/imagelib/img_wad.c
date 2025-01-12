@@ -177,11 +177,19 @@ qboolean Image_LoadMDL( const char *name, const byte *buffer, fs_offset_t filesi
 		pvrt_t *pvrt;
 		
 		if (*(uint32_t*)fin == GBIXHEADER)
-		{
-			gbix_t *gbix = (gbix_t*)fin;
-			texture_data = fin + sizeof(gbix_t) + gbix->nextTagOffset;
-			pvrt = (pvrt_t*)texture_data;
-		}
+        {
+            gbix_t *gbix = (gbix_t*)fin;
+            texture_data = fin + sizeof(gbix_t);
+            pvrt = (pvrt_t*)texture_data;
+            
+            // Verify we have a PVRT signature
+            if (*(uint32_t*)texture_data != PVRTSIGN)
+            {
+                Con_DPrintf("%s: Invalid PVRT signature after GBIX in %s\n", __func__, name);
+                return false;
+            }
+            texture_data += sizeof(pvrt_t);  
+        }
 		else  // standalone PVRT
 		{
 			pvrt = (pvrt_t*)fin;
@@ -344,8 +352,6 @@ qboolean Image_LoadSPR( const char *name, const byte *buffer, fs_offset_t filesi
 
     return Image_AddIndexedImageToPack( fin, image.width, image.height );
 }
-
-
 /*
 ============
 Image_LoadLMP
@@ -453,7 +459,7 @@ qboolean Image_LoadMIP( const char *name, const byte *buffer, fs_offset_t filesi
 
 	memcpy( &mip, buffer, sizeof( mip ));
 	
-	fin = (byte *)buffer + sizeof(mip);
+	fin = (byte *)buffer;
 
 	if (*(uint32_t*)buffer == PVRTSIGN)  
 	{
