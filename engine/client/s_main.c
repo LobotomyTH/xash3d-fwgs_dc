@@ -881,14 +881,8 @@ void S_StartSound( const vec3_t pos, int ent, int chan, sound_t handle, float fv
     // Start sound on AICA
     if(pSource)
     {
-#if 0
-        Con_DPrintf("AICA: Starting sound '%s' on channel %d (static: %s, in_use: %s)\n",
-            sfx->name,
-            target_chan->aica_channel,
-            (target_chan->aica_channel >= MAX_DYNAMIC_CHANNELS) ? "yes" : "no",
-            aica_channels_in_use[target_chan->aica_channel] ? "yes" : "no");
-#endif
-
+        qboolean should_loop = (target_chan->use_loop && FBitSet(pSource->flags, SOUND_LOOPED));
+        
         AICA_CMDSTR_CHANNEL(tmp, cmd, chan);
         
         cmd->cmd = AICA_CMD_CHAN;
@@ -901,7 +895,7 @@ void S_StartSound( const vec3_t pos, int ent, int chan, sound_t handle, float fv
         chan->type = pSource->type;
         chan->length = pSource->size;
         
-        chan->loop = (target_chan->use_loop && FBitSet(pSource->flags, SOUND_LOOPED)) ? 1 : 0;
+        chan->loop = should_loop;
         chan->loopstart = 0;
         chan->loopend = pSource->size;
         
@@ -914,8 +908,7 @@ void S_StartSound( const vec3_t pos, int ent, int chan, sound_t handle, float fv
         
         aica_channels_in_use[target_chan->aica_channel] = true;
         target_chan->active = true;
-        target_chan->start_time = Sys_DoubleTime();  // Set start time when allocating channel
-
+        target_chan->start_time = Sys_DoubleTime();
     }
 #endif
 
@@ -929,105 +922,125 @@ S_RestoreSound
 Restore a sound effect for the given entity on the given channel
 ====================
 */
-void S_RestoreSound( const vec3_t pos, int ent, int chan, sound_t handle, float fvol, float attn, int pitch, int flags, double sample, double end, int wordIndex )
+void S_RestoreSound(const vec3_t pos, int ent, int chan, sound_t handle, float fvol, float attn, int pitch, int flags, double sample, double end, int wordIndex)
 {
-	wavdata_t	*pSource;
-	sfx_t	*sfx = NULL;
-	channel_t	*target_chan;
-	qboolean	bIgnore = false;
-	int	vol;
+    wavdata_t    *pSource;
+    sfx_t    *sfx = NULL;
+    channel_t    *target_chan;
+    qboolean    bIgnore = false;
+    int    vol;
 
-	if( !dma.initialized ) return;
-	sfx = S_GetSfxByHandle( handle );
-	if( !sfx ) return;
+    if(!dma.initialized) return;
+    sfx = S_GetSfxByHandle(handle);
+    if(!sfx) return;
 
-	vol = bound( 0, fvol * 255, 255 );
-	if( pitch <= 1 ) pitch = PITCH_NORM; // Invasion issues
+    vol = bound(0, fvol * 255, 255);
+    if(pitch <= 1) pitch = PITCH_NORM; // Invasion issues
 
-	// pick a channel to play on
-	if( chan == CHAN_STATIC ) target_chan = SND_PickStaticChannel( pos, sfx );
-	else target_chan = SND_PickDynamicChannel( ent, chan, sfx, &bIgnore );
+    // pick a channel to play on
+    if(chan == CHAN_STATIC) target_chan = SND_PickStaticChannel(pos, sfx);
+    else target_chan = SND_PickDynamicChannel(ent, chan, sfx, &bIgnore);
 
-	if( !target_chan )
-	{
-		if( !bIgnore )
-			Con_DPrintf( S_ERROR "dropped sound \"" DEFAULT_SOUNDPATH "%s\"\n", sfx->name );
-		return;
-	}
+    if(!target_chan)
+    {
+        if(!bIgnore)
+            Con_DPrintf(S_ERROR "dropped sound \"" DEFAULT_SOUNDPATH "%s\"\n", sfx->name);
+        return;
+    }
 
-	// spatialize
-	memset( target_chan, 0, sizeof( *target_chan ));
-
-	VectorCopy( pos, target_chan->origin );
-	target_chan->staticsound = ( ent == 0 ) ? true : false;
-	target_chan->use_loop = (flags & SND_STOP_LOOPING) ? false : true;
-	target_chan->localsound = (flags & SND_LOCALSOUND) ? true : false;
-	target_chan->dist_mult = (attn / SND_CLIP_DISTANCE);
-	target_chan->master_vol = vol;
-	target_chan->entnum = ent;
-	target_chan->entchannel = chan;
-	target_chan->basePitch = pitch;
-	target_chan->isSentence = false;
-	target_chan->sfx = sfx;
-
-	pSource = NULL;
-
-	if( S_TestSoundChar( sfx->name, '!' ))
-	{
-		// this is a sentence
-		// link all words and load the first word
-		// NOTE: sentence names stored in the cache lookup are
-		// prepended with a '!'.  Sentence names stored in the
-		// sentence file do not have a leading '!'.
-#ifndef XASH_DREAMCAST
-		VOX_LoadSound( target_chan, S_SkipSoundChar( sfx->name ));
-		Q_strncpy( target_chan->name, sfx->name, sizeof( target_chan->name ));
-
-		// not a first word in sentence!
-		if( wordIndex != 0 )
-		{
-			VOX_FreeWord( target_chan );		// release first loaded word
-			target_chan->wordIndex = wordIndex;	// restore current word
-			VOX_LoadWord( target_chan );
-
-			if( target_chan->currentWord )
-			{
-				target_chan->sfx = target_chan->words[target_chan->wordIndex].sfx;
-				sfx = target_chan->sfx;
-				pSource = sfx->cache;
-			}
-		}
-		else
-		{
-			sfx = target_chan->sfx;
-			if( sfx ) pSource = sfx->cache;
-		}
+#ifdef XASH_DREAMCAST
+    // Store AICA channel state before memset
+    int saved_aica_channel = target_chan->aica_channel;
+    qboolean was_active = target_chan->active;
+    
+    // Stop previous sound if active
+    if(was_active)
+    {
+        AICA_CMDSTR_CHANNEL(tmp, cmd, chan);
+        cmd->cmd = AICA_CMD_CHAN;
+        cmd->timestamp = 0;
+        cmd->size = AICA_CMDSTR_CHANNEL_SIZE;
+        cmd->cmd_id = saved_aica_channel;
+        chan->cmd = AICA_CH_CMD_STOP;
+        snd_sh4_to_aica(tmp, cmd->size);
+        snd_poll_resp();
+    }
 #endif
-	}
-	else
-	{
-		// regular or streamed sound fx
-		pSource = S_LoadSound( sfx );
-		target_chan->name[0] = '\0';
-	}
 
-	if( !pSource )
-	{
-		S_FreeChannel( target_chan );
-		return;
-	}
+    // spatialize
+    memset(target_chan, 0, sizeof(*target_chan));
 
-	SND_Spatialize( target_chan );
+#ifdef XASH_DREAMCAST
+    // Restore AICA channel
+    target_chan->aica_channel = saved_aica_channel;
+#endif
 
-	// NOTE: first spatialization may be failed because listener position is invalid at this time
-	// so we should keep all sounds an actual and waiting for player spawn.
+    VectorCopy(pos, target_chan->origin);
+    target_chan->staticsound = (ent == 0) ? true : false;
+    target_chan->use_loop = (flags & SND_STOP_LOOPING) ? false : true;
+    target_chan->localsound = (flags & SND_LOCALSOUND) ? true : false;
+    target_chan->dist_mult = (attn / SND_CLIP_DISTANCE);
+    target_chan->master_vol = vol;
+    target_chan->entnum = ent;
+    target_chan->entchannel = chan;
+    target_chan->basePitch = pitch;
+    target_chan->isSentence = false;
+    target_chan->sfx = sfx;
 
-	// apply the sample offests
-	target_chan->pMixer.sample = sample;
-	target_chan->pMixer.forcedEndSample = end;
+    // regular or streamed sound fx
+    pSource = S_LoadSound(sfx);
+    target_chan->name[0] = '\0';
 
-	// Init client entity mouth movement vars
-	SND_InitMouth( ent, chan );
+    if(!pSource)
+    {
+        S_FreeChannel(target_chan);
+        return;
+    }
+
+    SND_Spatialize(target_chan);
+
+    // apply the sample offests
+    target_chan->pMixer.sample = sample;
+    target_chan->pMixer.forcedEndSample = end;
+
+#ifdef XASH_DREAMCAST
+    // Start sound on AICA
+    if(pSource)
+    {
+        qboolean should_loop = (target_chan->use_loop && FBitSet(pSource->flags, SOUND_LOOPED));
+        
+
+        AICA_CMDSTR_CHANNEL(tmp, cmd, chan);
+        
+        cmd->cmd = AICA_CMD_CHAN;
+        cmd->timestamp = 0;
+        cmd->size = AICA_CMDSTR_CHANNEL_SIZE;
+        cmd->cmd_id = target_chan->aica_channel;
+        
+        chan->cmd = AICA_CH_CMD_START;
+        chan->base = pSource->aica_pos;
+        chan->type = pSource->type;
+        chan->length = pSource->size;
+        
+        chan->loop = should_loop;
+        chan->loopstart = 0;
+        chan->loopend = pSource->size;
+        
+        chan->freq = pSource->rate;
+        chan->vol = (target_chan->leftvol + target_chan->rightvol) / 2;
+        chan->pan = 128;  // Will be updated by spatialize
+        
+        snd_sh4_to_aica(tmp, cmd->size);
+        snd_poll_resp();
+        
+        aica_channels_in_use[target_chan->aica_channel] = true;
+        target_chan->active = true;
+        target_chan->start_time = Sys_DoubleTime();
+    }
+#endif
+
+    // Init client entity mouth movement vars
+    SND_InitMouth(ent, chan);
 }
 
 /*
@@ -1044,79 +1057,115 @@ Pitch changes playback pitch of wave by % above or below 100.  Ignored if pitch 
 NOTE: volume is 0.0 - 1.0 and attenuation is 0.0 - 1.0 when passed in.
 =================
 */
-void S_AmbientSound( const vec3_t pos, int ent, sound_t handle, float fvol, float attn, int pitch, int flags )
+void S_AmbientSound(const vec3_t pos, int ent, sound_t handle, float fvol, float attn, int pitch, int flags)
 {
-	channel_t	*ch;
-	wavdata_t	*pSource = NULL;
-	sfx_t	*sfx = NULL;
-	int	vol, fvox = 0;
+    channel_t    *ch;
+    wavdata_t    *pSource = NULL;
+    sfx_t    *sfx = NULL;
+    int    vol, fvox = 0;
 
-	if( !dma.initialized ) return;
-	sfx = S_GetSfxByHandle( handle );
-	if( !sfx ) return;
+    if(!dma.initialized) return;
+    sfx = S_GetSfxByHandle(handle);
+    if(!sfx) return;
 
-	vol = bound( 0, fvol * 255, 255 );
-	if( pitch <= 1 ) pitch = PITCH_NORM; // Invasion issues
+    vol = bound(0, fvol * 255, 255);
+    if(pitch <= 1) pitch = PITCH_NORM; // Invasion issues
 
-	if( flags & (SND_STOP|SND_CHANGE_VOL|SND_CHANGE_PITCH))
-	{
-		if( S_AlterChannel( ent, CHAN_STATIC, sfx, vol, pitch, flags ))
-			return;
-		if( flags & SND_STOP ) return;
-	}
+    if(flags & (SND_STOP|SND_CHANGE_VOL|SND_CHANGE_PITCH))
+    {
+        if(S_AlterChannel(ent, CHAN_STATIC, sfx, vol, pitch, flags))
+            return;
+        if(flags & SND_STOP) return;
+    }
 
-	// pick a channel to play on from the static area
-	ch = SND_PickStaticChannel( pos, sfx );
-	if( !ch ) return;
+    // pick a channel to play on from the static area
+    ch = SND_PickStaticChannel(pos, sfx);
+    if(!ch) return;
 
-	VectorCopy( pos, ch->origin );
-	ch->entnum = ent;
-
-	CL_GetEntitySpatialization( ch );
-
-	if( S_TestSoundChar( sfx->name, '!' ))
-	{
-		// this is a sentence. link words to play in sequence.
-		// NOTE: sentence names stored in the cache lookup are
-		// prepended with a '!'.  Sentence names stored in the
-		// sentence file do not have a leading '!'.
-
-		// link all words and load the first word
-#ifndef XASH_DREAMCAST
-		VOX_LoadSound( ch, S_SkipSoundChar( sfx->name ));
-		Q_strncpy( ch->name, sfx->name, sizeof( ch->name ));
-		sfx = ch->sfx;
-		if( sfx ) pSource = sfx->cache;
-		fvox = 1;
+#ifdef XASH_DREAMCAST
+    // Store AICA channel state
+    int saved_aica_channel = ch->aica_channel;
+    qboolean was_active = ch->active;
+    
+    // Stop previous sound if active
+    if(was_active)
+    {
+        AICA_CMDSTR_CHANNEL(tmp, cmd, chan);
+        cmd->cmd = AICA_CMD_CHAN;
+        cmd->timestamp = 0;
+        cmd->size = AICA_CMDSTR_CHANNEL_SIZE;
+        cmd->cmd_id = ch->aica_channel;
+        chan->cmd = AICA_CH_CMD_STOP;
+        snd_sh4_to_aica(tmp, cmd->size);
+        snd_poll_resp();
+    }
 #endif
-	}
-	else
-	{
-		// load regular or stream sound
-		pSource = S_LoadSound( sfx );
-		ch->sfx = sfx;
-		ch->isSentence = false;
-		ch->name[0] = '\0';
-	}
 
-	if( !pSource )
-	{
-		S_FreeChannel( ch );
-		return;
-	}
+    VectorCopy(pos, ch->origin);
+    ch->entnum = ent;
 
-	pitch *= (sys_timescale.value + 1) / 2;
+    CL_GetEntitySpatialization(ch);
 
-	// never update positions if source entity is 0
-	ch->staticsound = ( ent == 0 ) ? true : false;
-	ch->use_loop = (flags & SND_STOP_LOOPING) ? false : true;
-	ch->localsound = (flags & SND_LOCALSOUND) ? true : false;
-	ch->master_vol = vol;
-	ch->dist_mult = (attn / SND_CLIP_DISTANCE);
-	ch->entchannel = CHAN_STATIC;
-	ch->basePitch = pitch;
+    // Regular or stream sound
+    pSource = S_LoadSound(sfx);
+    ch->sfx = sfx;
+    ch->isSentence = false;
+    ch->name[0] = '\0';
 
-	SND_Spatialize( ch );
+    if(!pSource)
+    {
+        S_FreeChannel(ch);
+        return;
+    }
+
+    pitch *= (sys_timescale.value + 1) / 2;
+
+    // never update positions if source entity is 0
+    ch->staticsound = (ent == 0) ? true : false;
+    ch->use_loop = (flags & SND_STOP_LOOPING) ? false : true;
+    ch->localsound = (flags & SND_LOCALSOUND) ? true : false;
+    ch->master_vol = vol;
+    ch->dist_mult = (attn / SND_CLIP_DISTANCE);
+    ch->entchannel = CHAN_STATIC;
+    ch->basePitch = pitch;
+
+    SND_Spatialize(ch);
+
+#ifdef XASH_DREAMCAST
+    // Start sound on AICA
+    if(pSource)
+    {
+        qboolean should_loop = (ch->use_loop && FBitSet(pSource->flags, SOUND_LOOPED));
+        
+
+        AICA_CMDSTR_CHANNEL(tmp, cmd, chan);
+        
+        cmd->cmd = AICA_CMD_CHAN;
+        cmd->timestamp = 0;
+        cmd->size = AICA_CMDSTR_CHANNEL_SIZE;
+        cmd->cmd_id = ch->aica_channel;
+        
+        chan->cmd = AICA_CH_CMD_START;
+        chan->base = pSource->aica_pos;
+        chan->type = pSource->type;
+        chan->length = pSource->size;
+        
+        chan->loop = should_loop;
+        chan->loopstart = 0;
+        chan->loopend = pSource->size;
+        
+        chan->freq = pSource->rate;
+        chan->vol = (ch->leftvol + ch->rightvol) / 2;
+        chan->pan = 128;  // Will be updated by spatialize
+        
+        snd_sh4_to_aica(tmp, cmd->size);
+        snd_poll_resp();
+        
+        aica_channels_in_use[ch->aica_channel] = true;
+        ch->active = true;
+        ch->start_time = Sys_DoubleTime();
+    }
+#endif
 }
 
 /*
