@@ -458,7 +458,7 @@ qboolean Image_LoadMIP( const char *name, const byte *buffer, fs_offset_t filesi
 
 	memcpy( &mip, buffer, sizeof( mip ));
 	
-	fin = (byte *)buffer + sizeof(mip);
+	fin = (byte *)buffer;
 
 	if (*(uint32_t*)buffer == PVRTSIGN)  
 	{
