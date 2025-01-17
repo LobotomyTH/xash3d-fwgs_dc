@@ -194,7 +194,7 @@ void stringlistinit( stringlist_t *list );
 void stringlistfreecontents( stringlist_t *list );
 void stringlistappend( stringlist_t *list, const char *text );
 void stringlistsort( stringlist_t *list );
-void listdirectory( stringlist_t *list, const char *path );
+void listdirectory( stringlist_t *list, const char *path, qboolean dirs_only );
 
 // filesystem ops
 int FS_FileExists( const char *filename, int gamedironly );
@@ -220,6 +220,7 @@ qboolean FS_FullPathToRelativePath( char *dst, const char *src, size_t size );
 // pak.c
 //
 searchpath_t *FS_AddPak_Fullpath( const char *pakfile, int flags );
+qboolean FS_CheckForQuakePak( const char *pakfile, const char *files[], size_t num_files );
 
 //
 // wad.c

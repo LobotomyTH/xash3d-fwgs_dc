@@ -123,6 +123,9 @@ typedef struct gameinfo_s
 	qboolean animated_title;
 
 	char demomap[MAX_QPATH];
+
+	qboolean rodir; // if true, parsed from rodir
+	int64_t mtime;
 } gameinfo_t;
 
 typedef struct fs_dllinfo_t
@@ -221,6 +224,7 @@ typedef struct fs_api_t
 	// Use FindFileInArchive to retrieve real path from caseinsensitive FS emulation!
 	byte *(*LoadFileFromArchive)( searchpath_t *sp, const char *path, int pack_ind, fs_offset_t *filesizeptr, const qboolean sys_malloc );
 
+	void (*MakeGameInfo)( void );
 
 } fs_api_t;
 

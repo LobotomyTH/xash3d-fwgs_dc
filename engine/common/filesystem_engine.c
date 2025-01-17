@@ -61,6 +61,11 @@ static void FS_Path_f_( void )
 	FS_Path_f();
 }
 
+static void FS_MakeGameInfo_f( void )
+{
+	g_fsapi.MakeGameInfo();
+}
+
 static const fs_interface_t fs_memfuncs =
 {
 	Con_Printf,
@@ -133,11 +138,27 @@ static qboolean FS_LoadProgs( void )
 static qboolean FS_DetermineRootDirectory( char *out, size_t size )
 {
 #if XASH_DREAMCAST
-	const char *path = "/vmu/a1/";
+	const char *path = NULL;
 #else
 	const char *path = getenv( "XASH3D_BASEDIR" );
 #endif
+
+#if XASH_DREAMCAST
+	if (!fs_fat_mount_sd())
+	{
+		path = "/sd/Xash3D";
+	}
+	else if (!fs_fat_mount_ide())
+	{
+		path = "/ide/Xash3D";
+	}
+	else 
+	{
+		path = "/vmu/a1";
+	}
 	
+	fs_mkdir( path ); // create RW directorty on device manually
+#endif
 	if( COM_CheckString( path ))
 	{
 		Q_strncpy( out, path, size );
@@ -257,6 +278,7 @@ void FS_Init( const char *basedir )
 	Cmd_AddRestrictedCommand( "fs_rescan", FS_Rescan_f, "rescan filesystem search pathes" );
 	Cmd_AddRestrictedCommand( "fs_path", FS_Path_f_, "show filesystem search pathes" );
 	Cmd_AddRestrictedCommand( "fs_clearpaths", FS_ClearPaths_f, "clear filesystem search pathes" );
+	Cmd_AddRestrictedCommand( "fs_make_gameinfo", FS_MakeGameInfo_f, "create gameinfo.txt for current running game" );
 
 	if( !Sys_GetParmFromCmdLine( "-dll", host.gamedll ))
 		host.gamedll[0] = 0;

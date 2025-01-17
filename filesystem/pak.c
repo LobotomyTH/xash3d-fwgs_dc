@@ -182,6 +182,41 @@ static pack_t *FS_LoadPackPAK( const char *packfile, int *error )
 }
 
 /*
+================
+FS_CheckForQuakePak
+To generate fake gameinfo for Quake directory, we need to parse pak0.pak
+and find progs.dat in it
+================
+*/
+qboolean FS_CheckForQuakePak( const char *pakfile, const char *files[], size_t num_files )
+{
+	qboolean is_quake = false;
+	pack_t *pak;
+	int i;
+	pak = FS_LoadPackPAK( pakfile, NULL );
+	if( !pak )
+		return false;
+	for( i = 0; i < num_files; i++ )
+	{
+		int j;
+		for( j = 0; j < pak->numfiles; j++ )
+		{
+			if( Q_strchr( pak->files[j].name, '/' ))
+				continue; // exclude subdirectories
+			if( !Q_stricmp( pak->files[j].name, files[i] ))
+			{
+				is_quake = true;
+				break;
+			}
+		}
+		if( is_quake )
+			break;
+	}
+	Mem_Free( pak );
+	return is_quake;
+}
+
+/*
 ===========
 FS_OpenPackedFile
 

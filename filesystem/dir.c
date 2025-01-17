@@ -134,7 +134,7 @@ static void FS_PopulateDirEntries( dir_t *dir, const char *path )
 	}
 
 	stringlistinit( &list );
-	listdirectory( &list, path );
+	listdirectory( &list, path, false );
 	if( !list.numstrings )
 	{
 		dir->numentries = DIRENTRY_EMPTY_DIRECTORY;
@@ -225,7 +225,7 @@ static int FS_MaybeUpdateDirEntries( dir_t *dir, const char *path, const char *e
 	int ret;
 
 	stringlistinit( &list );
-	listdirectory( &list, path );
+	listdirectory( &list, path, false );
 
 	if( list.numstrings == 0 ) // empty directory
 	{
@@ -380,8 +380,12 @@ static int FS_FindFile_DIR( searchpath_t *search, const char *path, char *fixedn
 {
 	char netpath[MAX_SYSPATH];
 
+#if !XASH_DREAMCAST
 	if( !FS_FixFileCase( search->dir, path, netpath, sizeof( netpath ), false ))
 		return -1;
+#else
+	Q_snprintf( netpath, sizeof(netpath), "%s%s", search->dir, path );
+#endif
 
 	if( FS_SysFileExists( netpath ))
 	{
@@ -414,6 +418,33 @@ static void FS_Search_DIR( searchpath_t *search, stringlist_t *list, const char 
 	if( basepathlength ) memcpy( basepath, pattern, basepathlength );
 	basepath[basepathlength] = '\0';
 
+#if XASH_DREAMCAST
+			// get a directory listing and look at each name
+    Q_snprintf( netpath, sizeof(netpath), "%s%s", search->dir, basepath );
+
+    stringlistinit( &dirlist );
+    listdirectory( &dirlist, netpath, false);
+
+
+    for( dirlistindex = 0; dirlistindex < dirlist.numstrings; dirlistindex++ )
+    {
+        Q_snprintf( temp, sizeof(temp), "%s%s", basepath, dirlist.strings[dirlistindex] );
+
+        if( matchpattern( temp, (char *)pattern, true ))
+        {
+            for( resultlistindex = 0; resultlistindex < list->numstrings; resultlistindex++ )
+            {
+                if( !Q_strcmp( list->strings[resultlistindex], temp ))
+                    break;
+            }
+
+            if( resultlistindex == list->strings )
+            {
+                stringlistappend( list, temp );
+            }
+        }
+    }
+#else
 	if( !FS_FixFileCase( search->dir, basepath, netpath, sizeof( netpath ), false ))
 	{
 		Mem_Free( basepath );
@@ -441,7 +472,7 @@ static void FS_Search_DIR( searchpath_t *search, stringlist_t *list, const char 
 				stringlistappend( list, temp );
 		}
 	}
-	
+#endif
 	stringlistfreecontents( &dirlist );
 
 	Mem_Free( basepath );
