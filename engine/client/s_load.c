@@ -243,31 +243,38 @@ S_FreeSound
 */
 void S_FreeSound( sfx_t *sfx )
 {
-	sfx_t	*hashSfx;
-	sfx_t	**prev;
+    sfx_t    *hashSfx;
+    sfx_t    **prev;
 
-	if( !sfx || !sfx->name[0] )
-		return;
+    if( !sfx || !sfx->name[0] )
+        return;
 
-	// de-link it from the hash tree
-	prev = &s_sfxHashList[sfx->hashValue];
-	while( 1 )
+    // de-link it from the hash tree
+    prev = &s_sfxHashList[sfx->hashValue];
+    while( 1 )
+    {
+        hashSfx = *prev;
+        if( !hashSfx )
+            break;
+
+        if( hashSfx == sfx )
+        {
+            *prev = hashSfx->hashNext;
+            break;
+        }
+        prev = &hashSfx->hashNext;
+    }
+
+    if( sfx->cache ) 
 	{
-		hashSfx = *prev;
-		if( !hashSfx )
-			break;
-
-		if( hashSfx == sfx )
-		{
-			*prev = hashSfx->hashNext;
-			break;
+		if (sfx->cache->aica_pos) {
+			snd_mem_free(sfx->cache->aica_pos);
+			Con_Printf("AICA: Freeing sound %s from AICA memory\n", sfx->name);
 		}
-		prev = &hashSfx->hashNext;
+		else
+        	FS_FreeSound( sfx->cache );
 	}
-
-	if( sfx->cache )
-		FS_FreeSound( sfx->cache );
-	memset( sfx, 0, sizeof( *sfx ));
+    memset( sfx, 0, sizeof( *sfx ));
 }
 
 /*

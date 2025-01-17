@@ -311,6 +311,35 @@ typedef struct
 	double		t_world_draw;
 } ref_speeds_t;
 
+#if XASH_DREAMCAST
+typedef struct __attribute__((packed, aligned(4))) vec3f_gl {
+  float x, y, z;
+} vec3f;
+
+typedef struct __attribute__((packed, aligned(4))) uv_float {
+  float u, v;
+} uv_float;
+
+typedef struct __attribute__((packed, aligned(1))) color_uc {
+  uint8_t b, g, r, a;
+} color_uc;
+
+typedef struct __attribute__((packed, aligned(4))) glvert_fast_t {
+  uint32_t flags;
+  vec3f vert;
+  uv_float texture;
+  color_uc color;  //bgra
+  union {
+    float pad;
+    uint32_t vertindex;
+  } pad0;
+} glvert_fast_t;
+
+typedef glvert_fast_t __attribute__((aligned(32))) fast_vert_aligned_t;
+#define VERTEX_EOL 0xf0000000
+#define VERTEX 0xe0000000
+#endif
+
 extern ref_speeds_t		r_stats;
 extern ref_instance_t	RI;
 extern gl_globals_t	tr;

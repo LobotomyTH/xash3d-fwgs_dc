@@ -177,11 +177,19 @@ qboolean Image_LoadMDL( const char *name, const byte *buffer, fs_offset_t filesi
 		pvrt_t *pvrt;
 		
 		if (*(uint32_t*)fin == GBIXHEADER)
-		{
-			gbix_t *gbix = (gbix_t*)fin;
-			texture_data = fin + sizeof(gbix_t) + gbix->nextTagOffset;
-			pvrt = (pvrt_t*)texture_data;
-		}
+        {
+            gbix_t *gbix = (gbix_t*)fin;
+            texture_data = fin + sizeof(gbix_t);
+            pvrt = (pvrt_t*)texture_data;
+            
+            // Verify we have a PVRT signature
+            if (*(uint32_t*)texture_data != PVRTSIGN)
+            {
+                Con_DPrintf("%s: Invalid PVRT signature after GBIX in %s\n", __func__, name);
+                return false;
+            }
+            texture_data += sizeof(pvrt_t);  
+        }
 		else  // standalone PVRT
 		{
 			pvrt = (pvrt_t*)fin;
@@ -193,11 +201,6 @@ qboolean Image_LoadMDL( const char *name, const byte *buffer, fs_offset_t filesi
 
 		switch(pvrt->imageFormat)
 		{
-			case PVR_TWIDDLE: 
-				image.type = PF_RGB_5650_TWID;
-				image.size = image.width * image.height * 2;
-				SetBits(image.flags, TF_KEEP_SOURCE);
-				break;
 			case PVR_VQ: 
 				image.type = PF_VQ_RGB_5650;
 				const int codebook_size = 2048;  // 1024 entries * 2 bytes each
@@ -220,8 +223,6 @@ qboolean Image_LoadMDL( const char *name, const byte *buffer, fs_offset_t filesi
 	} 	 
 	else if (image.hint == IL_HINT_HL)
     {
-			image.width = 8;
-			image.height = 8;
             size_t pixels = image.width * image.height;
             if (filesize < (sizeof(*pin) + pixels + 768))
                 return false;
@@ -253,194 +254,19 @@ qboolean Image_LoadMDL( const char *name, const byte *buffer, fs_offset_t filesi
 Image_LoadSPR
 ============
 */
-#if 1
 
-static qboolean IsScaleDownSprite(const char *name)
-{
-    const char *scale_sprites[] = {
-        "pistol_smoke1",
-        "pistol_smoke2",
-        "rifle_smoke1",
-        "rifle_smoke2",
-        "rifle_smoke3",
-        "black_smoke1",
-        "black_smoke2",
-        "black_smoke3",
-        "black_smoke4",
-        "fast_wallpuff1",
-        "wall_puff1",
-        "wall_puff2",
-        "wall_puff3",
-        "wall_puff4",
-		"zerogxplode",
-		"Wxplo1",
-		"steam1",
-		"bubble",
-		"bloodspray",
-		"blood",
-		"smokepuff",
-		"eexplo",
-		"fexplo",
-		"fexplo1",
-		"radio",
-        "b-tele1",
-        "c-tele1",
-        "ledglow",
-        "laserbeam",
-        "laserdot",
-        "explode1",
-		// Sniper and scope sprites
-        "ch_sniper",
-        "ch_sniper2",
-        "left2",
-        "sniper_scope",
-        "left",
-        
-        // Grass sprites
-        "grass_03",
-		"scope_arc",
-        "scope_arc_ne",
-        "scope_arc_nw",
-        "scope_arc_sw",
-		// Logo and UI sprites
-        "640_logo",
-        "logo",
-        
-        // Explosion and effect sprites
-        "fexplo",
-        "portal1",
-        "hexplo",
-        "gexplo",
-        "dexplo",
-        "b-tele1",
-        "cexplo",
-        "c-tele1",
-        "d-tele1",
-        "eexplo",
-        "enter1",
-        "e-tele1",
-        "exit1",
-        "tele1",
-        "gwave1",
-        "xexplo",
-        "bexplo",
-        "fexplo1",
-        "320_logo",
-        "small_logo",
-        "agrunt1",
-        "flare6",
-        "mushroom",
-        "xfire1",
-        "xfire2",
-        "xfireball3",
-        "xflare1",
-        "xflare2",
-        "xflare3",
-        "explode2",
-        "explode1",
-        NULL
-    };
-
-    for (int i = 0; scale_sprites[i] != NULL; i++)
-    {
-        if (Q_strstr(name, scale_sprites[i]))
-            return true;
-    }
-    return false;
-}
-
-
-/*
-============
-Image_LoadSPR
-============
-*/
 qboolean Image_LoadSPR( const char *name, const byte *buffer, fs_offset_t filesize )
-{
-	dspriteframe_t	pin;	// identical for q1\hl sprites
-	qboolean		truecolor = false;
-	byte *fin;
-	qboolean should_scale;
-
-
-	if( image.hint == IL_HINT_HL )
-	{
-		if( !image.d_currentpal )
-			return false;
-	}
-	else if( image.hint == IL_HINT_Q1 )
-	{
-		Image_GetPaletteQ1();
-	}
-	else
-	{
-		// unknown mode rejected
-		return false;
-	}
-
-	memcpy( &pin, buffer, sizeof(dspriteframe_t) );
-	image.width = pin.width / 1.5 ;
-	image.height = pin.height / 1.5;
-
-	if( filesize < image.width * image.height )
-		return false;
-
-	if( filesize == ( image.width * image.height * 4 ))
-		truecolor = true;
-
-	// sorry, can't validate palette rendermode
-	if( !Image_LumpValidSize( name )) return false;
-	image.type = (truecolor) ? PF_RGBA_32 : PF_INDEXED_32;	// 32-bit palete
-	image.depth = 1;
-
-	// detect alpha-channel by palette type
-	switch( image.d_rendermode )
-	{
-	case LUMP_MASKED:
-		SetBits( image.flags, IMAGE_ONEBIT_ALPHA );
-		// intentionally fallthrough
-	case LUMP_GRADIENT:
-	case LUMP_QUAKE1:
-		SetBits( image.flags, IMAGE_HAS_ALPHA );
-		break;
-	}
-
-	should_scale = IsScaleDownSprite(name);
-
-
-	if (should_scale)
-    {
-        image.width = 1;
-        image.height = 1;
-    }
-
-	fin =  (byte *)(buffer + sizeof(dspriteframe_t));
-
-	if( truecolor )
-	{
-		// spr32 support
-		image.size = image.width * image.height / 4;
-		image.rgba = Mem_Malloc( host.imagepool, image.size );
-		memcpy( image.rgba, fin, image.size );
-		SetBits( image.flags, IMAGE_HAS_COLOR ); // Color. True Color!
-		return true;
-	}
-	return Image_AddIndexedImageToPack( fin, image.width, image.height );
-}
-#else
-qboolean Image_LoadSPR(const char *name, const byte *buffer, fs_offset_t filesize)
 {
     dspriteframe_t pin;    // identical for q1\hl sprites
     qboolean truecolor = false;
     byte *fin;
-
-    // First check image hint and set up palette
-    if (image.hint == IL_HINT_HL)
+    
+    if( image.hint == IL_HINT_HL )
     {
-        if (!image.d_currentpal)
+        if( !image.d_currentpal )
             return false;
     }
-    else if (image.hint == IL_HINT_Q1)
+    else if( image.hint == IL_HINT_Q1 )
     {
         Image_GetPaletteQ1();
     }
@@ -450,146 +276,93 @@ qboolean Image_LoadSPR(const char *name, const byte *buffer, fs_offset_t filesiz
         return false;
     }
 
-    // Read frame header
-    if (filesize < sizeof(dspriteframe_t))
-        return false;
-        
-    memcpy(&pin, buffer, sizeof(dspriteframe_t));
+    memcpy( &pin, buffer, sizeof(dspriteframe_t) );
     image.width = pin.width;
     image.height = pin.height;
-    
-    // Get pointer to image data
-    fin = (byte *)(buffer + sizeof(dspriteframe_t));
-    
-    // Check for PVRT format
-    if (filesize >= (sizeof(dspriteframe_t) + sizeof(pvrt_t)) && 
-        *(uint32_t*)fin == PVRTSIGN)
-    {
-        pvrt_t *pvrt = (pvrt_t*)fin;
-        byte *texture_data = fin + sizeof(pvrt_t);
-        
-        // Validate PVRT header
-        if (pvrt->version != PVRTSIGN)
-        {
-            Con_DPrintf("Invalid PVRT signature\n");
-            return false;
-        }
 
-        // Update dimensions from PVRT header
-        image.width = pvrt->width;
-        image.height = pvrt->height;
+    if( filesize < image.width * image.height )
+        return false;
+
+    fin = (byte *)(buffer + sizeof(dspriteframe_t));
+
+    uint32_t sign;
+    memcpy(&sign, fin, sizeof(uint32_t)); 
+    if (sign == PVRTSIGN)
+    {
+        uint32_t format;
+        memcpy(&format, fin + 8, sizeof(uint32_t));
+        uint8_t texture_format = (format >> 8) & 0xFF;
         
-        switch(pvrt->imageFormat)
-        {
-            case PVR_VQ:
+        image.width = pin.width;
+        image.height = pin.height;
+        
+        if (texture_format == PVR_RECT || texture_format == PVR_VQ)
+        {  
+            if (texture_format == PVR_VQ)
+            {
                 image.type = PF_VQ_RGB_5650;
                 const int codebook_size = 2048;
                 const int indices_size = (image.width * image.height) / 4;
                 image.size = codebook_size + indices_size;
-                
+				fin += sizeof(dspriteframe_t);
                 Image_GetPaletteLMP(NULL, LUMP_VQ);
                 image.rgba = Mem_Malloc(host.imagepool, image.size);
-                if (!image.rgba) return false;
-                memcpy(image.rgba, texture_data, image.size);
+                memcpy(image.rgba, fin, image.size);
                 return true;
-                
-            case PVR_RECT:
+            }
+            else
+            {
                 image.type = PF_RGB_5650;
                 image.size = image.width * image.height * 2;
                 SetBits(image.flags, TF_KEEP_SOURCE);
                 return true;
-                
-            default:
-                Con_DPrintf("Unsupported PVR sprite format: 0x%X\n", pvrt->imageFormat);
-                return false;
+            }
         }
-    } else 
-	{
-    
-    // Standard sprite format handling
-    if (filesize < image.width * image.height)
-        return false;
-
-    if (filesize == (image.width * image.height * 4))
+    }
+	// Rescale smoke/puff sprites to 2x2
+    if (Q_stristr(name, "smoke") || Q_stristr(name, "puff") || Q_stristr(name, "tele") ||  Q_stristr(name, "explo") ){
+        image.width = 2;
+        image.height = 2;
+    }
+#if 0
+    else if (image.width > 64 || image.height > 64) {
+        image.width = 48;
+        image.height = 48;
+        Con_DPrintf("Rescaling large sprite to 48x48: %s\n", name);
+    }
+#endif
+    if( filesize == ( image.width * image.height * 4 ))
         truecolor = true;
 
-    // sorry, can't validate palette rendermode
-    if (!Image_LumpValidSize(name)) 
+    if( !Image_LumpValidSize( name )) 
         return false;
-        
+
     image.type = (truecolor) ? PF_RGBA_32 : PF_INDEXED_32;
     image.depth = 1;
 
-    // detect alpha-channel by palette type
-    switch (image.d_rendermode)
+    switch( image.d_rendermode )
     {
-        case LUMP_MASKED:
-            SetBits(image.flags, IMAGE_ONEBIT_ALPHA);
-            // intentionally fallthrough
-        case LUMP_GRADIENT:
-        case LUMP_QUAKE1:
-            SetBits(image.flags, IMAGE_HAS_ALPHA);
-            break;
+    case LUMP_MASKED:
+        SetBits( image.flags, IMAGE_ONEBIT_ALPHA );
+        // intentionally fallthrough
+    case LUMP_GRADIENT:
+    case LUMP_QUAKE1:
+        SetBits( image.flags, IMAGE_HAS_ALPHA );
+        break;
     }
 
-    // Scale down HL1 sprites if needed
-    if (image.hint == IL_HINT_HL && (image.width > 32 || image.height > 32))
+    if( truecolor )
     {
-        int orig_width = image.width;
-        int orig_height = image.height;
-        image.width /= 4;
-        image.height /= 4;
-        
-        if (truecolor)
-        {
-            image.size = image.width * image.height * 4;
-            byte *scaled = Mem_Malloc(host.imagepool, image.size);
-            if (!scaled) return false;
-            
-            // Downscale the image
-            for (int y = 0; y < image.height; y++)
-            {
-                for (int x = 0; x < image.width; x++)
-                {
-                    int r = 0, g = 0, b = 0, a = 0;
-                    for (int by = 0; by < 4; by++)
-                    {
-                        for (int bx = 0; bx < 4; bx++)
-                        {
-                            int src_idx = ((y * 4 + by) * orig_width + (x * 4 + bx)) * 4;
-                            r += fin[src_idx + 0];
-                            g += fin[src_idx + 1];
-                            b += fin[src_idx + 2];
-                            a += fin[src_idx + 3];
-                        }
-                    }
-                    int dst_idx = (y * image.width + x) * 4;
-                    scaled[dst_idx + 0] = r / 16;
-                    scaled[dst_idx + 1] = g / 16;
-                    scaled[dst_idx + 2] = b / 16;
-                    scaled[dst_idx + 3] = a / 16;
-                }
-            }
-            image.rgba = scaled;
-            SetBits(image.flags, IMAGE_HAS_COLOR);
-            return true;
-        }
-    }
-    else if (truecolor)
-    {
-        // Standard spr32 support
-        image.size = image.width * image.height * 4;
-        image.rgba = Mem_Malloc(host.imagepool, image.size);
-        if (!image.rgba) return false;
-        memcpy(image.rgba, fin, image.size);
-        SetBits(image.flags, IMAGE_HAS_COLOR);
+		Con_Printf("truecolor sprite %s\n", name);
+        image.size = image.width * image.height / 8;
+        image.rgba = Mem_Malloc( host.imagepool, image.size );
+        memcpy( image.rgba, fin, image.size );
+        SetBits( image.flags, IMAGE_HAS_COLOR );
         return true;
     }
 
-    return Image_AddIndexedImageToPack(fin, image.width, image.height);
-	}
+    return Image_AddIndexedImageToPack( fin, image.width, image.height );
 }
-#endif
 /*
 ============
 Image_LoadLMP
@@ -697,7 +470,7 @@ qboolean Image_LoadMIP( const char *name, const byte *buffer, fs_offset_t filesi
 
 	memcpy( &mip, buffer, sizeof( mip ));
 	
-	fin = (byte *)buffer + sizeof(mip);
+	fin = (byte *)buffer;
 
 	if (*(uint32_t*)buffer == PVRTSIGN)  
 	{

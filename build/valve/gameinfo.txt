@@ -2,7 +2,7 @@
 
 
 basedir		"valve"
-gamedir		"VALVE"
+gamedir		"valve"
 title		"Half-Life"
 startmap		"c0a0"
 trainmap		"t0a0"

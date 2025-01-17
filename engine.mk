@@ -41,11 +41,9 @@ XASH_CLIENT_OBJS = \
 	engine/client/s_dsp.o \
 	engine/client/s_load.o \
 	engine/client/s_main.o \
-	engine/client/s_mix.o \
 	engine/client/s_mouth.o \
 	engine/client/s_stream.o \
 	engine/client/s_utils.o \
-	engine/client/s_vox.o \
 	engine/client/titles.o \
 	engine/client/vid_common.o \
 	engine/client/voice.o \
@@ -161,8 +159,9 @@ INCLUDE = -Icommon \
 -I$(KOS_PORTS)/include/GL 
 
 
-DEFINES = -DDEBUG -DENGINE_DLL -D_KOS_ -D_SH4_ -DXASH_BUILD_COMMIT="64726f13-dirty" -DXASH_BUILD_BRANCH="master" -DXASH_NO_ASYNC_NS_RESOLVE=1 -DFRAME_POINTERS=1 -DXASH_STATIC_LIBS=1 -DXASH_LOW_MEMORY=2 -DXASH_ENABLE_MAIN=1 -DXASH_REF_SOFT_ENABLED=0  -DXASH_REF_GL_ENABLED=1 -DHAVE_TGMATH_H=0 -DHAVE_STRNICMP=1 -DHAVE_STRICMP=1 -D_snprintf=snprintf 
-FLAGS = -Os -fno-omit-frame-pointer -fno-common -fno-strict-aliasing -fno-stack-protector -mrelax -ffunction-sections -fdata-sections -fno-exceptions 
+
+DEFINES = -DENGINE_DLL -D_KOS_ -D_SH4_ -DXASH_BUILD_COMMIT="64726f13-dirty" -DXASH_BUILD_BRANCH="master" -DFRAME_POINTERS=1 -DXASH_STATIC_LIBS=1 -DXASH_LOW_MEMORY=2 -DXASH_ENABLE_MAIN=1 -DXASH_REF_SOFT_ENABLED=0  -DXASH_REF_GL_ENABLED=1 -DHAVE_TGMATH_H=0 -DHAVE_STRNICMP=1 -DHAVE_STRICMP=1 -D_snprintf=snprintf 
+FLAGS = -Os -fno-omit-frame-pointer -fno-common -fno-strict-aliasing -fno-stack-protector -mrelax -ffunction-sections -fdata-sections -fno-exceptions -freorder-blocks-algorithm=simple -flto=auto
 CFLAGS +=  $(INCLUDE) $(DEFINES) $(FLAGS)  
 
 

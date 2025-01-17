@@ -43,8 +43,10 @@ static wavdata_t *SoundPack( void )
 	pack->samples = sound.samples;
 	pack->channels = sound.channels;
 	pack->flags = sound.flags;
-
-	return pack;
+#ifdef XASH_DREAMCAST
+    pack->aica_pos = sound.aica_pos;
+#endif
+    return pack;
 }
 
 /*

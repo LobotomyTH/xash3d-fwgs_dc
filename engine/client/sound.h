@@ -19,6 +19,9 @@ GNU General Public License for more details.
 extern poolhandle_t sndpool;
 
 #include "xash3d_mathlib.h"
+#if XASH_DREAMCAST
+#include <dc/sound/aica_comm.h>
+#endif
 
 #define XASH_AUDIO_CD_QUALITY 1 // some platforms might need this
 
@@ -33,12 +36,12 @@ extern poolhandle_t sndpool;
 #define SOUND_44k       48000 // 44khz sample rate
 #endif // XASH_AUDIO_CD_QUALITY
 
-#define SOUND_DMA_SPEED SOUND_44k // hardware playback rate
+#define SOUND_DMA_SPEED SOUND_11k // hardware playback rate
 
 // NOTE: clipped sound at 32760 to avoid overload
 #define CLIP( x ) (( x ) > 32760 ? 32760 : (( x ) < -32760 ? -32760 : ( x )))
 
-#define PAINTBUFFER_SIZE 1024	// 44k: was 512
+#define PAINTBUFFER_SIZE 512	// 44k: was 512
 
 #define S_RAW_SOUND_IDLE_SEC         10 // time interval for idling raw sound before it's freed
 #define S_RAW_SOUND_BACKGROUNDTRACK  -2
@@ -124,6 +127,14 @@ typedef struct channel_s
 	char     name[16];    // keep sentence name
 	sfx_t   *sfx;         // sfx number
 
+#ifdef XASH_DREAMCAST
+	aica_channel_t aica;      // AICA channel data
+	qboolean    active;       // Is AICA channel in use?
+	qboolean    temp_aica; 
+	int         aica_channel;  
+	double      start_time;
+#endif
+
 	int      leftvol;     // 0-255 left volume
 	int      rightvol;    // 0-255 right volume
 
@@ -175,7 +186,7 @@ typedef struct
 
 #if XASH_DREAMCAST
 #define MAX_DYNAMIC_CHANNELS	(8 + NUM_AMBIENTS)
-#define MAX_CHANNELS	(64 + MAX_DYNAMIC_CHANNELS)
+#define MAX_CHANNELS	64
 #else
 #define MAX_DYNAMIC_CHANNELS	(60 + NUM_AMBIENTS)
 #define MAX_CHANNELS	(256 + MAX_DYNAMIC_CHANNELS)	// Scourge Of Armagon has too many static sounds on hip2m4.bsp
@@ -281,6 +292,7 @@ int S_ZeroCrossingBefore( wavdata_t *pWaveData, int sample );
 int S_ConvertLoopedPosition( wavdata_t *pSource, int samplePosition, qboolean use_loop );
 int S_GetOutputData( wavdata_t *pSource, void **pData, int samplePosition, int sampleCount, qboolean use_loop );
 
+#ifndef XASH_DREAMCAST
 //
 // s_vox.c
 //
@@ -290,5 +302,6 @@ void VOX_SetChanVol( channel_t *ch );
 void VOX_LoadSound( channel_t *pchan, const char *psz );
 float VOX_ModifyPitch( channel_t *ch, float pitch );
 int VOX_MixDataToDevice( channel_t *pChannel, int sampleCount, int outputRate, int outputOffset );
+#endif
+#endif //SOUND_H
 
-#endif//SOUND_H

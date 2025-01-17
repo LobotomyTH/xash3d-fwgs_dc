@@ -194,7 +194,12 @@ int SV_FindBestBaseline( int index, entity_state_t **baseline, entity_state_t *t
 	for( i = index - 1; bestBitCount > 0 && i >= 0 && ( index - i ) < ( MAX_CUSTOM_BASELINES - 1 ); i-- )
 	{
 		// don't worry about underflow in circular buffer
-		entity_state_t	*test = &svs.packet_entities[(frame->first_entity+i) % svs.num_client_entities];
+		entity_state_t *test;
+		// if set, then it's normal entity
+		if( frame != NULL )
+			test = &svs.packet_entities[(frame->first_entity+i) % svs.num_client_entities];
+		else
+			test = &svs.static_entities[i];
 
 		if( to->entityType == test->entityType )
 		{
@@ -210,7 +215,12 @@ int SV_FindBestBaseline( int index, entity_state_t **baseline, entity_state_t *t
 
 	// using delta from previous entity as baseline for current
 	if( index != bestfound )
-		*baseline = &svs.packet_entities[(frame->first_entity+bestfound) % svs.num_client_entities];
+	{
+		if( frame != NULL )
+			*baseline = &svs.packet_entities[(frame->first_entity+bestfound) % svs.num_client_entities];
+		else
+			*baseline = &svs.static_entities[bestfound];
+	}
 	return index - bestfound;
 }
 

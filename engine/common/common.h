@@ -489,6 +489,11 @@ typedef struct
 	uint    flags;     // misc sound flags
 	byte   *buffer;    // sound buffer
 	size_t  size;      // for bounds checking
+#ifdef XASH_DREAMCAST
+	uint32_t  aica_pos;  // position in AICA memory
+	uint32_t*   aica_chunks;   // Array of AICA chunk addresses
+    size_t      num_chunks;    // Number of chunks
+#endif
 } wavdata_t;
 
 //

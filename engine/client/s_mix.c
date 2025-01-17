@@ -631,7 +631,11 @@ static void MIX_MixChannelsToPaintbuffer( int endtime, int rate, int outputRate 
 
 		// get playback pitch
 		if( ch->isSentence )
+		{
+#ifndef XASH_DREAMCAST
 			ch->pitch = VOX_ModifyPitch( ch, ch->basePitch * 0.01f );
+#endif
+		}
 		else ch->pitch = ch->basePitch * 0.01f;
 
 		ch->pitch *= ( sys_timescale.value + 1 ) / 2;
@@ -646,7 +650,11 @@ static void MIX_MixChannelsToPaintbuffer( int endtime, int rate, int outputRate 
 		// mix channel to all active paintbuffers.
 		// NOTE: must be called once per channel only - consecutive calls retrieve additional data.
 		if( ch->isSentence )
+		{
+#ifndef XASH_DREAMCAST
 			VOX_MixDataToDevice( ch, sampleCount, outputRate, 0 );
+#endif
+		}
 		else S_MixDataToDevice( ch, sampleCount, outputRate, 0, 0 );
 
 		if( !S_ShouldContinueMixing( ch ))

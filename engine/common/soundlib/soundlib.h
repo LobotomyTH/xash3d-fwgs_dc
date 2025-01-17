@@ -58,6 +58,9 @@ typedef struct sndlib_s
 
 	byte		*tempbuffer;	// for convert operations
 	int		cmd_flags;
+#ifdef XASH_DREAMCAST
+    uint32_t    aica_pos;      // AICA memory position (0 if in main RAM)
+#endif
 } sndlib_t;
 
 struct stream_s

@@ -77,25 +77,25 @@ BRUSH MODELS
 #define MAX_MAP_MARKSURFACES		524288		// can be increased without problems
 #else
 // increased to match PrimeXT compilers
-#define MAX_MAP_MODELS		1024		// embedded models
-#define MAX_MAP_ENTSTRING		0x100000		// 1 Mb should be enough
-#define MAX_MAP_PLANES		65536		// can be increased without problems
+#define MAX_MAP_MODELS		256		// embedded models
+#define MAX_MAP_ENTSTRING		(128*1024)		// 1 Mb should be enough
+#define MAX_MAP_PLANES		32767		// can be increased without problems
 #define MAX_MAP_NODES		32767		// because negative shorts are leafs
 #define MAX_MAP_CLIPNODES		MAX_MAP_CLIPNODES_HLBSP		// because negative shorts are contents
-#define MAX_MAP_LEAFS		32767		// signed short limit
+#define MAX_MAP_LEAFS		8192		// signed short limit
 #define MAX_MAP_VERTS		65535		// unsigned short limit
 #define MAX_MAP_FACES		65535		// unsigned short limit
 #define MAX_MAP_MARKSURFACES		65535		// unsigned short limit
 #endif
 
-#define MAX_MAP_ENTITIES		8192		// network limit
-#define MAX_MAP_TEXINFO		MAX_MAP_FACES	// in theory each face may have personal texinfo
-#define MAX_MAP_EDGES		0x100000		// can be increased but not needs
-#define MAX_MAP_SURFEDGES		0x200000		// can be increased but not needs
-#define MAX_MAP_TEXTURES		2048		// can be increased but not needs
-#define MAX_MAP_MIPTEX		0x2000000		// 32 Mb internal textures data
-#define MAX_MAP_LIGHTING		0x2000000		// 32 Mb lightmap raw data (can contain deluxemaps)
-#define MAX_MAP_VISIBILITY		0x1000000		// 16 Mb visdata
+#define MAX_MAP_ENTITIES		1024		// network limit
+#define MAX_MAP_TEXINFO		MAX_MAP_FACEINFO	// in theory each face may have personal texinfo
+#define MAX_MAP_EDGES		256000		// can be increased but not needs
+#define MAX_MAP_SURFEDGES		512000		// can be increased but not needs
+#define MAX_MAP_TEXTURES		512		// can be increased but not needs
+#define MAX_MAP_MIPTEX		0x200000		// 32 Mb internal textures data
+#define MAX_MAP_LIGHTING		0x200000		// 32 Mb lightmap raw data (can contain deluxemaps)
+#define MAX_MAP_VISIBILITY		0x200000		// 16 Mb visdata
 #define MAX_MAP_FACEINFO		8192		// can be increased but not needs
 
 // quake lump ordering
@@ -166,12 +166,14 @@ typedef struct
 	dlump_t	lumps[HEADER_LUMPS];
 } dheader_t;
 
+#if !XASH_DREAMCAST
 typedef struct
 {
 	int	id;			// must be little endian XASH
 	int	version;
 	dlump_t	lumps[EXTRA_LUMPS];
 } dextrahdr_t;
+#endif 
 
 typedef struct
 {

@@ -358,7 +358,7 @@ static mlumpinfo_t srclumps[HEADER_LUMPS] =
 		.count = &srcmodel.numsubmodels,
 	},
 };
-
+#if !XASH_DREAMCAST
 static const mlumpinfo_t extlumps[EXTRA_LUMPS] =
 {
 	{
@@ -395,7 +395,7 @@ static const mlumpinfo_t extlumps[EXTRA_LUMPS] =
 		.count = &srcmodel.shadowdatasize,
 	},
 };
-
+#endif
 /*
 ===============================================================================
 
@@ -543,7 +543,7 @@ static void Mod_LoadLump( const byte *in, mlumpinfo_t *info, mlumpstat_t *stat, 
 	size_t	numelems, real_entrysize;
 	char	msg1[32], msg2[32];
 	dlump_t	*l = NULL;
-
+#if !XASH_DREAMCAST
 	if( FBitSet( info->flags, USE_EXTRAHEADER ))
 	{
 		dextrahdr_t *header = (dextrahdr_t *)((byte *)in + sizeof( dheader_t ));
@@ -552,6 +552,7 @@ static void Mod_LoadLump( const byte *in, mlumpinfo_t *info, mlumpstat_t *stat, 
 		l = &header->lumps[info->lumpnumber];
 	}
 	else
+#endif
 	{
 		dheader_t	*header = (dheader_t *)in;
 		l = &header->lumps[info->lumpnumber];
@@ -2051,7 +2052,7 @@ static void Mod_LoadEntities( model_t *mod, dbspmodel_t *bmod )
 			{
 				char	*pszWadFile;
 
-#if XASH_DREAMCAST
+#if 0
 			static const char *wadNumbers[] = {"1_", "2_", "3_", "4_", "5_", "6_", "7_"};
 			static const char *systemWads[] = {"decals", "spraypaint", "xeno", "liquids"};
 			char wadname[MAX_QPATH];
@@ -3560,7 +3561,9 @@ loading and processing bmodel
 static qboolean Mod_LoadBmodelLumps( model_t *mod, const byte *mod_base, qboolean isworld )
 {
 	const dheader_t *header = (const dheader_t *)mod_base;
+#if !XASH_DREAMCAST
 	const dextrahdr_t	*extrahdr = (const dextrahdr_t *)(mod_base + sizeof( dheader_t ));
+#endif
 	dbspmodel_t	*bmod = &srcmodel;
 	char		wadvalue[2048];
 	size_t		len = 0;
@@ -3591,12 +3594,15 @@ static qboolean Mod_LoadBmodelLumps( model_t *mod, const byte *mod_base, qboolea
 	switch( header->version )
 	{
 	case HLBSP_VERSION:
+#if !XASH_DREAMCAST
 		if( extrahdr->id == IDEXTRAHEADER )
 		{
 			SetBits( flags, LUMP_BSP30EXT );
 		}
 		// only relevant for half-life maps
-		else if( !Mod_LumpLooksLikeEntities( mod_base + header->lumps[LUMP_ENTITIES].fileofs, header->lumps[LUMP_ENTITIES].filelen ) &&
+		else
+#endif
+		if( !Mod_LumpLooksLikeEntities( mod_base + header->lumps[LUMP_ENTITIES].fileofs, header->lumps[LUMP_ENTITIES].filelen ) &&
 			 Mod_LumpLooksLikeEntities( mod_base + header->lumps[LUMP_PLANES].fileofs, header->lumps[LUMP_PLANES].filelen ))
 		{
 			// blue-shift swapped lumps
@@ -3629,11 +3635,11 @@ static qboolean Mod_LoadBmodelLumps( model_t *mod, const byte *mod_base, qboolea
 	// loading base lumps
 	for( i = 0; i < ARRAYSIZE( srclumps ); i++ )
 		Mod_LoadLump( mod_base, &srclumps[i], &worldstats[i], flags );
-
+#if !XASH_DREAMCAST
 	// loading extralumps
 	for( i = 0; i < ARRAYSIZE( extlumps ); i++ )
 		Mod_LoadLump( mod_base, &extlumps[i], &worldstats[ARRAYSIZE( srclumps ) + i], flags );
-
+#endif
 	if( !bmod->isworld && loadstat.numerrors )
 	{
 		Con_DPrintf( "Mod_Load%s: %i error(s), %i warning(s)\n", isworld ? "World" : "Brush", loadstat.numerrors, loadstat.numwarnings );
@@ -3795,7 +3801,9 @@ return real entities lump (for bshift swapped lumps)
 qboolean Mod_TestBmodelLumps( dc_file_t *f, const char *name, const byte *mod_base, qboolean silent, dlump_t *entities )
 {
 	const dheader_t	*header = (const dheader_t *)mod_base;
+#if !XASH_DREAMCAST
 	const dextrahdr_t *extrahdr = (const dextrahdr_t *)( mod_base + sizeof( dheader_t ));
+#endif
 	int	i, flags = LUMP_TESTONLY;
 
 	// always reset the intermediate struct
@@ -3818,11 +3826,13 @@ qboolean Mod_TestBmodelLumps( dc_file_t *f, const char *name, const byte *mod_ba
 	switch( header->version )
 	{
 	case HLBSP_VERSION:
+#if !XASH_DREAMCAST
 		if( extrahdr->id == IDEXTRAHEADER )
 		{
 			SetBits( flags, LUMP_BSP30EXT );
 		}
 		else
+#endif
 		{
 			// only relevant for half-life maps
 			int ret = Mod_LumpLooksLikeEntitiesFile( f, &header->lumps[LUMP_ENTITIES], flags, "entities" );
@@ -3862,11 +3872,11 @@ qboolean Mod_TestBmodelLumps( dc_file_t *f, const char *name, const byte *mod_ba
 	// loading base lumps
 	for( i = 0; i < ARRAYSIZE( srclumps ); i++ )
 		Mod_LoadLump( mod_base, &srclumps[i], &worldstats[i], flags );
-
+#if !XASH_DREAMCAST
 	// loading extralumps
 	for( i = 0; i < ARRAYSIZE( extlumps ); i++ )
 		Mod_LoadLump( mod_base, &extlumps[i], &worldstats[ARRAYSIZE( srclumps ) + i], flags );
-
+#endif
 	if( loadstat.numerrors )
 	{
 		if( !FBitSet( flags, LUMP_SILENT ))
@@ -3917,9 +3927,15 @@ check lump for existing
 int GAME_EXPORT Mod_CheckLump( const char *filename, const int lump, int *lumpsize )
 {
 	dc_file_t		*f = FS_Open( filename, "rb", false );
+#if XASH_DREAMCAST
+	byte		buffer[sizeof( dheader_t )];
+#else
 	byte		buffer[sizeof( dheader_t ) + sizeof( dextrahdr_t )];
+#endif
 	size_t		prefetch_size = sizeof( buffer );
+#if !XASH_DREAMCAST
 	dextrahdr_t	*extrahdr;
+#endif
 	dheader_t		*header;
 
 	if( !f ) return LUMP_LOAD_COULDNT_OPEN;
@@ -3938,6 +3954,7 @@ int GAME_EXPORT Mod_CheckLump( const char *filename, const int lump, int *lumpsi
 		return LUMP_LOAD_BAD_VERSION;
 	}
 
+#if !XASH_DREAMCAST
 	extrahdr = (dextrahdr_t *)((byte *)buffer + sizeof( dheader_t ));
 
 	if( extrahdr->id != IDEXTRAHEADER || extrahdr->version != EXTRA_VERSION )
@@ -3945,13 +3962,13 @@ int GAME_EXPORT Mod_CheckLump( const char *filename, const int lump, int *lumpsi
 		FS_Close( f );
 		return LUMP_LOAD_NO_EXTRADATA;
 	}
-
+#endif
 	if( lump < 0 || lump >= EXTRA_LUMPS )
 	{
 		FS_Close( f );
 		return LUMP_LOAD_INVALID_NUM;
 	}
-
+#if !XASH_DREAMCAST
 	if( extrahdr->lumps[lump].filelen <= 0 )
 	{
 		FS_Close( f );
@@ -3960,7 +3977,7 @@ int GAME_EXPORT Mod_CheckLump( const char *filename, const int lump, int *lumpsi
 
 	if( lumpsize )
 		*lumpsize = extrahdr->lumps[lump].filelen;
-
+#endif
 	FS_Close( f );
 
 	return LUMP_LOAD_OK;
@@ -3976,9 +3993,15 @@ reading random lump by user request
 int GAME_EXPORT Mod_ReadLump( const char *filename, const int lump, void **lumpdata, int *lumpsize )
 {
 	dc_file_t		*f = FS_Open( filename, "rb", false );
+#if XASH_DREAMCAST
+	byte		buffer[sizeof( dheader_t )];
+#else
 	byte		buffer[sizeof( dheader_t ) + sizeof( dextrahdr_t )];
+#endif
 	size_t		prefetch_size = sizeof( buffer );
+#if !XASH_DREAMCAST
 	dextrahdr_t	*extrahdr;
+#endif
 	dheader_t		*header;
 	byte		*data;
 	int		length;
@@ -3998,7 +4021,7 @@ int GAME_EXPORT Mod_ReadLump( const char *filename, const int lump, void **lumpd
 		FS_Close( f );
 		return LUMP_LOAD_BAD_VERSION;
 	}
-
+#if !XASH_DREAMCAST
 	extrahdr = (dextrahdr_t *)((byte *)buffer + sizeof( dheader_t ));
 
 	if( extrahdr->id != IDEXTRAHEADER || extrahdr->version != EXTRA_VERSION )
@@ -4006,13 +4029,14 @@ int GAME_EXPORT Mod_ReadLump( const char *filename, const int lump, void **lumpd
 		FS_Close( f );
 		return LUMP_LOAD_NO_EXTRADATA;
 	}
-
+#endif
 	if( lump < 0 || lump >= EXTRA_LUMPS )
 	{
 		FS_Close( f );
 		return LUMP_LOAD_INVALID_NUM;
 	}
 
+#if !XASH_DREAMCAST
 	if( extrahdr->lumps[lump].filelen <= 0 )
 	{
 		FS_Close( f );
@@ -4043,7 +4067,7 @@ int GAME_EXPORT Mod_ReadLump( const char *filename, const int lump, void **lumpd
 	if( lumpsize )
 		*lumpsize = length;
 	*lumpdata = data;
-
+#endif
 	return LUMP_LOAD_OK;
 }
 
@@ -4057,6 +4081,7 @@ only empty lumps is allows
 */
 int GAME_EXPORT Mod_SaveLump( const char *filename, const int lump, void *lumpdata, int lumpsize )
 {
+#if !XASH_DREAMCAST
 	byte		buffer[sizeof( dheader_t ) + sizeof( dextrahdr_t )];
 	size_t		prefetch_size = sizeof( buffer );
 	int		result, dummy = lumpsize;
@@ -4138,5 +4163,6 @@ int GAME_EXPORT Mod_SaveLump( const char *filename, const int lump, void *lumpda
 	}
 
 	FS_Close( f );
+#endif
 	return LUMP_SAVE_OK;
 }
