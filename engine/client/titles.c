@@ -16,7 +16,11 @@ GNU General Public License for more details.
 #include "common.h"
 #include "client.h"
 
+#if XASH_DREAMCAST
+#define MAX_MESSAGES	1024
+#else
 #define MAX_MESSAGES	2048
+#endif 
 
 #define MSGFILE_NAME	0
 #define MSGFILE_TEXT	1

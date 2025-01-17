@@ -190,6 +190,10 @@ GNU General Public License for more details.
 #undef MAX_RESOURCES
 #undef MAX_LIGHTSTYLES
 #undef MAX_CLIENTS
+#undef MAX_WEAPONS
+#undef MAX_USER_MESSAGES
+#define MAX_USER_MESSAGES 128
+#define MAX_WEAPONS 32
 #define MAX_CLIENTS 			8
 #define DC_MAX_EDICTS				128
 #define MAX_VISIBLE_PACKET      128     
@@ -198,9 +202,9 @@ GNU General Public License for more details.
 #define MAX_MODELS          512     
 #define MAX_SOUNDS          512     
 #define MAX_CUSTOM          32      
-#define MAX_DLIGHTS         16       
+#define MAX_DLIGHTS         8       
 #define MAX_ELIGHTS         32     
-#define MAX_RENDER_DECALS      64      
+#define MAX_RENDER_DECALS      16      
 #define MAX_RESOURCES       1024    
 #define MAX_LIGHTSTYLES		64
 #else

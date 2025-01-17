@@ -6,7 +6,7 @@
 
 # Put the filename of the output binary here
 PROJECT_NAME = xash
-TARGET = xash.elf
+TARGET = xash
 
 include engine.mk
 
@@ -30,6 +30,7 @@ LIBS = -L$(CS_DLL_DIR) \
        -L$(FILESYSTEM_DIR) \
        -L$(GLDC_DIR) \
        -L$(MAINUI_DIR) \
+	   -lfatfs \
        -lfilesystem_stdio \
        -lcs_client \
        -lref_gldc \
