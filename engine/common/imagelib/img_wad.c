@@ -319,18 +319,13 @@ qboolean Image_LoadSPR( const char *name, const byte *buffer, fs_offset_t filesi
             }
         }
     }
-	// Rescale smoke/puff sprites to 2x2
-    if (Q_stristr(name, "smoke") || Q_stristr(name, "puff") || Q_stristr(name, "tele") ||  Q_stristr(name, "explo") ){
+	// FIXME: maximqad THIS IS STUPID UGLY HACK to fit certain sprites into VRAM, remove that when we have VQ sprgen
+    if (Q_stristr(name, "smoke") || Q_stristr(name, "puff") || Q_stristr(name, "tele") ||  Q_stristr(name, "explo") )
+	{
         image.width = 2;
         image.height = 2;
     }
-#if 0
-    else if (image.width > 64 || image.height > 64) {
-        image.width = 48;
-        image.height = 48;
-        Con_DPrintf("Rescaling large sprite to 48x48: %s\n", name);
-    }
-#endif
+
     if( filesize == ( image.width * image.height * 4 ))
         truecolor = true;
 
