@@ -100,7 +100,6 @@ void IN_LockInputDevices( qboolean lock )
 		ClearBits( joy_enable.flags, FCVAR_READ_ONLY );
 	}
 #else
-
 	if( lock )
 	{
 		SetBits( m_ignore.flags, FCVAR_READ_ONLY );
@@ -377,9 +376,7 @@ void IN_MouseEvent( int key, int down )
 	{
 		Touch_KeyEvent( K_MOUSE1 + key, down );
 	}
-	else 
-#
-	if ( cls.key_dest == key_game )
+	else if ( cls.key_dest == key_game )
 	{
 		// perform button actions
 		VGui_MouseEvent( K_MOUSE1 + key, down );
@@ -578,10 +575,9 @@ IN_EngineAppendMove
 Called from cl_main.c after generating command in client
 ================
 */
-void IN_EngineAppendMove( float frametime, void *cmd1, qboolean active )
+void IN_EngineAppendMove( float frametime, usercmd_t *cmd, qboolean active )
 {
 	float forward, side, pitch, yaw;
-	usercmd_t *cmd = cmd1;
 
 	if( clgame.dllFuncs.pfnLookEvent )
 		return;
@@ -643,8 +639,6 @@ Called every frame, even if not generating commands
 */
 void Host_InputFrame( void )
 {
-	Sys_SendKeyEvents ();
-
 	IN_Commands();
 
 	IN_MouseMove();

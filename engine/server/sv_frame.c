@@ -25,8 +25,8 @@ typedef struct
 	byte		sended[MAX_EDICTS_BYTES];
 } sv_ents_t;
 
-int	c_fullsend;	// just a debug counter
-int	c_notsend;
+static int	c_fullsend;	// just a debug counter
+static int	c_notsend;
 
 /*
 =======================
@@ -195,6 +195,7 @@ int SV_FindBestBaseline( int index, entity_state_t **baseline, entity_state_t *t
 	{
 		// don't worry about underflow in circular buffer
 		entity_state_t *test;
+
 		// if set, then it's normal entity
 		if( frame != NULL )
 			test = &svs.packet_entities[(frame->first_entity+i) % svs.num_client_entities];
@@ -221,43 +222,6 @@ int SV_FindBestBaseline( int index, entity_state_t **baseline, entity_state_t *t
 		else
 			*baseline = &svs.static_entities[bestfound];
 	}
-	return index - bestfound;
-}
-
-/*
-=============
-SV_FindBestBaselineForStatic
-
-trying to deltas with previous static entities
-=============
-*/
-int SV_FindBestBaselineForStatic( int index, entity_state_t **baseline, entity_state_t *to )
-{
-	int	bestBitCount;
-	int	i, bitCount;
-	int	bestfound, j;
-
-	bestBitCount = j = Delta_TestBaseline( *baseline, to, false, sv.time );
-	bestfound = index;
-
-	// lookup backward for previous 64 states and try to interpret current delta as baseline
-	for( i = index - 1; bestBitCount > 0 && i >= 0 && ( index - i ) < ( MAX_CUSTOM_BASELINES - 1 ); i-- )
-	{
-		// don't worry about underflow in circular buffer
-		entity_state_t	*test = &svs.static_entities[i];
-
-		bitCount = Delta_TestBaseline( test, to, false, sv.time );
-
-		if( bitCount < bestBitCount )
-		{
-			bestBitCount = bitCount;
-			bestfound = i;
-		}
-	}
-
-	// using delta from previous entity as baseline for current
-	if( index != bestfound )
-		*baseline = &svs.static_entities[bestfound];
 	return index - bestfound;
 }
 
@@ -528,14 +492,15 @@ SV_EmitPings
 */
 static void SV_EmitPings( sizebuf_t *msg )
 {
-	sv_client_t	*cl;
-	int		packet_loss;
-	int		i, ping;
+	sv_client_t *cl;
+	int i;
 
 	MSG_BeginServerCmd( msg, svc_pings );
 
 	for( i = 0, cl = svs.clients; i < svs.maxclients; i++, cl++ )
 	{
+		int packet_loss, ping;
+
 		if( cl->state != cs_spawned )
 			continue;
 

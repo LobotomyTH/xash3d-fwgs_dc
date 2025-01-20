@@ -316,12 +316,10 @@ static int SND_GetChannelTimeLeft(const channel_t *ch)
     {
         int curpos;
         int samples;
-
         samples = ch->sfx->cache->samples;
         curpos = S_ConvertLoopedPosition( ch->sfx->cache, ch->pMixer.sample, ch->use_loop );
         remaining = bound( 0, samples - curpos, samples );
     }
-
     return remaining;
 #endif
 }
@@ -353,7 +351,6 @@ channel_t *SND_PickDynamicChannel( int entnum, int channel, sfx_t *sfx, qboolean
             *ignore = true;
         return NULL;
     }
-
     for( ch_idx = NUM_AMBIENTS; ch_idx < MAX_DYNAMIC_CHANNELS; ch_idx++ )
     {
         channel_t *ch = &channels[ch_idx];
@@ -370,6 +367,7 @@ channel_t *SND_PickDynamicChannel( int entnum, int channel, sfx_t *sfx, qboolean
             break;
         }
 
+
         // don't let monster sounds override player sounds
         if( ch->sfx && S_IsClient( ch->entnum ) && !S_IsClient( entnum ))
             continue;
@@ -383,6 +381,7 @@ channel_t *SND_PickDynamicChannel( int entnum, int channel, sfx_t *sfx, qboolean
             first_to_die = ch_idx;
         }
     }
+
 
     if( first_to_die == -1 )
         return NULL;
@@ -538,6 +537,7 @@ channel_t *SND_PickStaticChannel( const vec3_t pos, sfx_t *sfx )
     return ch;
 }
 
+
 /*
 =================
 S_AlterChannel
@@ -545,7 +545,7 @@ S_AlterChannel
 search through all channels for a channel that matches this
 soundsource, entchannel and sfx, and perform alteration on channel
 as indicated by 'flags' parameter. If shut down request and
-sfx contains a sentence name, shut off the sentence.w
+sfx contains a sentence name, shut off the sentence.
 returns TRUE if sound was altered,
 returns FALSE if sound was not found (sound is not playing)
 =================
@@ -802,7 +802,6 @@ void S_StartSound( const vec3_t pos, int ent, int chan, sound_t handle, float fv
             Con_DPrintf( S_ERROR "dropped sound \"" DEFAULT_SOUNDPATH "%s\"\n", sfx->name );
         return;
     }
-
 #ifdef XASH_DREAMCAST
     // Store AICA channel and state before memset
     int saved_aica_channel = target_chan->aica_channel;
@@ -986,7 +985,6 @@ void S_RestoreSound(const vec3_t pos, int ent, int chan, sound_t handle, float f
     target_chan->basePitch = pitch;
     target_chan->isSentence = false;
     target_chan->sfx = sfx;
-
     // regular or streamed sound fx
     pSource = S_LoadSound(sfx);
     target_chan->name[0] = '\0';
@@ -1103,6 +1101,7 @@ void S_AmbientSound(const vec3_t pos, int ent, sound_t handle, float fvol, float
 
     VectorCopy(pos, ch->origin);
     ch->entnum = ent;
+
 
     CL_GetEntitySpatialization(ch);
 
@@ -1312,7 +1311,7 @@ static void S_UpdateAmbientSounds( void )
 	// calc ambient sound levels
 	if( !cl.worldmodel ) return;
 
-	leaf = Mod_PointInLeaf( s_listener.origin, cl.worldmodel->nodes );
+	leaf = Mod_PointInLeaf( s_listener.origin, cl.worldmodel->nodes, cl.worldmodel );
 
 	if( !leaf || !s_ambient_level.value )
 	{
@@ -2278,7 +2277,7 @@ S_VoiceRecordStart_f
 */
 static void S_VoiceRecordStart_f( void )
 {
-	if( cls.state != ca_active || cls.legacymode )
+	if( cls.state != ca_active )
 		return;
 	
 	Voice_RecordStart();
@@ -2306,12 +2305,6 @@ S_Init
 qboolean S_Init( void )
 {
 
-	if( Sys_CheckParm( "-nosound" ))
-	{
-		Con_Printf( "Audio: Disabled\n" );
-		return false;
-	}
-
 	Cvar_RegisterVariable( &s_volume );
 	Cvar_RegisterVariable( &s_musicvolume );
 	Cvar_RegisterVariable( &s_mixahead );
@@ -2325,11 +2318,14 @@ qboolean S_Init( void )
 	Cvar_RegisterVariable( &s_samplecount );
 	Cvar_RegisterVariable( &s_warn_late_precache );
 
+
+
 	Cmd_AddCommand( "play", S_Play_f, "playing a specified sound file" );
 	Cmd_AddCommand( "play2", S_Play2_f, "playing a group of specified sound files" ); // nehahra stuff
 	Cmd_AddCommand( "playvol", S_PlayVol_f, "playing a specified sound file with specified volume" );
 	Cmd_AddCommand( "stopsound", S_StopSound_f, "stop all sounds" );
-	Cmd_AddCommand( "music", S_Music_f, "starting a background track" );
+	// HLU SDK have command with the same name
+	Cmd_AddCommandWithFlags( "music", S_Music_f, "starting a background track", CMD_OVERRIDABLE );
 	Cmd_AddCommand( "soundlist", S_SoundList_f, "display loaded sounds" );
 	Cmd_AddCommand( "s_info", S_SoundInfo_f, "print sound system information" );
 	Cmd_AddCommand( "s_fade", S_SoundFade_f, "fade all sounds then stop all" );
@@ -2377,7 +2373,8 @@ void S_Shutdown( void )
 	Cmd_RemoveCommand( "play" );
 	Cmd_RemoveCommand( "playvol" );
 	Cmd_RemoveCommand( "stopsound" );
-	Cmd_RemoveCommand( "music" );
+	if( Cmd_Exists( "music" ))
+		Cmd_RemoveCommand( "music" );
 	Cmd_RemoveCommand( "soundlist" );
 	Cmd_RemoveCommand( "s_info" );
 	Cmd_RemoveCommand( "s_fade" );

@@ -53,11 +53,13 @@ size_t Q_colorstr( const char *string )
 	return len;
 }
 
-static int Q_atoi_hex( int sign, const char *str )
+int Q_atoi_hex( int sign, const char *str )
 {
 	int c, val = 0;
 
-	str += 2;
+	if( str[0] == '0' && ( str[1] == 'x' || str[1] == 'X' ))
+		str += 2;
+
 	while( 1 )
 	{
 		c = *str++;
@@ -288,7 +290,6 @@ const char* Q_timestamp( int format )
 	static string	timestamp;
 	time_t		crt_time;
 	const struct tm	*crt_tm;
-	string		timestring;
 
 	time( &crt_time );
 	crt_tm = localtime( &crt_time );
@@ -297,32 +298,32 @@ const char* Q_timestamp( int format )
 	{
 	case TIME_FULL:
 		// Build the full timestamp (ex: "Apr03 2007 [23:31.55]");
-		strftime( timestring, sizeof( timestring ), "%b%d %Y [%H:%M.%S]", crt_tm );
+		strftime( timestamp, sizeof( timestamp ), "%b%d %Y [%H:%M.%S]", crt_tm );
 		break;
 	case TIME_DATE_ONLY:
 		// Build the date stamp only (ex: "Apr03 2007");
-		strftime( timestring, sizeof( timestring ), "%b%d %Y", crt_tm );
+		strftime( timestamp, sizeof( timestamp ), "%b%d %Y", crt_tm );
 		break;
 	case TIME_TIME_ONLY:
 		// Build the time stamp only (ex: "23:31.55");
-		strftime( timestring, sizeof( timestring ), "%H:%M.%S", crt_tm );
+		strftime( timestamp, sizeof( timestamp ), "%H:%M.%S", crt_tm );
 		break;
 	case TIME_NO_SECONDS:
 		// Build the time stamp exclude seconds (ex: "13:46");
-		strftime( timestring, sizeof( timestring ), "%H:%M", crt_tm );
+		strftime( timestamp, sizeof( timestamp ), "%H:%M", crt_tm );
 		break;
 	case TIME_YEAR_ONLY:
 		// Build the date stamp year only (ex: "2006");
-		strftime( timestring, sizeof( timestring ), "%Y", crt_tm );
+		strftime( timestamp, sizeof( timestamp ), "%Y", crt_tm );
 		break;
 	case TIME_FILENAME:
 		// Build a timestamp that can use for filename (ex: "Nov2006-26 (19.14.28)");
-		strftime( timestring, sizeof( timestring ), "%b%Y-%d_%H.%M.%S", crt_tm );
+		strftime( timestamp, sizeof( timestamp ), "%b%Y-%d_%H.%M.%S", crt_tm );
 		break;
-	default: return NULL;
+	default:
+		Q_snprintf( timestamp, sizeof( timestamp ), "%s: unknown format %d", __func__, format );
+		break;
 	}
-
-	Q_strncpy( timestamp, timestring, sizeof( timestamp ));
 
 	return timestamp;
 }
@@ -527,22 +528,16 @@ COM_FileExtension
 */
 const char *COM_FileExtension( const char *in )
 {
-	const char *separator, *backslash, *colon, *dot;
-
-	separator = Q_strrchr( in, '/' );
-	backslash = Q_strrchr( in, '\\' );
-
-	if( !separator || separator < backslash )
-		separator = backslash;
-
-	colon = Q_strrchr( in, ':' );
-
-	if( !separator || separator < colon )
-		separator = colon;
+	const char *dot;
 
 	dot = Q_strrchr( in, '.' );
 
-	if( dot == NULL || ( separator && ( dot < separator )))
+	// quickly exit if there is no dot at all
+	if( dot == NULL )
+		return "";
+
+	// if there are any of these special symbols after the dot, the file has no extension
+	if( Q_strpbrk( dot + 1, "\\/:" ))
 		return "";
 
 	return dot + 1;
@@ -670,21 +665,6 @@ void COM_RemoveLineFeed( char *str, size_t bufsize )
 
 /*
 ============
-COM_FixSlashes
-
-Changes all '\' characters into '/' characters, in place.
-============
-*/
-void COM_FixSlashes( char *pname )
-{
-	while(( pname = Q_strchr( pname, '\\' )))
-	{
-		*pname = '/';
-	}
-}
-
-/*
-============
 COM_PathSlashFix
 
 ensure directory path always ends on forward slash
@@ -703,33 +683,6 @@ void COM_PathSlashFix( char *path )
 		path[len] = '/';
 		path[len + 1] = '\0';
 	}
-}
-
-/*
-============
-COM_Hex2Char
-============
-*/
-char COM_Hex2Char( uint8_t hex )
-{
-	if( hex >= 0x0 && hex <= 0x9 )
-		hex += '0';
-	else if( hex >= 0xA && hex <= 0xF )
-		hex += '7';
-
-	return (char)hex;
-}
-
-/*
-============
-COM_Hex2String
-============
-*/
-void COM_Hex2String( uint8_t hex, char *str )
-{
-	*str++ = COM_Hex2Char( hex >> 4 );
-	*str++ = COM_Hex2Char( hex & 0x0F );
-	*str = '\0';
 }
 
 /*
@@ -790,8 +743,8 @@ skipwhite:
 		data++;
 	}
 
-	// skip // comments
-	if( c == '/' && data[1] == '/' )
+	// skip // or #, if requested, comments
+	if(( c == '/' && data[1] == '/' ) || ( c == '#' && FBitSet( flags, PFILE_IGNOREHASHCMT )))
 	{
 		while( *data && *data != '\n' )
 			data++;

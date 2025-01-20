@@ -81,7 +81,7 @@ static inline void CopyAndFixSlashes( char *p, const char *in, size_t size )
 	COM_FixSlashes( p );
 }
 
-class CXashFS : public IVFileSystem009
+class CXashFS : public IFileSystem
 {
 private:
 	class CSearchState
@@ -233,7 +233,7 @@ public:
 		return FS_FileTime( p, false );
 	}
 
-	long int GetFileModificationTime( const char *path )
+	long int GetFileModificationTime( const char *path ) override
 	{
 		// TODO: properly reverse-engineer this
 		FixupPath( p, path );
@@ -435,9 +435,7 @@ public:
 
 	bool GetCurrentDirectory( char *p, int size ) override
 	{
-		Q_strncpy( p, fs_rootdir, size );
-
-		return true;
+		return FS_GetRootDirectory( p, size );
 	}
 
 	void PrintOpenedFiles() override

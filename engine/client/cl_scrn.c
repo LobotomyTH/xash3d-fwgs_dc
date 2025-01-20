@@ -33,6 +33,7 @@ static CVAR_DEFINE_AUTO( net_speeds, "0", FCVAR_ARCHIVE, "show network packets" 
 static CVAR_DEFINE_AUTO( cl_showfps, "0", FCVAR_ARCHIVE, "show client fps" );
 static CVAR_DEFINE_AUTO( cl_showpos, "0", FCVAR_ARCHIVE, "show local player position and velocity" );
 static CVAR_DEFINE_AUTO( cl_showents, "0", FCVAR_ARCHIVE | FCVAR_CHEAT, "show entities information (largely undone)" );
+static CVAR_DEFINE_AUTO( cl_showcmd, "0", 0, "visualize usercmd button presses" );
 
 typedef struct
 {
@@ -123,7 +124,7 @@ void SCR_DrawPos( void )
 	if( cls.state != ca_active || !cl_showpos.value || cl.background )
 		return;
 
-	ent = CL_EDICT_NUM( cl.playernum + 1 );
+	ent = CL_GetLocalPlayer();
 	speed = VectorLength( cl.simvel );
 
 	Q_snprintf( msg, MAX_SYSPATH,
@@ -197,10 +198,73 @@ void SCR_DrawEnts( void )
 			screen[0] += 0.5f * refState.width;
 			screen[1] += 0.5f * refState.height;
 
-
 			Con_DrawString( screen[0], screen[1], msg, color );
 		}
 	}
+}
+
+/*
+==============
+SCR_DrawUserCmd
+
+another debugging aids, shows pressed buttons
+==============
+*/
+void SCR_DrawUserCmd( void )
+{
+	runcmd_t *pcmd = &cl.commands[( cls.netchan.outgoing_sequence - 1 ) & CL_UPDATE_MASK];
+	struct
+	{
+		int mask;
+		const char *name;
+	} buttons[16] =
+	{
+	{ IN_ATTACK, "attack" },
+	{ IN_JUMP, "jump" },
+	{ IN_DUCK, "duck" },
+	{ IN_FORWARD, "forward" },
+	{ IN_BACK, "back" },
+	{ IN_USE, "use" },
+	{ IN_CANCEL, "cancel" },
+	{ IN_LEFT, "left" },
+	{ IN_RIGHT, "right" },
+	{ IN_MOVELEFT, "moveleft" },
+	{ IN_MOVERIGHT, "moveright" },
+	{ IN_ATTACK2, "attack2" },
+	{ IN_RUN, "run" },
+	{ IN_RELOAD, "reload" },
+	{ IN_ALT1, "alt1" },
+	{ IN_SCORE, "score" },
+	};
+	cl_font_t *font = Con_GetCurFont();
+	string msg;
+	int i, ypos = 100;
+
+	if( cls.state != ca_active || !cl_showcmd.value )
+		return;
+
+	for( i = 0; i < ARRAYSIZE( buttons ); i++ )
+	{
+		rgba_t rgba;
+
+		rgba[0] = FBitSet( pcmd->cmd.buttons, buttons[i].mask ) ? 0 : 255;
+		rgba[1] = FBitSet( pcmd->cmd.buttons, buttons[i].mask ) ? 255 : 0;
+		rgba[2] = 0;
+		rgba[3] = 255;
+
+		Con_DrawString( 100, ypos, buttons[i].name, rgba );
+
+		ypos += font->charHeight;
+	}
+
+	Q_snprintf( msg, sizeof( msg ),
+		"F/S/U: %g %g %g\n"
+		"impulse: %u\n"
+		"msec: %u",
+		pcmd->cmd.forwardmove, pcmd->cmd.sidemove, pcmd->cmd.upmove,
+		pcmd->cmd.impulse,
+		pcmd->cmd.msec );
+	Con_DrawString( 100, ypos, msg, g_color_table[7] );
 }
 
 /*
@@ -494,6 +558,18 @@ void SCR_DirtyScreen( void )
 	SCR_AddDirtyPoint( refState.width - 1, refState.height - 1 );
 }
 
+static void R_DrawTileClear( int texnum, int x, int y, int w, int h, float tw, float th )
+{
+	float s1 = x / tw;
+	float t1 = y / th;
+	float s2 = ( x + w ) / tw;
+	float t2 = ( y + h ) / th;
+
+	ref.dllFuncs.GL_SetRenderMode( kRenderNormal );
+	ref.dllFuncs.Color4ub( 255, 255, 255, 255 );
+	ref.dllFuncs.R_DrawStretchPic( x, y, w, h, s1, t1, s2, t2, texnum );
+}
+
 /*
 ================
 SCR_TileClear
@@ -501,11 +577,23 @@ SCR_TileClear
 */
 void SCR_TileClear( void )
 {
-	int	i, top, bottom, left, right;
+	int	i, top, bottom, left, right, texnum;
 	dirty_t	clear;
+	float tw, th;
 
 	if( likely( scr_viewsize.value >= 120 ))
 		return; // full screen rendering
+
+	if( !cls.tileImage )
+	{
+		cls.tileImage = ref.dllFuncs.GL_LoadTexture( "gfx/backtile.lmp", NULL, 0, TF_NOMIPMAP );
+		if( !cls.tileImage )
+			cls.tileImage = -1;
+	}
+
+	if( cls.tileImage > 0 )
+		texnum = cls.tileImage;
+	else texnum = 0;
 
 	// erase rect will be the union of the past three frames
 	// so tripple buffering works properly
@@ -539,11 +627,14 @@ void SCR_TileClear( void )
 	left = clgame.viewport[0];
 	right = left + clgame.viewport[2] - 1;
 
+	tw = REF_GET_PARM( PARM_TEX_SRC_WIDTH, texnum );
+	th = REF_GET_PARM( PARM_TEX_SRC_HEIGHT, texnum );
+
 	if( clear.y1 < top )
 	{
 		// clear above view screen
 		i = clear.y2 < top-1 ? clear.y2 : top - 1;
-		ref.dllFuncs.R_DrawTileClear( cls.tileImage, clear.x1, clear.y1, clear.x2 - clear.x1 + 1, i - clear.y1 + 1 );
+		R_DrawTileClear( texnum, clear.x1, clear.y1, clear.x2 - clear.x1 + 1, i - clear.y1 + 1, tw, th );
 		clear.y1 = top;
 	}
 
@@ -551,7 +642,7 @@ void SCR_TileClear( void )
 	{
 		// clear below view screen
 		i = clear.y1 > bottom + 1 ? clear.y1 : bottom + 1;
-		ref.dllFuncs.R_DrawTileClear( cls.tileImage, clear.x1, i, clear.x2 - clear.x1 + 1, clear.y2 - i + 1 );
+		R_DrawTileClear( texnum, clear.x1, i, clear.x2 - clear.x1 + 1, clear.y2 - i + 1, tw, th );
 		clear.y2 = bottom;
 	}
 
@@ -559,7 +650,7 @@ void SCR_TileClear( void )
 	{
 		// clear left of view screen
 		i = clear.x2 < left - 1 ? clear.x2 : left - 1;
-		ref.dllFuncs.R_DrawTileClear( cls.tileImage, clear.x1, clear.y1, i - clear.x1 + 1, clear.y2 - clear.y1 + 1 );
+		R_DrawTileClear( texnum, clear.x1, clear.y1, i - clear.x1 + 1, clear.y2 - clear.y1 + 1, tw, th );
 		clear.x1 = left;
 	}
 
@@ -567,7 +658,7 @@ void SCR_TileClear( void )
 	{
 		// clear left of view screen
 		i = clear.x1 > right + 1 ? clear.x1 : right + 1;
-		ref.dllFuncs.R_DrawTileClear( cls.tileImage, i, clear.y1, clear.x2 - i + 1, clear.y2 - clear.y1 + 1 );
+		R_DrawTileClear( texnum, i, clear.y1, clear.x2 - i + 1, clear.y2 - clear.y1 + 1, tw, th );
 		clear.x2 = right;
 	}
 }
@@ -702,6 +793,18 @@ static void SCR_InstallParticlePalette( void )
 	}
 }
 
+int SCR_LoadPauseIcon( void )
+{
+	int texnum = 0;
+
+	if( FS_FileExists( "gfx/paused.lmp", false ))
+		texnum = ref.dllFuncs.GL_LoadTexture( "gfx/paused.lmp", NULL, 0, TF_IMAGE|TF_ALLOW_NEAREST );
+	else if( FS_FileExists( "gfx/pause.lmp", false ))
+		texnum = ref.dllFuncs.GL_LoadTexture( "gfx/pause.lmp", NULL, 0, TF_IMAGE|TF_ALLOW_NEAREST );
+
+	return texnum ? texnum : -1;
+}
+
 /*
 ================
 SCR_RegisterTextures
@@ -712,12 +815,6 @@ INTERNAL RESOURCE
 void SCR_RegisterTextures( void )
 {
 	// register gfx.wad images
-
-	if( FS_FileExists( "gfx/paused.lmp", false ))
-		cls.pauseIcon = ref.dllFuncs.GL_LoadTexture( "gfx/paused.lmp", NULL, 0, TF_IMAGE|TF_ALLOW_NEAREST );
-	else if( FS_FileExists( "gfx/pause.lmp", false ))
-		cls.pauseIcon = ref.dllFuncs.GL_LoadTexture( "gfx/pause.lmp", NULL, 0, TF_IMAGE|TF_ALLOW_NEAREST );
-
 	if( FS_FileExists( "gfx/lambda.lmp", false ))
 	{
 		if( cl_allow_levelshots.value )
@@ -731,7 +828,6 @@ void SCR_RegisterTextures( void )
 		else cls.loadingBar = ref.dllFuncs.GL_LoadTexture( "gfx/loading.lmp", NULL, 0, TF_IMAGE|TF_ALLOW_NEAREST );
 	}
 
-	cls.tileImage = ref.dllFuncs.GL_LoadTexture( "gfx/backtile.lmp", NULL, 0, TF_NOMIPMAP );
 }
 
 /*
@@ -818,6 +914,7 @@ void SCR_Init( void )
 	Cvar_RegisterVariable( &net_speeds );
 	Cvar_RegisterVariable( &cl_showfps );
 	Cvar_RegisterVariable( &cl_showpos );
+	Cvar_RegisterVariable( &cl_showcmd );
 #ifdef _DEBUG
 	Cvar_RegisterVariable( &cl_showents );
 #endif // NDEBUG
@@ -840,9 +937,9 @@ void SCR_Init( void )
 	SCR_RegisterTextures ();
 	SCR_InstallParticlePalette ();
 	SCR_InitCinematic();
-	#if !XASH_DREAMCAST
+#if !XASH_DREAMCAST
 	CL_InitNetgraph();
-	#endif
+#endif
 	if( host.allow_console && Sys_CheckParm( "-toconsole" ))
 		Cbuf_AddText( "toggleconsole\n" );
 	else UI_SetActiveMenu( true );
@@ -854,7 +951,6 @@ void SCR_Shutdown( void )
 {
 	if( !scr_init ) return;
 
-	Cmd_RemoveCommand( "timerefresh" );
 	Cmd_RemoveCommand( "skyname" );
 	Cmd_RemoveCommand( "viewpos" );
 	UI_SetActiveMenu( false );

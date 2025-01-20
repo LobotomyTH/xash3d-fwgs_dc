@@ -40,8 +40,29 @@ GNU General Public License for more details.
 #include "render_api.h"	// decallist_t
 #include "tests.h"
 
-pfnChangeGame	pChangeGame = NULL;
+static pfnChangeGame	pChangeGame = NULL;
 host_parm_t		host;	// host parms
+
+#if XASH_ANDROID
+static jmp_buf return_from_main_buf;
+
+/*
+===============
+Host_ExitInMain
+
+On some platforms (e.g. Android) we can't exit with exit(3) as calling it would
+kill wrapper process (e.g. app_process) too early, before all resources would
+be freed, contexts released, files closed, etc, etc...
+
+To fix this, we create jmp_buf in Host_Main function, when jumping into with
+non-zero value will immediately return from it with `error_on_exit`.
+===============
+*/
+void Host_ExitInMain( void )
+{
+	longjmp( return_from_main_buf, 1 );
+}
+#endif // XASH_ANDROID
 
 #ifdef XASH_ENGINE_TESTS
 struct tests_stats_s tests_stats;
@@ -49,13 +70,14 @@ struct tests_stats_s tests_stats;
 
 CVAR_DEFINE( host_developer, "developer", "0", FCVAR_FILTERABLE, "engine is in development-mode" );
 CVAR_DEFINE_AUTO( sys_timescale, "1.0", FCVAR_FILTERABLE, "scale frame time" );
-CVAR_DEFINE_AUTO( sys_ticrate, "100", FCVAR_SERVER, "framerate in dedicated mode" );
 
+static CVAR_DEFINE_AUTO( sys_ticrate, "100", FCVAR_SERVER, "framerate in dedicated mode" );
 static CVAR_DEFINE_AUTO( host_serverstate, "0", FCVAR_READ_ONLY, "displays current server state" );
 static CVAR_DEFINE_AUTO( host_gameloaded, "0", FCVAR_READ_ONLY, "inidcates a loaded game.dll" );
 static CVAR_DEFINE_AUTO( host_clientloaded, "0", FCVAR_READ_ONLY, "inidcates a loaded client.dll" );
 CVAR_DEFINE_AUTO( host_limitlocal, "0", 0, "apply cl_cmdrate and rate to loopback connection" );
 CVAR_DEFINE( host_maxfps, "fps_max", "72", FCVAR_ARCHIVE|FCVAR_FILTERABLE, "host fps upper limit" );
+CVAR_DEFINE_AUTO( fps_override, "1", FCVAR_FILTERABLE, "unlock higher framerate values, not supported" );
 static CVAR_DEFINE_AUTO( host_framerate, "0", FCVAR_FILTERABLE, "locks frame timing to this value in seconds" );
 static CVAR_DEFINE( host_sleeptime, "sleeptime", "1", FCVAR_ARCHIVE|FCVAR_FILTERABLE, "milliseconds to sleep for each frame. higher values reduce fps accuracy" );
 static CVAR_DEFINE_AUTO( host_sleeptime_debug, "0", 0, "print sleeps between frames" );
@@ -69,14 +91,15 @@ typedef struct feature_message_s
 	const char *arg;
 } feature_message_t;
 
-static feature_message_t bugcomp_features[] =
+static const feature_message_t bugcomp_features[] =
 {
 { BUGCOMP_PENTITYOFENTINDEX_FLAG, "pfnPEntityOfEntIndex bugfix revert", "peoei" },
 { BUGCOMP_MESSAGE_REWRITE_FACILITY_FLAG, "GoldSrc Message Rewrite Facility", "gsmrf" },
 { BUGCOMP_SPATIALIZE_SOUND_WITH_ATTN_NONE, "spatialize sounds with zero attenuation", "sp_attn_none" },
+{ BUGCOMP_GET_GAME_DIR_FULL_PATH, "Return full path in GET_GAME_DIR()", "get_game_dir_full" }
 };
 
-static feature_message_t engine_features[] =
+static const feature_message_t engine_features[] =
 {
 { ENGINE_WRITE_LARGE_COORD, "Big World Support" },
 { ENGINE_QUAKE_COMPATIBLE, "Quake Compatibility" },
@@ -90,13 +113,17 @@ static feature_message_t engine_features[] =
 { ENGINE_STEP_POSHISTORY_LERP, "MOVETYPE_STEP Position History Based Lerping" },
 };
 
+static void Sys_MakeVersionString( char *out, size_t len )
+{
+	Q_snprintf( out, len, XASH_ENGINE_NAME " %i/" XASH_VERSION " (%s-%s build %i)", PROTOCOL_VERSION, Q_buildos(), Q_buildarch(), Q_buildnum( ));
+}
+
 static void Sys_PrintUsage( const char *exename )
 {
 	string version_str;
 	const char *usage_str;
 
-	Q_snprintf( version_str, sizeof( version_str ),
-		XASH_ENGINE_NAME " %i/" XASH_VERSION " (%s-%s build %i)", PROTOCOL_VERSION, Q_buildos(), Q_buildarch(), Q_buildnum( ));
+	Sys_MakeVersionString( version_str, sizeof( version_str ));
 
 #if XASH_MESSAGEBOX != MSGBOX_STDERR
 	#if XASH_WIN32
@@ -107,87 +134,93 @@ static void Sys_PrintUsage( const char *exename )
 #else
 	#define XASH_EXE "%s"
 #endif
-
 #define O( x, y ) "  "x"  "y"\n"
 
 	usage_str = S_USAGE XASH_EXE " [options] [+command] [+command2 arg] ...\n"
 
 "\nCommon options:\n"
-	O("-dev [level]     ", "set log verbosity 0-2")
-	O("-log             ", "write log to \"engine.log\"")
-	O("-nowriteconfig   ", "disable config save")
-	O("-noch            ", "disable crashhandler")
+	O("-dev [level]       ", "set log verbosity 0-2")
+	O("-log               ", "write log to \"engine.log\"")
+	O("-nowriteconfig     ", "disable config save")
+	O("-noch              ", "disable crashhandler")
 #if XASH_WIN32 // !!!!
-	O("-minidumps       ", "enable writing minidumps when game is crashed")
+	O("-minidumps         ", "enable writing minidumps when game is crashed")
 #endif
-	O("-rodir <path>    ", "set read-only base directory")
-	O("-bugcomp [opts]  ", "enable precise bug compatibility")
-	O("                 ", "will break games that don't require it")
-	O("                 ", "refer to engine documentation for more info")
-	O("-disablehelp     ", "disable this message")
+	O("-rodir <path>      ", "set read-only base directory")
+	O("-bugcomp [opts]    ", "enable precise bug compatibility")
+	O("                   ", "will break games that don't require it")
+	O("                   ", "refer to engine documentation for more info")
+	O("-disablehelp       ", "disable this message")
 #if !XASH_DEDICATED
-	O("-dedicated       ", "run engine in dedicated mode")
+	O("-dedicated         ", "run engine in dedicated mode")
 #endif
 
 "\nNetworking options:\n"
-	O("-noip            ", "disable IPv4")
-	O("-ip <ip>         ", "set IPv4 address")
-	O("-port <port>     ", "set IPv4 port")
-	O("-noip6           ", "disable IPv6")
-	O("-ip6 <ip>        ", "set IPv6 address")
-	O("-port6 <port>    ", "set IPv6 port")
-	O("-clockwindow <cw>", "adjust clockwindow used to ignore client commands")
-	O("                 ", "to prevent speed hacks")
+	O("-noip              ", "disable IPv4")
+	O("-ip <ip>           ", "set IPv4 address")
+	O("-port <port>       ", "set IPv4 port")
+#if !XASH_DEDICATED
+	O("-clientport <port> ", "set IPv4 client port")
+#endif
+	O("-noip6             ", "disable IPv6")
+	O("-ip6 <ip>          ", "set IPv6 address")
+	O("-port6 <port>      ", "set IPv6 port")
+#if !XASH_DEDICATED
+	O("-clientport6 <port>", "set IPv6 client port")
+#endif
+	O("-clockwindow <cw>  ", "adjust clockwindow used to ignore client commands")
+	O("                   ", "to prevent speed hacks")
 
 "\nGame options:\n"
-	O("-game <directory>", "set game directory to start engine with")
-	O("-dll <path>      ", "override server DLL path")
+	O("-game <directory>  ", "set game directory to start engine with")
+	O("-dll <path>        ", "override server DLL path")
 #if !XASH_DEDICATED
-	O("-clientlib <path>", "override client DLL path")
-	O("-console         ", "run engine with console enabled")
-	O("-toconsole       ", "run engine witn console open")
-	O("-oldfont         ", "enable unused Quake font in Half-Life")
-	O("-width <n>       ", "set window width")
-	O("-height <n>      ", "set window height")
-	O("-borderless      ", "run engine in fullscreen borderless mode")
-	O("-fullscreen      ", "run engine in fullscreen mode")
-	O("-windowed        ", "run engine in windowed mode")
-	O("-ref <name>      ", "use selected renderer dll")
-	O("-gldebug         ", "enable OpenGL debug log")
+	O("-clientlib <path>  ", "override client DLL path")
+	O("-console           ", "run engine with console enabled")
+	O("-toconsole         ", "run engine witn console open")
+	O("-oldfont           ", "enable unused Quake font in Half-Life")
+	O("-width <n>         ", "set window width")
+	O("-height <n>        ", "set window height")
+	O("-borderless        ", "run engine in fullscreen borderless mode")
+	O("-fullscreen        ", "run engine in fullscreen mode")
+	O("-windowed          ", "run engine in windowed mode")
+	O("-ref <name>        ", "use selected renderer dll")
+	O("-gldebug           ", "enable OpenGL debug log")
 #if XASH_WIN32
-	O("-noavi           ", "disable AVI support")
-	O("-nointro         ", "disable intro video")
+	O("-noavi             ", "disable AVI support")
+	O("-nointro           ", "disable intro video")
 #endif
-	O("-noenginejoy     ", "disable engine builtin joystick support")
-	O("-noenginemouse   ", "disable engine builtin mouse support")
-	O("-nosound         ", "disable sound output")
-	O("-timedemo        ", "run timedemo and exit")
+	O("-noenginejoy       ", "disable engine builtin joystick support")
+	O("-noenginemouse     ", "disable engine builtin mouse support")
+	O("-nosound           ", "disable sound output")
+	O("-timedemo          ", "run timedemo and exit")
 #endif
 
 "\nPlatform-specific options:\n"
 #if !XASH_MOBILE_PLATFORM
-	O("-daemonize       ", "run engine as a daemon")
+	O("-daemonize         ", "run engine as a daemon")
 #endif
 #if XASH_SDL == 2
-	O("-sdl_joy_old_api ","use SDL legacy joystick API")
-	O("-sdl_renderer <n>","use alternative SDL_Renderer for software")
+	O("-sdl_joy_old_api   ","use SDL legacy joystick API")
+	O("-sdl_renderer <n>  ","use alternative SDL_Renderer for software")
 #endif // XASH_SDL
 #if XASH_ANDROID && !XASH_SDL
-	O("-nativeegl       ","use native egl implementation. Use if screen does not update or black")
+	O("-nativeegl         ","use native egl implementation. Use if screen does not update or black")
 #endif // XASH_ANDROID
 #if XASH_DOS
-	O("-novesa          ","disable vesa")
+	O("-novesa            ","disable vesa")
 #endif // XASH_DOS
 #if XASH_VIDEO == VIDEO_FBDEV
-	O("-fbdev <path>    ","open selected framebuffer")
-	O("-ttygfx          ","set graphics mode in tty")
-	O("-doublebuffer    ","enable doublebuffering")
+	O("-fbdev <path>      ","open selected framebuffer")
+	O("-ttygfx            ","set graphics mode in tty")
+	O("-doublebuffer      ","enable doublebuffering")
 #endif // XASH_VIDEO == VIDEO_FBDEV
 #if XASH_SOUND == SOUND_ALSA
-	O("-alsadev <dev>   ","open selected ALSA device")
+	O("-alsadev <dev>     ","open selected ALSA device")
 #endif // XASH_SOUND == SOUND_ALSA
 	;
 #undef O
+#undef XASH_EXE
 
 	// HACKHACK: pretty output in dedicated
 #if XASH_MESSAGEBOX != MSGBOX_STDERR
@@ -197,25 +230,32 @@ static void Sys_PrintUsage( const char *exename )
 	fprintf( stderr, usage_str, exename );
 #endif
 
-	Sys_Quit();
+	Sys_Quit( NULL );
 }
 
-int Host_CompareFileTime( int ft1, int ft2 )
+static void Sys_PrintBugcompUsage( const char *exename )
 {
-	if( ft1 < ft2 )
-	{
-		return -1;
-	}
-	else if( ft1 > ft2 )
-	{
-		return 1;
-	}
-	return 0;
-}
+	string version_str;
+	char usage_str[4096];
+	char *p = usage_str;
+	int i;
 
-void Host_ShutdownServer( void )
-{
-	SV_Shutdown( "Server was killed\n" );
+	Sys_MakeVersionString( version_str, sizeof( version_str ));
+
+	p += Q_snprintf( p, sizeof( usage_str ) - ( usage_str - p ), "Known bugcomp flags are:\n" );
+	for( i = 0; i < ARRAYSIZE( bugcomp_features ); i++ )
+		p += Q_snprintf( p, sizeof( usage_str ) - ( usage_str - p ), "   %s: %s\n", bugcomp_features[i].arg, bugcomp_features[i].msg );
+	p += Q_snprintf( p, sizeof( usage_str ) - ( usage_str - p ), "\nIt is possible to combine multiple flags with '+' characters.\nExample: -bugcomp flag1+flag2+flag3...\n" );
+
+	// HACKHACK: pretty output in dedicated
+#if XASH_MESSAGEBOX != MSGBOX_STDERR
+	Platform_MessageBox( version_str, usage_str, false );
+#else
+	fprintf( stderr, "%s\n", version_str );
+	fprintf( stderr, usage_str, exename );
+#endif
+
+	Sys_Quit( NULL );
 }
 
 /*
@@ -223,7 +263,7 @@ void Host_ShutdownServer( void )
 Host_PrintEngineFeatures
 ================
 */
-static void Host_PrintFeatures( uint32_t flags,	const char *s, feature_message_t *features, size_t size )
+static void Host_PrintFeatures( uint32_t flags, const char *s, const feature_message_t *features, size_t size )
 {
 	size_t i;
 
@@ -241,15 +281,8 @@ Host_ValidateEngineFeatures
 validate features bits and set host.features
 ==============
 */
-void Host_ValidateEngineFeatures( uint32_t features )
+void Host_ValidateEngineFeatures( uint32_t mask, uint32_t features )
 {
-	uint32_t mask = ENGINE_FEATURES_MASK;
-
-#if !XASH_DEDICATED
-	if( !Host_IsDedicated( ) && cls.legacymode )
-		mask = ENGINE_LEGACY_FEATURES_MASK;
-#endif
-
 	// don't allow unsupported bits
 	features &= mask;
 	// force bits for some games
@@ -348,9 +381,8 @@ static void Host_NewInstance( const char *name, const char *finalmsg )
 	if( !pChangeGame ) return;
 
 	host.change_game = true;
-	Q_strncpy( host.finalmsg, finalmsg, sizeof( host.finalmsg ));
 
-	if( !Sys_NewInstance( name ))
+	if( !Sys_NewInstance( name, finalmsg ))
 		pChangeGame( name ); // call from hl.exe
 }
 
@@ -404,8 +436,7 @@ static void Host_Exec_f( void )
 {
 	string cfgpath;
 	byte *f;
-	char *txt;
-	fs_offset_t	len;
+	fs_offset_t len;
 
 	if( Cmd_Argc() != 2 )
 	{
@@ -460,20 +491,29 @@ static void Host_Exec_f( void )
 		return;
 	}
 
+	// len is fs_offset_t, which can be larger than size_t
+	if( len >= SIZE_MAX )
+	{
+		Con_Reportf( "%s: %s is too long\n", __func__, Cmd_Argv( 1 ));
+		return;
+	}
+
 	if( !Q_stricmp( "config.cfg", cfgpath ))
 		host.config_executed = true;
 
-	// adds \n\0 at end of the file
-	txt = Z_Calloc( len + 2 );
-	memcpy( txt, f, len );
-	txt[len] = '\n';
-	txt[len + 1] = '\0';
-	Mem_Free( f );
-
 	if( !host.apply_game_config )
 		Con_Printf( "execing %s\n", Cmd_Argv( 1 ));
-	Cbuf_InsertText( txt );
-	Mem_Free( txt );
+
+	// adds \n at end of the file
+	// FS_LoadFile always null terminates
+	if( f[len - 1] != '\n' )
+	{
+		Cbuf_InsertTextLen( f, len, len + 1 );
+		Cbuf_InsertTextLen( "\n", 1, 1 );
+	}
+	else Cbuf_InsertTextLen( f, len, len );
+
+	Mem_Free( f );
 }
 
 /*
@@ -576,7 +616,7 @@ static void Host_GetCommands( void )
 {
 	char	*cmd;
 
-	while( ( cmd = Sys_Input() ) )
+	while( ( cmd = Platform_Input() ) )
 	{
 		Cbuf_AddText( cmd );
 		Cbuf_Execute();
@@ -608,13 +648,19 @@ static double Host_CalcFPS( void )
 		if( !gl_vsync.value )
 			fps = host_maxfps.value;
 	}
+	else if( !SV_Active() && CL_Protocol() == PROTO_GOLDSRC && cls.state != ca_disconnected && cls.state < ca_validate )
+	{
+		return 31.0;
+	}
 	else
 	{
 		if( !gl_vsync.value )
 		{
+			double max_fps = fps_override.value ? MAX_FPS_HARD : MAX_FPS_SOFT;
+
 			fps = host_maxfps.value;
-			if( fps == 0.0 ) fps = MAX_FPS;
-			fps = bound( MIN_FPS, fps, MAX_FPS );
+			if( fps == 0.0 ) fps = max_fps;
+			fps = bound( MIN_FPS, fps, max_fps );
 		}
 	}
 #endif
@@ -633,7 +679,7 @@ static qboolean Host_Autosleep( double dt, double scale )
 		return true;
 
 	// limit fps to withing tolerable range
-	fps = bound( MIN_FPS, fps, MAX_FPS );
+	fps = bound( MIN_FPS, fps, MAX_FPS_HARD );
 
 	if( Host_IsDedicated( ))
 		targetframetime = ( 1.0 / ( fps + 1.0 ));
@@ -657,10 +703,10 @@ static qboolean Host_Autosleep( double dt, double scale )
 			// if we have allocated time window, try to sleep
 			if( timewindow > realsleeptime )
 			{
-				// Sys_Sleep isn't guaranteed to sleep an exact amount of milliseconds
+				// Platform_Sleep isn't guaranteed to sleep an exact amount of milliseconds
 				// so we measure the real sleep time and use it to decrease the window
 				double t1 = Sys_DoubleTime(), t2;
-				Sys_Sleep( sleep ); // in msec!
+				Platform_Sleep( sleep ); // in msec!
 				t2 = Sys_DoubleTime();
 				realsleeptime = t2 - t1;
 
@@ -789,11 +835,11 @@ void GAME_EXPORT Host_Error( const char *error, ... )
 	}
 	else
 	{
+		Con_Printf( "%s: %s", __func__, hosterror1 );
 		if( host.allow_console )
 		{
 			UI_SetActiveMenu( false );
 			Key_SetKeyDest( key_console );
-			Con_Printf( "%s: %s", __func__, hosterror1 );
 		}
 		else Platform_MessageBox( "Host Error", hosterror1, true );
 	}
@@ -810,13 +856,12 @@ void GAME_EXPORT Host_Error( const char *error, ... )
 	recursive = true;
 	Q_strncpy( hosterror2, hosterror1, sizeof( hosterror2 ));
 	host.errorframe = host.framecount; // to avoid multply calls per frame
-	Q_snprintf( host.finalmsg, sizeof( host.finalmsg ), "Server crashed: %s", hosterror1 );
 
 	// clearing cmd buffer to prevent execute any commands
 	COM_InitHostState();
 	Cbuf_Clear();
 
-	Host_ShutdownServer();
+	SV_Shutdown( "Server was killed due to an error\n" );
 	CL_Drop(); // drop clients
 
 	// recreate world if needs
@@ -895,46 +940,52 @@ static void Host_RunTests( int stage )
 #endif
 		Msg( "Done! %d passed, %d failed\n", tests_stats.passed, tests_stats.failed );
 		error_on_exit = tests_stats.failed > 0 ? EXIT_FAILURE : EXIT_SUCCESS;
-		Sys_Quit();
+		Sys_Quit( NULL );
 	}
 }
 #endif
 
+static int Host_CheckBugcomp_splitstr_handler( char *prev, char *next, void *userdata )
+{
+	size_t i;
+	uint32_t *flags = userdata;
+
+	*next = '\0';
+
+	if( !COM_CheckStringEmpty( prev ))
+		return 0;
+
+	for( i = 0; i < ARRAYSIZE( bugcomp_features ); i++ )
+	{
+		if( !Q_stricmp( bugcomp_features[i].arg, prev ))
+		{
+			SetBits( *flags, bugcomp_features[i].mask );
+			break;
+		}
+	}
+
+	if( i == ARRAYSIZE( bugcomp_features ))
+	{
+		Con_Printf( S_ERROR "Unknown bugcomp flag %s\n", prev );
+		Con_Printf( "Valid flags are:\n" );
+		for( i = 0; i < ARRAYSIZE( bugcomp_features ); i++ )
+			Con_Printf( "\t%s: %s\n", bugcomp_features[i].arg, bugcomp_features[i].msg );
+	}
+
+	return 0;
+}
+
 static uint32_t Host_CheckBugcomp( void )
 {
-	const char *prev, *next;
 	uint32_t flags = 0;
-	string args, arg;
-	size_t i;
+	string args;
 
 	if( !Sys_CheckParm( "-bugcomp" ))
 		return 0;
 
 	if( Sys_GetParmFromCmdLine( "-bugcomp", args ) && isalpha( args[0] ))
 	{
-		for( prev = args, next = Q_strchrnul( prev, '+' ); ; prev = next + 1, next = Q_strchrnul( prev, '+' ))
-		{
-			Q_strncpy( arg, prev, next - prev + 1 );
-			for( i = 0; i < ARRAYSIZE( bugcomp_features ); i++ )
-			{
-				if( !Q_stricmp( bugcomp_features[i].arg, arg ))
-				{
-					SetBits( flags, bugcomp_features[i].mask );
-					break;
-				}
-			}
-
-			if( i == ARRAYSIZE( bugcomp_features ))
-			{
-				Con_Printf( S_ERROR "Unknown bugcomp flag %s\n", arg );
-				Con_Printf( "Valid flags are:\n" );
-				for( i = 0; i < ARRAYSIZE( bugcomp_features ); i++ )
-					Con_Printf( "\t%s: %s\n", bugcomp_features[i].arg, bugcomp_features[i].msg );
-			}
-
-			if( !*next )
-				break;
-		}
+		Q_splitstr( args, '+', &flags, Host_CheckBugcomp_splitstr_handler );
 	}
 	else
 	{
@@ -981,8 +1032,13 @@ static void Host_InitCommon( int argc, char **argv, const char *progname, qboole
 
 	if( !Sys_CheckParm( "-disablehelp" ))
 	{
+		string arg;
+
 		if( Sys_CheckParm( "-help" ) || Sys_CheckParm( "-h" ) || Sys_CheckParm( "--help" ))
 			Sys_PrintUsage( exename );
+
+		if( Sys_GetParmFromCmdLine( "-bugcomp", arg ) && !Q_stricmp( arg, "help" ))
+			Sys_PrintBugcompUsage( exename );
 	}
 
 	if( !Sys_CheckParm( "-noch" ))
@@ -1063,7 +1119,7 @@ static void Host_InitCommon( int argc, char **argv, const char *progname, qboole
 
 	if( Sys_GetParmFromCmdLine( "-sys_ticrate", ticrate ))
 	{
-		double fps = bound( MIN_FPS, atof( ticrate ), MAX_FPS );
+		double fps = bound( MIN_FPS, atof( ticrate ), MAX_FPS_HARD );
 		Cvar_SetValue( "sys_ticrate", fps );
 	}
 
@@ -1074,6 +1130,9 @@ static void Host_InitCommon( int argc, char **argv, const char *progname, qboole
 		Host_RunTests( 0 );
 #endif
 
+#if XASH_DEDICATED
+	Platform_SetupSigtermHandling();
+#endif
 	Platform_Init( Host_IsDedicated( ) || developer >= DEV_EXTENDED );
 	FS_Init( basedir );
 
@@ -1132,6 +1191,11 @@ static void Host_FreeCommon( void )
 	FS_Shutdown();
 }
 
+static void Sys_Quit_f( void )
+{
+	Sys_Quit( "command" );
+}
+
 /*
 =================
 Host_Main
@@ -1159,6 +1223,7 @@ int EXPORT Host_Main( int argc, char **argv, const char *progname, int bChangeGa
 	Cvar_RegisterVariable( &host_allow_materials );
 	Cvar_RegisterVariable( &host_serverstate );
 	Cvar_RegisterVariable( &host_maxfps );
+	Cvar_RegisterVariable( &fps_override );
 	Cvar_RegisterVariable( &host_framerate );
 	Cvar_RegisterVariable( &host_sleeptime );
 	Cvar_RegisterVariable( &host_sleeptime_debug );
@@ -1170,7 +1235,7 @@ int EXPORT Host_Main( int argc, char **argv, const char *progname, int bChangeGa
 
 	Cvar_Getf( "buildnum", FCVAR_READ_ONLY, "returns a current build number", "%i", Q_buildnum_compat());
 	Cvar_Getf( "ver", FCVAR_READ_ONLY, "shows an engine version", "%i/%s (hw build %i)", PROTOCOL_VERSION, XASH_COMPAT_VERSION, Q_buildnum_compat());
-	Cvar_Getf( "host_ver", FCVAR_READ_ONLY, "detailed info about this build", "%i " XASH_VERSION " %s %s %s", Q_buildnum(), Q_buildos(), Q_buildarch(), Q_buildcommit());
+	Cvar_Getf( "host_ver", FCVAR_READ_ONLY, "detailed info about this build", "%i " XASH_VERSION " %s %s %s", Q_buildnum(), Q_buildos(), Q_buildarch(), g_buildcommit);
 	Cvar_Getf( "host_lowmemorymode", FCVAR_READ_ONLY, "indicates if engine compiled for low RAM consumption (0 - normal, 1 - low engine limits, 2 - low protocol limits)", "%i", XASH_LOW_MEMORY );
 
 	Mod_Init();
@@ -1205,8 +1270,8 @@ int EXPORT Host_Main( int argc, char **argv, const char *progname, int bChangeGa
 		// disable texture replacements for dedicated
 		Cvar_FullSet( "host_allow_materials", "0", FCVAR_READ_ONLY );
 
-		Cmd_AddRestrictedCommand( "quit", Sys_Quit, "quit the game" );
-		Cmd_AddRestrictedCommand( "exit", Sys_Quit, "quit the game" );
+		Cmd_AddRestrictedCommand( "quit", Sys_Quit_f, "quit the game" );
+		Cmd_AddRestrictedCommand( "exit", Sys_Quit_f, "quit the game" );
 	}
 	else Cmd_AddRestrictedCommand( "minimize", Host_Minimize_f, "minimize main window to tray" );
 
@@ -1277,6 +1342,11 @@ int EXPORT Host_Main( int argc, char **argv, const char *progname, int bChangeGa
 	// check after all configs were executed
 	HPAK_CheckIntegrity( hpk_custom_file.string );
 
+#if XASH_ANDROID
+	if( setjmp( return_from_main_buf ))
+		return error_on_exit;
+#endif // XASH_ANDROID
+
 	// main window message loop
 	while( !host.crashed )
 	{
@@ -1289,20 +1359,31 @@ int EXPORT Host_Main( int argc, char **argv, const char *progname, int bChangeGa
 	return 0;
 }
 
+void EXPORT Host_Shutdown( void );
+void EXPORT Host_Shutdown( void )
+{
+	Host_ShutdownWithReason( "launcher shutdown" );
+}
+
 /*
 =================
 Host_Shutdown
 =================
 */
-void EXPORT Host_Shutdown( void )
+void Host_ShutdownWithReason( const char *reason )
 {
 	qboolean error = host.status == HOST_ERR_FATAL;
 
-	if( host.shutdown_issued ) return;
+	if( host.shutdown_issued )
+		return;
+
 	host.shutdown_issued = true;
 
-	if( host.status != HOST_ERR_FATAL ) host.status = HOST_SHUTDOWN; // prepare host to normal shutdown
-	if( !host.change_game ) Q_strncpy( host.finalmsg, "Server shutdown", sizeof( host.finalmsg ));
+	if( reason != NULL )
+		Con_Printf( S_NOTE "Issuing host shutdown due to reason \"%s\"\n", reason );
+
+	if( host.status != HOST_ERR_FATAL )
+		host.status = HOST_SHUTDOWN; // prepare host to normal shutdown
 
 #if !XASH_DEDICATED
 	if( host.type == HOST_NORMAL && !error )
@@ -1326,5 +1407,5 @@ void EXPORT Host_Shutdown( void )
 
 	// restore filter
 	Sys_RestoreCrashHandler();
-	Sys_CloseLog();
+	Sys_CloseLog( reason );
 }

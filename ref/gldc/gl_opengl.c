@@ -7,7 +7,7 @@
 
 CVAR_DEFINE( gl_extensions, "gl_allow_extensions", "1", FCVAR_GLCONFIG|FCVAR_READ_ONLY, "allow gl_extensions" );
 CVAR_DEFINE( gl_texture_anisotropy, "gl_anisotropy", "8", FCVAR_GLCONFIG, "textures anisotropic filter" );
-CVAR_DEFINE_AUTO( gl_texture_lodbias, "-7.0", FCVAR_GLCONFIG, "LOD bias for mipmapped textures (perfomance|quality)" );
+CVAR_DEFINE_AUTO( gl_texture_lodbias, "0.0", FCVAR_GLCONFIG, "LOD bias for mipmapped textures (perfomance|quality)" );
 CVAR_DEFINE_AUTO( gl_texture_nearest, "0", FCVAR_GLCONFIG, "disable texture filter" );
 CVAR_DEFINE_AUTO( gl_lightmap_nearest, "0", FCVAR_GLCONFIG, "disable lightmap filter" );
 CVAR_DEFINE_AUTO( gl_keeptjunctions, "1", FCVAR_GLCONFIG, "removing tjuncs causes blinking pixels" );
@@ -20,19 +20,20 @@ CVAR_DEFINE_AUTO( gl_test, "0", 0, "engine developer cvar for quick testing new 
 CVAR_DEFINE_AUTO( gl_msaa, "1", FCVAR_GLCONFIG, "enable or disable multisample anti-aliasing" );
 CVAR_DEFINE_AUTO( gl_stencilbits, "8", FCVAR_GLCONFIG|FCVAR_READ_ONLY, "pixelformat stencil bits (0 - auto)" );
 CVAR_DEFINE_AUTO( gl_overbright, "1", FCVAR_GLCONFIG, "overbrights" );
+CVAR_DEFINE_AUTO( gl_fog, "1", FCVAR_GLCONFIG, "allow for rendering fog using built-in OpenGL fog implementation" );
 CVAR_DEFINE_AUTO( r_lighting_extended, "1", FCVAR_GLCONFIG, "allow to get lighting from world and bmodels" );
 CVAR_DEFINE_AUTO( r_lighting_ambient, "0.3", FCVAR_GLCONFIG, "map ambient lighting scale" );
-CVAR_DEFINE_AUTO( r_detailtextures, "1", FCVAR_ARCHIVE, "enable detail textures support" );
+CVAR_DEFINE_AUTO( r_detailtextures, "1", FCVAR_GLCONFIG, "enable detail textures support" );
 CVAR_DEFINE_AUTO( r_novis, "0", 0, "ignore vis information (perfomance test)" );
 CVAR_DEFINE_AUTO( r_nocull, "0", 0, "ignore frustrum culling (perfomance test)" );
 CVAR_DEFINE_AUTO( r_lockpvs, "0", FCVAR_CHEAT, "lockpvs area at current point (pvs test)" );
 CVAR_DEFINE_AUTO( r_lockfrustum, "0", FCVAR_CHEAT, "lock frustrum area at current point (cull test)" );
 CVAR_DEFINE_AUTO( r_traceglow, "0", FCVAR_GLCONFIG, "cull flares behind models" );
 CVAR_DEFINE_AUTO( gl_round_down, "2", FCVAR_GLCONFIG|FCVAR_READ_ONLY, "round texture sizes to nearest POT value" );
-CVAR_DEFINE( r_vbo, "gl_vbo", "0", FCVAR_ARCHIVE, "draw world using VBO (known to be glitchy)" );
-CVAR_DEFINE( r_vbo_detail, "gl_vbo_detail", "0", FCVAR_ARCHIVE, "detail vbo mode (0: disable, 1: multipass, 2: singlepass, broken decal dlights)" );
-CVAR_DEFINE( r_vbo_dlightmode, "gl_vbo_dlightmode", "0", FCVAR_ARCHIVE, "vbo dlight rendering mode (0-1)" );
-CVAR_DEFINE( r_vbo_overbrightmode, "gl_vbo_overbrightmode", "0", FCVAR_ARCHIVE, "vbo overbright rendering mode (0-1)" );
+CVAR_DEFINE( r_vbo, "gl_vbo", "0", FCVAR_GLCONFIG, "draw world using VBO (known to be glitchy)" );
+CVAR_DEFINE( r_vbo_detail, "gl_vbo_detail", "0", FCVAR_GLCONFIG, "detail vbo mode (0: disable, 1: multipass, 2: singlepass, broken decal dlights)" );
+CVAR_DEFINE( r_vbo_dlightmode, "gl_vbo_dlightmode", "1", FCVAR_GLCONFIG, "vbo dlight rendering mode (0-1)" );
+CVAR_DEFINE( r_vbo_overbrightmode, "gl_vbo_overbrightmode", "0", FCVAR_GLCONFIG, "vbo overbright rendering mode (0-1)" );
 CVAR_DEFINE_AUTO( r_ripple, "0", FCVAR_GLCONFIG, "enable software-like water texture ripple simulation" );
 CVAR_DEFINE_AUTO( r_ripple_updatetime, "0.05", FCVAR_GLCONFIG, "how fast ripple simulation is" );
 CVAR_DEFINE_AUTO( r_ripple_spawntime, "0.1", FCVAR_GLCONFIG, "how fast new ripples spawn" );
@@ -492,13 +493,13 @@ GL_SetExtension
 */
 void GL_SetExtension( int r_ext, int enable )
 {
-	if( r_ext >= 0 && r_ext < GL_EXTCOUNT ) {
-	glConfig.extension[r_ext] = enable ? GL_TRUE : GL_FALSE; }
-	#if XASH_DREAMCAST
+	if( r_ext >= 0 && r_ext < GL_EXTCOUNT ) 
+		glConfig.extension[r_ext] = enable ? GL_TRUE : GL_FALSE; 
+#if XASH_DREAMCAST
 	else gEngfuncs_gl.Con_Printf( "%s: invalid extension %d\n", __func__, r_ext );
-	#else
+#else
 	else gEngfuncs_gl.Con_Printf( S_ERROR "%s: invalid extension %d\n", __func__, r_ext );
-	#endif
+#endif
 }
 
 /*
@@ -510,11 +511,11 @@ qboolean GL_Support( int r_ext )
 {
 	if( r_ext >= 0 && r_ext < GL_EXTCOUNT )
 		return glConfig.extension[r_ext] ? true : false;
-	#if XASH_DREAMCAST
+#if XASH_DREAMCAST
 	else gEngfuncs_gl.Con_Printf( "%s: invalid extension %d\n", __func__, r_ext );
-	#else
+#else
 	else gEngfuncs_gl.Con_Printf( S_ERROR "%s: invalid extension %d\n", __func__, r_ext );
-	#endif
+#endif
 
 	return false;
 }
@@ -536,19 +537,15 @@ int GL_MaxTextureUnits( void )
 GL_CheckExtension
 =================
 */
-qboolean GL_CheckExtension( const char *name, const dllfunc_t *funcs, const char *cvarname, int r_ext, float minver )
+static qboolean GL_CheckExtension( const char *name, const dllfunc_t *funcs, size_t num_funcs, const char *cvarname, int r_ext, float minver )
 {
-#ifndef XASH_GL_STATIC
-	const dllfunc_t	*func;
-#endif
-	cvar_t		*parm = NULL;
-	const char	*extensions_string;
-	char		desc[MAX_VA_STRING];
+	size_t i;
+	cvar_t *parm = NULL;
+	const char *extensions_string;
+	char desc[MAX_VA_STRING];
 	float glver = (float)glConfig.version_major + glConfig.version_minor / 10.0f;
 
-#if !XASH_DREAMCAST
 	gEngfuncs_gl.Con_Reportf( "%s: %s ", __func__, name );
-#endif
 	GL_SetExtension( r_ext, true );
 
 	if( cvarname )
@@ -560,7 +557,7 @@ qboolean GL_CheckExtension( const char *name, const dllfunc_t *funcs, const char
 
 	if(( parm && !parm->value ) || ( !gl_extensions.value && r_ext != GL_OPENGL_110 ))
 	{
-		gEngfuncs_gl.Con_Reportf( "%s - disabled\n", name );
+		gEngfuncs_gl.Con_Reportf( "- disabled\n" );
 		GL_SetExtension( r_ext, false );
 		return false; // nothing to process at
 	}
@@ -570,35 +567,30 @@ qboolean GL_CheckExtension( const char *name, const dllfunc_t *funcs, const char
 	if(( name[2] == '_' || name[3] == '_' ) && !Q_strstr( extensions_string, name ) && ( glver < minver  || !minver || !glver ) )
 	{
 		GL_SetExtension( r_ext, false );	// update render info
-		#if XASH_DREAMCAST
-		gEngfuncs_gl.Con_Reportf( " %s - failed\n", name );
-		#else
 		gEngfuncs_gl.Con_Reportf( "- ^1failed\n" );
-		#endif
 		return false;
 	}
 
-#ifndef XASH_GL_STATIC
+#if !XASH_GL_STATIC
 	// clear exports
-	for( func = funcs; func && func->name; func++ )
-		*func->func = NULL;
+	ClearExports( funcs, num_funcs );
 
-	for( func = funcs; func && func->name; func++ )
+	for( i = 0; i < num_funcs; i++ )
 	{
 		// functions are cleared before all the extensions are evaluated
-		if(( *func->func = (void *)gEngfuncs_gl.GL_GetProcAddress( func->name )) == NULL )
+		if(( *(funcs[i].func) = (void *)gEngfuncs.GL_GetProcAddress( funcs[i].name )) == NULL )
 		{
 			string name;
 			char *end;
-			size_t i = 0;
-#ifdef XASH_GLES
+			size_t j = 0;
+#if XASH_GLES
 			const char *suffixes[] = { "", "EXT", "OES" };
 #else
 			const char *suffixes[] = { "", "EXT" };
 #endif
 
 			// HACK: fix ARB names
-			Q_strncpy( name, func->name, sizeof( name ));
+			Q_strncpy( name, funcs[i].name, sizeof( name ));
 			if(( end = Q_strstr( name, "ARB" )))
 			{
 				*end = '\0';
@@ -606,21 +598,21 @@ qboolean GL_CheckExtension( const char *name, const dllfunc_t *funcs, const char
 			else // I need Q_strstrnul
 			{
 				end = name + Q_strlen( name );
-				i++; // skip empty suffix
+				j++; // skip empty suffix
 			}
 
-			for( ; i < sizeof( suffixes ) / sizeof( suffixes[0] ); i++ )
+			for( ; j < sizeof( suffixes ) / sizeof( suffixes[0] ); j++ )
 			{
 				void *f;
 
-				Q_strncat( name, suffixes[i], sizeof( name ));
+				Q_strncat( name, suffixes[j], sizeof( name ));
 
-				if(( f = gEngfuncs_gl.GL_GetProcAddress( name )))
+				if(( f = gEngfuncs.GL_GetProcAddress( name )))
 				{
 					// GL_GetProcAddress prints errors about missing functions, so tell user that we found it with different name
-					gEngfuncs_gl.Con_Printf( S_NOTE "found %s\n", name );
+					gEngfuncs.Con_Printf( S_NOTE "found %s\n", name );
 
-					*func->func = f;
+					*(funcs[i].func) = f;
 					break;
 				}
 				else
@@ -630,7 +622,7 @@ qboolean GL_CheckExtension( const char *name, const dllfunc_t *funcs, const char
 			}
 
 			// not found...
-			if( i == sizeof( suffixes ) / sizeof( suffixes[0] ))
+			if( j == sizeof( suffixes ) / sizeof( suffixes[0] ))
 			{
 				GL_SetExtension( r_ext, false );
 			}
@@ -640,13 +632,12 @@ qboolean GL_CheckExtension( const char *name, const dllfunc_t *funcs, const char
 
 	if( GL_Support( r_ext ))
 	{
-		gEngfuncs_gl.Con_Reportf( "%s: - enabled\n", name );
+		gEngfuncs_gl.Con_Reportf( "- ^2enabled\n" );
 		return true;
 	}
 
-	gEngfuncs_gl.Con_Reportf( "%s: - failed\n", name );
+	gEngfuncs_gl.Con_Reportf( "- ^1failed\n" );
 	return false;
-
 }
 
 /*
@@ -657,11 +648,11 @@ defined just for nanogl/glwes, so it don't link to SDL2 directly, nor use dlsym
 ==============
 */
 #if XASH_DREAMCAST
-void GAME_EXPORT *DC_GL_GetProcAddress( const char *name ); // keep defined for nanogl/wes
-void GAME_EXPORT *DC_GL_GetProcAddress( const char *name )
+static void GAME_EXPORT *DC_GL_GetProcAddress( const char *name ); // keep defined for nanogl/wes
+static void GAME_EXPORT *DC_GL_GetProcAddress( const char *name )
 #else
-void GAME_EXPORT *GL_GetProcAddress( const char *name ); // keep defined for nanogl/wes
-void GAME_EXPORT *GL_GetProcAddress( const char *name )
+static void GAME_EXPORT *GL_GetProcAddress( const char *name ); // keep defined for nanogl/wes
+static void GAME_EXPORT *GL_GetProcAddress( const char *name )
 #endif
 {
 	return gEngfuncs_gl.GL_GetProcAddress( name );
@@ -719,18 +710,15 @@ static void GL_SetDefaults( void )
 	glDisable( GL_SCISSOR_TEST );
 	glDepthFunc( GL_LEQUAL );
 	glColor4f( 1.0f, 1.0f, 1.0f, 1.0f );
-
+#if !XASH_DREAMCAST
 	if( glState.stencilEnabled )
 	{
 		glDisable( GL_STENCIL_TEST );
-		#if !XASH_DREAMCAST
 		glStencilMask( ( GLuint ) ~0 );
-		#endif
 		glStencilFunc( GL_EQUAL, 0, ~0 );
-		#if !XASH_DREAMCAST
 		glStencilOp( GL_KEEP, GL_INCR, GL_INCR );
-		#endif
 	}
+#endif
 
 	glPolygonMode( GL_FRONT_AND_BACK, GL_FILL );
 	glPolygonOffset( -1.0f, -2.0f );
@@ -807,9 +795,9 @@ static void R_RenderInfo_f( void )
 	gEngfuncs_gl.Con_Printf( "\n" );
 	gEngfuncs_gl.Con_Printf( "MODE: %ix%i\n", gpGlobals_gl->width, gpGlobals_gl->height );
 	gEngfuncs_gl.Con_Printf( "\n" );
-	#if !XASH_DREAMCAST
+#if !XASH_DREAMCAST
 	gEngfuncs_gl.Con_Printf( "VERTICAL SYNC: %s\n", gl_vsync->value ? "enabled" : "disabled" );
-	#endif
+#endif
 	gEngfuncs_gl.Con_Printf( "Color %d bits, Alpha %d bits, Depth %d bits, Stencil %d bits\n", glConfig.color_bits,
 		glConfig.alpha_bits, glConfig.depth_bits, glConfig.stencil_bits );
 }
@@ -824,7 +812,7 @@ static void GL_InitExtensionsBigGL( void )
 
 	// multitexture
 	glConfig.max_texture_units = glConfig.max_texture_coords = glConfig.max_teximage_units = 1;
-	if( GL_CheckExtension( "GL_ARB_multitexture", multitexturefuncs, "gl_arb_multitexture", GL_ARB_MULTITEXTURE, 1.0f ))
+	if( GL_CheckExtension( "GL_ARB_multitexture", multitexturefuncs, ARRAYSIZE( multitexturefuncs ), "gl_arb_multitexture", GL_ARB_MULTITEXTURE, 1.3f ))
 	{
 		glGetIntegerv( GL_MAX_TEXTURE_UNITS_ARB, &glConfig.max_texture_units );
 	}
@@ -834,46 +822,44 @@ static void GL_InitExtensionsBigGL( void )
 
 	
 	// cubemaps support
-	if( GL_CheckExtension( "GL_ARB_texture_cube_map", NULL, "gl_texture_cubemap", GL_TEXTURE_CUBEMAP_EXT, 0 ))
+	if( GL_CheckExtension( "GL_ARB_texture_cube_map", NULL, 0, "gl_texture_cubemap", GL_TEXTURE_CUBEMAP_EXT, 0 ))
 	{
 		glGetIntegerv( GL_MAX_CUBE_MAP_TEXTURE_SIZE_ARB, &glConfig.max_cubemap_size );
 
 		// check for seamless cubemaps too
-		GL_CheckExtension( "GL_ARB_seamless_cube_map", NULL, "gl_texture_cubemap_seamless", GL_ARB_SEAMLESS_CUBEMAP, 0 );
+		GL_CheckExtension( "GL_ARB_seamless_cube_map", NULL, 0, "gl_texture_cubemap_seamless", GL_ARB_SEAMLESS_CUBEMAP, 0 );
 	}
 
 
-	GL_CheckExtension( "GL_ARB_texture_non_power_of_two", NULL, "gl_texture_npot", GL_ARB_TEXTURE_NPOT_EXT, 0 );
-	GL_CheckExtension( "GL_ARB_texture_compression", texturecompressionfuncs, "gl_texture_dxt_compression", GL_TEXTURE_COMPRESSION_EXT, 0 );
-
-
-	if( !GL_CheckExtension( "GL_EXT_texture_edge_clamp", NULL, "gl_clamp_to_edge", GL_CLAMPTOEDGE_EXT, 2.0 )) // present in ES2
-		GL_CheckExtension( "GL_SGIS_texture_edge_clamp", NULL, "gl_clamp_to_edge", GL_CLAMPTOEDGE_EXT, 0 );
-
+	GL_CheckExtension( "GL_ARB_texture_non_power_of_two", NULL, 0, "gl_texture_npot", GL_ARB_TEXTURE_NPOT_EXT, 0 );
+	GL_CheckExtension( "GL_ARB_texture_compression", texturecompressionfuncs, ARRAYSIZE( texturecompressionfuncs ), "gl_texture_dxt_compression", GL_TEXTURE_COMPRESSION_EXT, 0 );
+	if( !GL_CheckExtension( "GL_EXT_texture_edge_clamp", NULL, 0, "gl_clamp_to_edge", GL_CLAMPTOEDGE_EXT, 2.0 )) // present in ES2
+		GL_CheckExtension( "GL_SGIS_texture_edge_clamp", NULL, 0, "gl_clamp_to_edge", GL_CLAMPTOEDGE_EXT, 0 );
 	glConfig.max_texture_anisotropy = 0.0f;
 
-		if( GL_CheckExtension( "GL_EXT_texture_lod_bias", NULL, "gl_texture_mipmap_biasing", GL_TEXTURE_LOD_BIAS, 1.0 ))
+		if( GL_CheckExtension( "GL_EXT_texture_lod_bias", NULL, 0, "gl_texture_mipmap_biasing", GL_TEXTURE_LOD_BIAS, 1.4 ))
 			glGetFloatv( GL_MAX_TEXTURE_LOD_BIAS_EXT, &glConfig.max_texture_lod_bias );
 
-	GL_CheckExtension( "GL_ARB_texture_border_clamp", NULL, NULL, GL_CLAMP_TEXBORDER_EXT, 2.0 ); // present in ES2
+	GL_CheckExtension( "GL_ARB_texture_border_clamp", NULL, 0, NULL, GL_CLAMP_TEXBORDER_EXT, 2.0 ); // present in ES2
 
-	GL_CheckExtension( "GL_ARB_depth_texture", NULL, NULL, GL_DEPTH_TEXTURE, 1.4 ); // missing in gles, check GL_OES_depth_texture
-	GL_CheckExtension( "GL_ARB_texture_float", NULL, "gl_texture_float", GL_ARB_TEXTURE_FLOAT_EXT, 0 );
-	GL_CheckExtension( "GL_ARB_depth_buffer_float", NULL, "gl_texture_depth_float", GL_ARB_DEPTH_FLOAT_EXT, 0 );
-	GL_CheckExtension( "GL_EXT_gpu_shader4", NULL, NULL, GL_EXT_GPU_SHADER4, 0 ); // don't confuse users
-	GL_CheckExtension( "GL_ARB_vertex_buffer_object", vbofuncs, "gl_vertex_buffer_object", GL_ARB_VERTEX_BUFFER_OBJECT_EXT, 2.0 );
-	GL_CheckExtension( "GL_ARB_texture_multisample", multisampletexfuncs, "gl_texture_multisample", GL_TEXTURE_MULTISAMPLE, 0 );
-	GL_CheckExtension( "GL_ARB_texture_compression_bptc", NULL, "gl_texture_bptc_compression", GL_ARB_TEXTURE_COMPRESSION_BPTC, 0 );
+	GL_CheckExtension( "GL_ARB_depth_texture", NULL, 0, NULL, GL_DEPTH_TEXTURE, 1.4 ); // missing in gles, check GL_OES_depth_texture
+	GL_CheckExtension( "GL_ARB_texture_float", NULL, 0, "gl_texture_float", GL_ARB_TEXTURE_FLOAT_EXT, 0 );
+	GL_CheckExtension( "GL_ARB_depth_buffer_float", NULL, 0, "gl_texture_depth_float", GL_ARB_DEPTH_FLOAT_EXT, 0 );
+	GL_CheckExtension( "GL_EXT_gpu_shader4", NULL, 0, NULL, GL_EXT_GPU_SHADER4, 0 ); // don't confuse users
+	GL_CheckExtension( "GL_ARB_vertex_buffer_object", vbofuncs, ARRAYSIZE( vbofuncs ), "gl_vertex_buffer_object", GL_ARB_VERTEX_BUFFER_OBJECT_EXT, 2.0 );
+	GL_CheckExtension( "GL_ARB_texture_multisample", multisampletexfuncs, ARRAYSIZE( multisampletexfuncs ), "gl_texture_multisample", GL_TEXTURE_MULTISAMPLE, 0 );
+	GL_CheckExtension( "GL_ARB_texture_compression_bptc", NULL, 0, "gl_texture_bptc_compression", GL_ARB_TEXTURE_COMPRESSION_BPTC, 0 );
 
 		// just get from multitexturing
 		glConfig.max_texture_coords = glConfig.max_teximage_units = glConfig.max_texture_units;
 
 	// rectangle textures support
-	GL_CheckExtension( "GL_ARB_texture_rectangle", NULL, "gl_texture_rectangle", GL_TEXTURE_2D_RECT_EXT, 0 );
+	// rectangle textures support
+	GL_CheckExtension( "GL_ARB_texture_rectangle", NULL, 0, "gl_texture_rectangle", GL_TEXTURE_2D_RECT_EXT, 0 );
 
-	if( !GL_CheckExtension( "glDrawRangeElements", drawrangeelementsfuncs, "gl_drawrangeelements", GL_DRAW_RANGEELEMENTS_EXT, 0 ) )
+	if( !GL_CheckExtension( "glDrawRangeElements", drawrangeelementsfuncs, ARRAYSIZE( drawrangeelementsfuncs ), "gl_drawrangeelements", GL_DRAW_RANGEELEMENTS_EXT, 0 ) )
 	{
-		if( GL_CheckExtension( "glDrawRangeElementsEXT", drawrangeelementsextfuncs,
+		if( GL_CheckExtension( "glDrawRangeElementsEXT", drawrangeelementsextfuncs, ARRAYSIZE( drawrangeelementsextfuncs ),
 			"gl_drawrangelements", GL_DRAW_RANGEELEMENTS_EXT, 0 ))
 		{
 
@@ -881,7 +867,7 @@ static void GL_InitExtensionsBigGL( void )
 	}
 	// this won't work without extended context
 	if( r_glw_state.extended )
-		GL_CheckExtension( "GL_ARB_debug_output", debugoutputfuncs, "gl_debug_output", GL_DEBUG_OUTPUT, 0 );
+		GL_CheckExtension( "GL_ARB_debug_output", debugoutputfuncs, ARRAYSIZE( debugoutputfuncs ), "gl_debug_output", GL_DEBUG_OUTPUT, 0 );
 }
 
 
@@ -889,13 +875,13 @@ void GL_InitExtensions( void )
 {
 	char value[MAX_VA_STRING];
 	GLint major = 0, minor = 0;
-	#if XASH_DREAMCAST
+#if !XASH_DREAMCAST
 	GL_SetPixelformat();
-	#else
+#else
 	GL_OnContextCreated();
-	#endif
+#endif
 	// initialize gl extensions
-	GL_CheckExtension( "OpenGL 1.1.0", opengl_110funcs, NULL, GL_OPENGL_110, 1.0 );
+	GL_CheckExtension( "OpenGL 1.1.0", opengl_110funcs, ARRAYSIZE( opengl_110funcs ), NULL, GL_OPENGL_110, 1.0 );
 
 
 	// get our various GL strings
@@ -983,6 +969,8 @@ static void GL_InitCommands( void )
 	gEngfuncs_gl.Cvar_RegisterVariable( &r_ripple );
 	gEngfuncs_gl.Cvar_RegisterVariable( &r_ripple_updatetime );
 	gEngfuncs_gl.Cvar_RegisterVariable( &r_ripple_spawntime );
+	gEngfuncs_gl.Cvar_RegisterVariable( &r_shadows );
+
 
 	gEngfuncs_gl.Cvar_RegisterVariable( &gl_extensions );
 	gEngfuncs_gl.Cvar_RegisterVariable( &gl_texture_nearest );
@@ -999,6 +987,7 @@ static void GL_InitCommands( void )
 	gEngfuncs_gl.Cvar_RegisterVariable( &gl_stencilbits );
 	gEngfuncs_gl.Cvar_RegisterVariable( &gl_round_down );
 	gEngfuncs_gl.Cvar_RegisterVariable( &gl_overbright );
+    gEngfuncs_gl.Cvar_RegisterVariable( &gl_fog );
 
 	// these cvar not used by engine but some mods requires this
 	gEngfuncs_gl.Cvar_RegisterVariable( &gl_polyoffset );
@@ -1093,15 +1082,21 @@ qboolean R_Init( void )
 	tr.movevars = (movevars_t *)ENGINE_GET_PARM( PARM_GET_MOVEVARS_PTR );
 	tr.palette = (color24 *)ENGINE_GET_PARM( PARM_GET_PALETTE_PTR );
 	tr.viewent = (cl_entity_t *)ENGINE_GET_PARM( PARM_GET_VIEWENT_PTR );
+	tr.texgammatable = (byte *)ENGINE_GET_PARM( PARM_GET_TEXGAMMATABLE_PTR );
+	tr.lightgammatable = (uint *)ENGINE_GET_PARM( PARM_GET_LIGHTGAMMATABLE_PTR );
+	tr.screengammatable = (uint *)ENGINE_GET_PARM( PARM_GET_SCREENGAMMATABLE_PTR );
+	tr.lineargammatable = (uint *)ENGINE_GET_PARM( PARM_GET_LINEARGAMMATABLE_PTR );
+	tr.dlights = (dlight_t *)ENGINE_GET_PARM( PARM_GET_DLIGHTS_PTR );
+	tr.elights = (dlight_t *)ENGINE_GET_PARM( PARM_GET_ELIGHTS_PTR );
 
 	GL_SetDefaults();
 	R_CheckVBO();
 	R_InitImages();
 	R_SpriteInit();
 	R_StudioInit();
-	#if !XASH_DREAMCAST
+#if !XASH_DREAMCAST
 	R_AliasInit();
-	#endif
+#endif
 	R_ClearDecals();
 	R_ClearScene();
 

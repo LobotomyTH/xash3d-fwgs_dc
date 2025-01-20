@@ -164,7 +164,6 @@ GL_SelectTexture
 */
 void GL_SelectTexture( GLint tmu )
 {
-
 	if( !GL_Support( GL_ARB_MULTITEXTURE ))
 		return;
 
@@ -189,7 +188,7 @@ void GL_SelectTexture( GLint tmu )
 		if( tmu < glConfig.max_texture_coords )
 			glClientActiveTextureARB( tmu + GL_TEXTURE0_ARB );
 	}
-	#endif
+#endif
 }
 
 /*
@@ -236,9 +235,9 @@ GL_CleanupAllTextureUnits
 */
 void GL_CleanupAllTextureUnits( void )
 {
-	#if !XASH_DREAMCAST
+#if !XASH_DREAMCAST
 	if( !glw_state.initialized ) return;
-	#endif
+#endif
 	// force to cleanup all the units
 	GL_SelectTexture( GL_MaxTextureUnits() - 1 );
 	GL_CleanUpTextureUnits( 0 );
@@ -312,7 +311,7 @@ GL_TexGen
 */
 void GL_TexGen( GLenum coord, GLenum mode )
 {
-	#if !XASH_DREAMCAST
+#if !XASH_DREAMCAST
 	int	tmu = Q_min( glConfig.max_texture_coords, glState.activeTMU );
 	int	bit, gen;
 
@@ -354,7 +353,7 @@ void GL_TexGen( GLenum coord, GLenum mode )
 			glState.genSTEnabled[tmu] &= ~bit;
 		}
 	}
-	#endif
+#endif
 }
 
 /*
@@ -503,22 +502,10 @@ qboolean VID_ScreenShot( const char *filename, int shot_type )
 		gEngfuncs_gl.fsapi->AllowDirectPaths( true );
 		break;
 	case VID_LEVELSHOT:
-		flags |= IMAGE_RESAMPLE;
-		if( gpGlobals_gl->wideScreen )
-		{
-			height = 480;
-			width = 800;
-		}
-		else
-		{
-			height = 480;
-			width = 640;
-		}
-		break;
 	case VID_MINISHOT:
 		flags |= IMAGE_RESAMPLE;
-		height = 200;
-		width = 320;
+		height = shot_type == VID_MINISHOT ? 200 : 480;
+		width = Q_rint( height * ((double)r_shot->width / r_shot->height ));
 		break;
 	case VID_MAPSHOT:
 		flags |= IMAGE_RESAMPLE|IMAGE_QUANTIZE;	// GoldSrc request overviews in 8-bit format
@@ -627,7 +614,6 @@ Draw all the images to the screen, on top of whatever
 was there.  This is used to test for texture thrashing.
 ===============
 */
-
 void R_ShowTextures( void )
 {
 #if !XASH_DREAMCAST

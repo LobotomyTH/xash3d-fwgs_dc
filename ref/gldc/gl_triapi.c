@@ -60,6 +60,7 @@ void _TriRenderMode( int mode )
 		break;
 	case kRenderGlow:
 	case kRenderTransAdd:
+		glTexEnvi( GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE );
 		glBlendFunc( GL_SRC_ALPHA, GL_ONE );
 		glEnable( GL_BLEND );
 		glDepthMask( GL_FALSE );
@@ -244,7 +245,7 @@ int TriSpriteTexture( model_t *pSpriteModel, int frame )
 	if(( gl_texturenum = R_GetSpriteTexture( pSpriteModel, frame )) == 0 )
 		return 0;
 
-	if( gl_texturenum <= 0 || gl_texturenum > MAX_TEXTURES )
+	if( gl_texturenum <= 0 || gl_texturenum >= MAX_TEXTURES )
 		gl_texturenum = tr.defaultTexture;
 
 	GL_Bind( XASH_TEXTURE0, gl_texturenum );
@@ -303,7 +304,7 @@ void TriFog( float flFogColor[3], float flStart, float flEnd, int bOn )
 	glFogf( GL_FOG_END, RI.fogEnd );
 
 	glHint( GL_FOG_HINT, GL_NICEST );
-	#endif
+#endif
 }
 
 /*

@@ -229,10 +229,9 @@ void CL_DrawTracers( double frametime, particle_t *cl_active_tracers )
 			VectorAdd( verts[0], delta, verts[2] );
 			VectorAdd( verts[1], delta, verts[3] );
 
-			if( p->color < 0 || p->color > sizeof( gTracerColors ) / sizeof( gTracerColors[0] ))
+			if( p->color < 0 || p->color >= sizeof( gTracerColors ) / sizeof( gTracerColors[0] ))
 			{
-				p->color = TRACER_COLORINDEX_DEFAULT;
-				 
+				p->color = TRACER_COLORINDEX_DEFAULT; 
 			}
 
 			color = gTracerColors[p->color];
@@ -281,7 +280,6 @@ void CL_DrawParticlesExternal( const ref_viewpass_t *rvp, qboolean trans_pass, f
 {
 	ref_instance_t	oldRI = RI;
 
-	
 	R_SetupRefParams( rvp );
 	R_SetupFrustum();
 	R_SetupGL( false );	// don't touch GL-states

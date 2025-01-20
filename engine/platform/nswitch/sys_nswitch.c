@@ -34,6 +34,7 @@ long pathconf( const char *path, int name ) { return -1; }
 
 // part of libunwind; required by any dynamic lib that uses C++ exceptions
 extern void *_Unwind_Resume;
+extern void *_Unwind_GetIPInfo;
 
 // these are macros in our libc, so we need to wrap them
 static int tolower_fn( int c ) { return tolower( c ); }
@@ -55,6 +56,7 @@ static const solder_export_t aux_exports[] =
 	SOLDER_EXPORT_SYMBOL( strchrnul ),
 	SOLDER_EXPORT_SYMBOL( stpcpy ),
 	SOLDER_EXPORT_SYMBOL( _Unwind_Resume ),
+	SOLDER_EXPORT_SYMBOL( _Unwind_GetIPInfo ),
 };
 
 const solder_export_t *__solder_aux_exports = aux_exports;
@@ -119,7 +121,4 @@ void NSwitch_Init( void )
 void NSwitch_Shutdown( void )
 {
 	printf( "%s\n", __func__ );
-	// force deinit everything SDL-related to avoid issues with changing games
-	if ( SDL_WasInit( 0 ) )
-		SDL_Quit( );
 }

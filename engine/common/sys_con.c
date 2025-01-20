@@ -14,10 +14,7 @@ GNU General Public License for more details.
 */
 
 #include "common.h"
-#if XASH_WIN32
-#define STDOUT_FILENO 1
-#include <io.h>
-#elif XASH_ANDROID
+#if XASH_ANDROID
 #include <android/log.h>
 #endif
 #include <string.h>
@@ -25,20 +22,13 @@ GNU General Public License for more details.
 #if XASH_IRIX
 #include <sys/time.h>
 #endif
+#include "xash3d_mathlib.h"
 
 // do not waste precious CPU cycles on mobiles or low memory devices
 #if !XASH_WIN32 && !XASH_MOBILE_PLATFORM && !XASH_LOW_MEMORY
-#define XASH_COLORIZE_CONSOLE true
-// use with caution, running engine in Qt Creator may cause a freeze in read() call
-// I have never encountered this bug anywhere else, so still enable by default
-#define XASH_USE_SELECT 1
+#define XASH_COLORIZE_CONSOLE 1
 #else
-#define XASH_COLORIZE_CONSOLE false
-#endif
-
-#if XASH_USE_SELECT
-// non-blocking console input
-#include <sys/select.h>
+#define XASH_COLORIZE_CONSOLE 0
 #endif
 
 typedef struct {
@@ -50,41 +40,6 @@ typedef struct {
 } LogData;
 
 static LogData s_ld;
-
-char *Sys_Input( void )
-{
-#if XASH_USE_SELECT
-	if( Host_IsDedicated( ))
-	{
-		fd_set rfds;
-		static char line[1024];
-		static int len;
-		struct timeval tv;
-		tv.tv_sec = 0;
-		tv.tv_usec = 0;
-		FD_ZERO( &rfds );
-		FD_SET( 0, &rfds); // stdin
-		while( select( 1, &rfds, NULL, NULL, &tv ) > 0 )
-		{
-			if( read( 0, &line[len], 1 ) != 1 )
-				break;
-			if( line[len] == '\n' || len > 1022 )
-			{
-				line[ ++len ] = 0;
-				len = 0;
-				return line;
-			}
-			len++;
-			tv.tv_sec = 0;
-			tv.tv_usec = 0;
-		}
-	}
-#endif
-#if XASH_WIN32
-	return Wcon_Input();
-#endif
-	return NULL;
-}
 
 void Sys_DestroyConsole( void )
 {
@@ -126,7 +81,7 @@ void Sys_InitLog( void )
 	const char	*mode;
 #if XASH_DREAMCAST
 	s_ld.log_active = true;
-	Q_strncpy( s_ld.log_path, "/vmu/a1/engine.log", sizeof( s_ld.log_path ));
+	Q_strncpy( s_ld.log_path, "engine.log", sizeof( s_ld.log_path ));
 #else
 	if( Sys_CheckParm( "-log" ) && host.allow_console != 0 )
 	{
@@ -157,48 +112,48 @@ void Sys_InitLog( void )
 
 		// fit to 80 columns for easier read on standard terminal
 		fputs( "================================================================================\n", s_ld.logfile );
-		fprintf( s_ld.logfile, "%s (%i, %s, %s, %s-%s)\n", s_ld.title, Q_buildnum(), Q_buildcommit(), Q_buildbranch(), Q_buildos(), Q_buildarch());
+		fprintf( s_ld.logfile, "%s (%i, %s, %s, %s-%s)\n", s_ld.title, Q_buildnum(), g_buildcommit, g_buildbranch, Q_buildos(), Q_buildarch());
 		fprintf( s_ld.logfile, "Game started at %s\n", Q_timestamp( TIME_FULL ));
 		fputs( "================================================================================\n", s_ld.logfile );
 		fflush( s_ld.logfile );
 	}
 }
 
-void Sys_CloseLog( void )
+void Sys_CloseLog( const char *finalmsg )
 {
-	char	event_name[64];
-
-	// continue logged
-	switch( host.status )
-	{
-	case HOST_CRASHED:
-		Q_strncpy( event_name, "crashed", sizeof( event_name ));
-		break;
-	case HOST_ERR_FATAL:
-		Q_strncpy( event_name, "stopped with error", sizeof( event_name ));
-		break;
-	default:
-		if( !host.change_game ) Q_strncpy( event_name, "stopped", sizeof( event_name ));
-		else Q_strncpy( event_name, host.finalmsg, sizeof( event_name ));
-		break;
-	}
-
 	Sys_FlushStdout(); // flush to stdout to ensure all data was written
 
-	if( s_ld.logfile )
+	if( !s_ld.logfile )
+		return;
+
+	// continue logged
+	if( !finalmsg )
 	{
-		fputc( '\n', s_ld.logfile );
-		fputs( "================================================================================\n", s_ld.logfile );
-		fprintf( s_ld.logfile, "%s (%i, %s, %s, %s-%s)\n", s_ld.title, Q_buildnum(), Q_buildcommit(), Q_buildbranch(), Q_buildos(), Q_buildarch());
-		fprintf( s_ld.logfile, "Stopped with reason \"%s\" at %s\n", event_name, Q_timestamp( TIME_FULL ));
-		fputs( "================================================================================\n", s_ld.logfile );
-		fclose( s_ld.logfile );
-		s_ld.logfile = NULL;
+		switch( host.status )
+		{
+		case HOST_CRASHED:
+			finalmsg = "crashed";
+			break;
+		case HOST_ERR_FATAL:
+			finalmsg = "stopped with error";
+			break;
+		default:
+			finalmsg = "stopped";
+			break;
+		}
 	}
+
+	fputc( '\n', s_ld.logfile );
+	fputs( "================================================================================\n", s_ld.logfile );
+	fprintf( s_ld.logfile, "%s (%i, %s, %s, %s-%s)\n", s_ld.title, Q_buildnum(), g_buildcommit, g_buildbranch, Q_buildos(), Q_buildarch());
+	fprintf( s_ld.logfile, "Stopped with reason \"%s\" at %s\n", finalmsg, Q_timestamp( TIME_FULL ));
+	fputs( "================================================================================\n", s_ld.logfile );
+	fclose( s_ld.logfile );
+	s_ld.logfile = NULL;
 }
 
-#if XASH_COLORIZE_CONSOLE == true
-static void Sys_WriteEscapeSequenceForColorcode( int fd, int c )
+#if XASH_COLORIZE_CONSOLE
+static qboolean Sys_WriteEscapeSequenceForColorcode( int fd, int c )
 {
 	static const char *q3ToAnsi[ 8 ] =
 	{
@@ -213,19 +168,26 @@ static void Sys_WriteEscapeSequenceForColorcode( int fd, int c )
 	};
 	const char *esc = q3ToAnsi[c];
 
-	if( c == 7 )
-		write( fd, esc, 4 );
-	else write( fd, esc, 7 );
+	return write( fd, esc, c == 7 ? 4 : 7 ) < 0 ? false : true;
 }
 #else
-static void Sys_WriteEscapeSequenceForColorcode( int fd, int c ) {}
+static qboolean Sys_WriteEscapeSequenceForColorcode( int fd, int c )
+{
+	return true;
+}
 #endif
 
-static void Sys_PrintLogfile( const int fd, const char *logtime, const char *msg, const qboolean colorize )
+static void Sys_PrintLogfile( const int fd, const char *logtime, size_t logtime_len, const char *msg, const int colorize )
 {
 	const char *p = msg;
 
-	write( fd, logtime, Q_strlen( logtime ) );
+	if( logtime_len != 0 )
+	{
+		if( write( fd, logtime, logtime_len ) < 0 )
+		{
+			// not critical for us
+		}
+	}
 
 	while( p && *p )
 	{
@@ -233,13 +195,20 @@ static void Sys_PrintLogfile( const int fd, const char *logtime, const char *msg
 
 		if( p == NULL )
 		{
-			write( fd, msg, Q_strlen( msg ));
+			if( write( fd, msg, Q_strlen( msg )) < 0 )
+			{
+				// don't call engine Msg, might cause recursion
+				fprintf( stderr, "%s: write failed: %s\n", __func__, strerror( errno ));
+			}
 			break;
 		}
 		else if( IsColorString( p ))
 		{
 			if( p != msg )
-				write( fd, msg, p - msg );
+			{
+				if( write( fd, msg, p - msg ) < 0 )
+					fprintf( stderr, "%s: write failed: %s\n", __func__, strerror( errno ));
+			}
 			msg = p + 2;
 
 			if( colorize )
@@ -247,7 +216,8 @@ static void Sys_PrintLogfile( const int fd, const char *logtime, const char *msg
 		}
 		else
 		{
-			write( fd, msg, p - msg + 1 );
+			if( write( fd, msg, p - msg + 1 ) < 0 )
+				fprintf( stderr, "%s: write failed: %s\n", __func__, strerror( errno ));
 			msg = p + 1;
 		}
 	}
@@ -257,7 +227,7 @@ static void Sys_PrintLogfile( const int fd, const char *logtime, const char *msg
 		Sys_WriteEscapeSequenceForColorcode( fd, 7 );
 }
 
-static void Sys_PrintStdout( const char *logtime, const char *msg )
+static void Sys_PrintStdout( const char *logtime, size_t logtime_len, const char *msg )
 {
 #if XASH_MOBILE_PLATFORM
 	static char buf[MAX_PRINT_MSG];
@@ -291,7 +261,7 @@ static void Sys_PrintStdout( const char *logtime, const char *msg )
 	printf ("%s %s\n", logtime, buf);
 #endif								  
 #elif !XASH_WIN32 // Wcon does the job
-	Sys_PrintLogfile( STDOUT_FILENO, logtime, msg, XASH_COLORIZE_CONSOLE );
+	Sys_PrintLogfile( STDOUT_FILENO, logtime, logtime_len, msg, XASH_COLORIZE_CONSOLE );
 	Sys_FlushStdout();
 #endif
 }
@@ -302,33 +272,44 @@ void Sys_PrintLog( const char *pMsg )
 	const struct tm	*crt_tm;
 	char logtime[32] = "";
 	static char lastchar;
-	size_t len;
+	qboolean print_time = true;
+	size_t len, logtime_len = 0;
 
-	time( &crt_time );
-	crt_tm = localtime( &crt_time );
+	if( !lastchar || lastchar == '\n' )
+	{
+		if( time( &crt_time ) >= 0 )
+		{
+			crt_tm = localtime( &crt_time );
+			if( crt_tm == NULL )
+				print_time = false;
+		}
+	}
+	else print_time = false;
 
-	if( !lastchar || lastchar == '\n')
-		strftime( logtime, sizeof( logtime ), "[%H:%M:%S] ", crt_tm ); //short time
+	if( print_time )
+	{
+		logtime_len = strftime( logtime, sizeof( logtime ), "[%H:%M:%S] ", crt_tm ); // short time
+		logtime_len = Q_min( logtime_len, sizeof( logtime ) - 1 ); // just in case
+	}
 
 	// spew to stdout
-	Sys_PrintStdout( logtime, pMsg );
+	Sys_PrintStdout( logtime, logtime_len, pMsg );
 
 	len = Q_strlen( pMsg );
 
-	if( !s_ld.logfile )
-	{
-		// save last char to detect when line was not ended
-		lastchar = len > 0 ? pMsg[len - 1] : 0;
-		return;
-	}
-
-	if( !lastchar || lastchar == '\n')
-		strftime( logtime, sizeof( logtime ), "[%Y:%m:%d|%H:%M:%S] ", crt_tm ); //full time
-	
 	// save last char to detect when line was not ended
 	lastchar = len > 0 ? pMsg[len - 1] : 0;
 
-	Sys_PrintLogfile( s_ld.logfileno, logtime, pMsg, false );
+	if( !s_ld.logfile )
+		return;
+
+	if( print_time )
+	{
+		logtime_len = strftime( logtime, sizeof( logtime ), "[%Y:%m:%d|%H:%M:%S] ", crt_tm ); //full time
+		logtime_len = Q_min( logtime_len, sizeof( logtime ) - 1 ); // just in case
+	}
+	
+	Sys_PrintLogfile( s_ld.logfileno, logtime, logtime_len, pMsg, false );
 	Sys_FlushLogfile();
 }
 

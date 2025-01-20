@@ -119,6 +119,10 @@ const char *Q_PlatformStringByID( const int platform )
 		return "nswitch";
 	case PLATFORM_PSVITA:
 		return "psvita";
+	case PLATFORM_WASI:
+		return "wasi";
+	case PLATFORM_SUNOS:
+		return "sunos";
 	case PLATFORM_DREAMCAST:
 		return "dreamcast";	 
 	}
@@ -207,7 +211,8 @@ const char *Q_ArchitectureStringByID( const int arch, const uint abi, const int 
 		}
 		break;
 	case ARCHITECTURE_SH4:
-		return "sh4";
+		return "sh4";	case ARCHITECTURE_WASM:
+		return is64 ? "wasm64" : "wasm32";
 	}
 
 	assert( 0 );
@@ -237,38 +242,4 @@ const char *Q_buildarch( void )
 	);
 }
 
-/*
-=============
-Q_buildcommit
-
-Returns a short hash of current commit in VCS as string
-XASH_BUILD_COMMIT must be passed in quotes
-=============
-*/
-const char *Q_buildcommit( void )
-{
-#if XASH_DREAMCAST
-	return "nonset";
-#else
-	return XASH_BUILD_COMMIT;
-#endif
-}
-
-/*
-=============
-Q_buildbranch
-
-Returns current branch name in VCS as string
-XASH_BUILD_BRANCH must be passed in quotes
-=============
-*/
-const char *Q_buildbranch( void )
-{
-#if XASH_DREAMCAST
-	return "dev";
-#else
-	return XASH_BUILD_BRANCH;
-#endif
-
-}
 

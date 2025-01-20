@@ -77,7 +77,7 @@ const static uint8_t dc_kbd_map[] =
 	'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z', '1', '2', 
 	'3', '4', '5', '6', '7', '8', '9', '0', K_ENTER, K_ESCAPE, K_BACKSPACE, K_TAB, K_SPACE, '-', '=', '[', 
 	']','\\',   0, ';', '\'', '`', ',', '.', '/', K_CAPSLOCK, K_F1, K_F2, K_F3, K_F4, K_F5, K_F6, 
-	K_F7, K_F8, K_F9, K_F10, K_F11, K_F12, 0, K_SCROLLOCK, 0, K_INS, K_HOME, K_PGUP, K_DEL, K_END, K_PGDN, K_RIGHTARROW, 
+	K_F7, K_F8, K_F9, K_F10, K_F11, K_F12, 0, K_SCROLLLOCK, 0, K_INS, K_HOME, K_PGUP, K_DEL, K_END, K_PGDN, K_RIGHTARROW, 
 	K_LEFTARROW, K_DOWNARROW, K_UPARROW, K_KP_NUMLOCK, K_KP_SLASH, K_KP_MUL, K_KP_MINUS, K_KP_PLUS, K_KP_ENTER, K_KP_END, K_KP_DOWNARROW, K_KP_PGDN, K_KP_LEFTARROW, K_KP_5, K_KP_RIGHTARROW, K_KP_HOME, 
 	K_KP_UPARROW, K_KP_PGUP, K_KP_INS, K_KP_DEL, 0 /* S3 */
 };

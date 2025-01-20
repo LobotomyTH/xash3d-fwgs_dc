@@ -33,4 +33,8 @@
 	url = https://gitlab.xiph.org/xiph/vorbis.git
 [submodule "3rdparty/opusfile/opusfile"]
 	path = 3rdparty/opusfile/opusfile
+<<<<<<< HEAD
 	url = https://gitlab.xiph.org/xiph/opusfile.git
+=======
+	url = https://gitlab.xiph.org/xiph/opusfile.git
+>>>>>>> remotes/master/master

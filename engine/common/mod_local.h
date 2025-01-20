@@ -83,6 +83,12 @@ typedef struct
 	uint		num_polys;
 } hull_model_t;
 
+typedef struct wadlist_s
+{
+	char wadnames[MAX_MAP_WADS][36]; // including .wad extension
+	int  wadusage[MAX_MAP_WADS];
+	int  count;
+} wadlist_t;
 
 typedef struct world_static_s
 {
@@ -119,6 +125,8 @@ typedef struct world_static_s
 	// Potentially Hearable Set
 	byte   *compressed_phs;
 	size_t *phsofs;
+
+	wadlist_t wadlist;
 } world_static_t;
 
 #ifndef REF_DLL
@@ -127,6 +135,8 @@ extern poolhandle_t     com_studiocache;
 extern convar_t		mod_studiocache;
 extern convar_t		r_wadtextures;
 extern convar_t		r_showhull;
+extern const mclipnode16_t box_clipnodes16[6];
+extern const mclipnode32_t box_clipnodes32[6];
 
 //
 // model.c
@@ -159,13 +169,12 @@ void Mod_LoadAliasModel( model_t *mod, const void *buffer, qboolean *loaded );
 //
 void Mod_LoadBrushModel( model_t *mod, const void *buffer, qboolean *loaded );
 qboolean Mod_TestBmodelLumps( dc_file_t *f, const char *name, const byte *mod_base, qboolean silent, dlump_t *entities );
-qboolean Mod_HeadnodeVisible( mnode_t *node, const byte *visbits, int *lastleaf );
 int Mod_FatPVS( const vec3_t org, float radius, byte *visbuffer, int visbytes, qboolean merge, qboolean fullvis, qboolean false );
 qboolean Mod_BoxVisible( const vec3_t mins, const vec3_t maxs, const byte *visbits );
 int Mod_CheckLump( const char *filename, const int lump, int *lumpsize );
 int Mod_ReadLump( const char *filename, const int lump, void **lumpdata, int *lumpsize );
 int Mod_SaveLump( const char *filename, const int lump, void *lumpdata, int lumpsize );
-mleaf_t *Mod_PointInLeaf( const vec3_t p, mnode_t *node );
+mleaf_t *Mod_PointInLeaf( const vec3_t p, mnode_t *node, model_t *mod );
 int Mod_SampleSizeForFace( const msurface_t *surf );
 byte *Mod_GetPVSForPoint( const vec3_t p );
 void Mod_UnloadBrushModel( model_t *mod );
@@ -174,8 +183,8 @@ void Mod_PrintWorldStats_f( void );
 //
 // mod_dbghulls.c
 //
-void Mod_InitDebugHulls( model_t *mod );
-void Mod_CreatePolygonsForHull( int hullnum );
+void R_DrawWorldHull( void );
+void R_DrawModelHull( model_t *mod );
 void Mod_ReleaseHullPolygons( void );
 
 //

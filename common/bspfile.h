@@ -16,8 +16,6 @@ GNU General Public License for more details.
 #ifndef BSPFILE_H
 #define BSPFILE_H
 
-//#define SUPPORT_BSP2_FORMAT		// allow to loading Darkplaces BSP2 maps (with broke binary compatibility)
-
 /*
 ==============================================================================
 
@@ -64,19 +62,7 @@ BRUSH MODELS
 #define MAX_MAP_CLIPNODES_HLBSP 32767
 #define MAX_MAP_CLIPNODES_BSP2  524288
 
-// these limis not using by modelloader but only for displaying 'mapstats' correctly
-#ifdef SUPPORT_BSP2_FORMAT
-#define MAX_MAP_MODELS		2048		// embedded models
-#define MAX_MAP_ENTSTRING		0x200000		// 2 Mb should be enough
-#define MAX_MAP_PLANES		131072		// can be increased without problems
-#define MAX_MAP_NODES		262144		// can be increased without problems
-#define MAX_MAP_CLIPNODES		MAX_MAP_CLIPNODES_BSP2		// can be increased without problems
-#define MAX_MAP_LEAFS		131072		// CRITICAL STUFF to run ad_sepulcher!!!
-#define MAX_MAP_VERTS		524288		// can be increased without problems
-#define MAX_MAP_FACES		262144		// can be increased without problems
-#define MAX_MAP_MARKSURFACES		524288		// can be increased without problems
-#else
-// increased to match PrimeXT compilers
+#if XASH_DREAMCAST
 #define MAX_MAP_MODELS		256		// embedded models
 #define MAX_MAP_ENTSTRING		(128*1024)		// 1 Mb should be enough
 #define MAX_MAP_PLANES		32767		// can be increased without problems
@@ -86,7 +72,7 @@ BRUSH MODELS
 #define MAX_MAP_VERTS		65535		// unsigned short limit
 #define MAX_MAP_FACES		65535		// unsigned short limit
 #define MAX_MAP_MARKSURFACES		65535		// unsigned short limit
-#endif
+// these limis not using by modelloader but only for displaying 'mapstats' correctly
 
 #define MAX_MAP_ENTITIES		1024		// network limit
 #define MAX_MAP_TEXINFO		MAX_MAP_FACEINFO	// in theory each face may have personal texinfo
@@ -97,7 +83,27 @@ BRUSH MODELS
 #define MAX_MAP_LIGHTING		0x200000		// 32 Mb lightmap raw data (can contain deluxemaps)
 #define MAX_MAP_VISIBILITY		0x200000		// 16 Mb visdata
 #define MAX_MAP_FACEINFO		8192		// can be increased but not needs
+#else
+#define MAX_MAP_MODELS		2048		// embedded models
+#define MAX_MAP_ENTSTRING		0x200000		// 2 Mb should be enough
+#define MAX_MAP_PLANES		131072		// can be increased without problems
+#define MAX_MAP_NODES		262144		// can be increased without problems
+#define MAX_MAP_CLIPNODES		MAX_MAP_CLIPNODES_BSP2		// can be increased without problems
+#define MAX_MAP_LEAFS		131072		// CRITICAL STUFF to run ad_sepulcher!!!
+#define MAX_MAP_VERTS		524288		// can be increased without problems
+#define MAX_MAP_FACES		262144		// can be increased without problems
+#define MAX_MAP_MARKSURFACES		524288		// can be increased without problems
 
+#define MAX_MAP_ENTITIES		1024		// network limit
+#define MAX_MAP_TEXINFO		MAX_MAP_FACEINFO	// in theory each face may have personal texinfo
+#define MAX_MAP_EDGES		256000		// can be increased but not needs
+#define MAX_MAP_SURFEDGES		512000		// can be increased but not needs
+#define MAX_MAP_TEXTURES		512		// can be increased but not needs
+#define MAX_MAP_MIPTEX		0x200000		// 32 Mb internal textures data
+#define MAX_MAP_LIGHTING		0x200000		// 32 Mb lightmap raw data (can contain deluxemaps)
+#define MAX_MAP_VISIBILITY		0x200000		// 16 Mb visdata
+#define MAX_MAP_FACEINFO		8192		// can be increased but not needs
+#endif
 // quake lump ordering
 #define LUMP_ENTITIES		0
 #define LUMP_PLANES			1

@@ -15,9 +15,6 @@ GNU General Public License for more details.
 
 #include "soundlib.h"
 
-// global sound variables
-sndlib_t	sound;
-
 static void Sound_Reset( void )
 {
 	// reset global variables
@@ -30,7 +27,7 @@ static void Sound_Reset( void )
 	sound.size = 0;
 }
 
-static wavdata_t *SoundPack( void )
+static MALLOC_LIKE( FS_FreeSound, 1 ) wavdata_t *SoundPack( void )
 {
 	wavdata_t	*pack = Mem_Calloc( host.soundpool, sizeof( wavdata_t ));
 

@@ -104,7 +104,7 @@ static void HPAK_CreatePak( const char *filename, resource_t *pResource, byte *p
 	string		pakname;
 	byte		md5[16];
 	dc_file_t		*fout;
-	MD5Context_t	ctx;
+	MD5Context_t	ctx = { 0 };
 
 	if( !COM_CheckString( filename ))
 		return;
@@ -125,7 +125,6 @@ static void HPAK_CreatePak( const char *filename, resource_t *pResource, byte *p
 	}
 
 	// let's hash it.
-	memset( &ctx, 0, sizeof( MD5Context_t ));
 	MD5Init( &ctx );
 
 	if( pData == NULL )
@@ -214,7 +213,7 @@ void HPAK_AddLump( qboolean bUseQueue, const char *name, resource_t *pResource, 
 	dc_file_t		*file_src;
 	dc_file_t		*file_dst;
 	byte		md5[16];
-	MD5Context_t	ctx;
+	MD5Context_t	ctx = { 0 };
 
 	if( pData == NULL && pFile == NULL )
 		return;
@@ -226,7 +225,6 @@ void HPAK_AddLump( qboolean bUseQueue, const char *name, resource_t *pResource, 
 	}
 
 	// hash it
-	memset( &ctx, 0, sizeof( MD5Context_t ));
 	MD5Init( &ctx );
 
 	if( !pData )
@@ -1055,7 +1053,7 @@ static void HPAK_Extract_f( void )
 		FS_Seek( f, entry->filepos, SEEK_SET );
 		FS_Read( f, pData, nDataSize );
 
-		Q_snprintf( szFileOut, sizeof( szFileOut ), "hpklmps\\lmp%04i.bmp", nCurrent );
+		Q_snprintf( szFileOut, sizeof( szFileOut ), "hpklmps/lmp%04i.bmp", nCurrent );
 		FS_WriteFile( szFileOut, pData, nDataSize );
 		if( pData ) Mem_Free( pData );
 	}

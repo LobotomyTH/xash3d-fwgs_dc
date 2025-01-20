@@ -466,8 +466,8 @@ static void R_ShowTree_r( mnode_t *node, float x, float y, float scale, int show
 		R_DrawNodeConnection( x, y, x + scale, y + scale );
 	}
 
-	R_ShowTree_r( node->children[1], x - scale, y + scale, downScale, shownodes, viewleaf );
-	R_ShowTree_r( node->children[0], x + scale, y + scale, downScale, shownodes, viewleaf );
+	R_ShowTree_r( node_child( node, 1, cl.worldmodel ), x - scale, y + scale, downScale, shownodes, viewleaf );
+	R_ShowTree_r( node_child( node, 0, cl.worldmodel ), x + scale, y + scale, downScale, shownodes, viewleaf );
 
 	world.recursion_level--;
 }
@@ -482,11 +482,9 @@ static void R_ShowTree( void )
 		return;
 
 	world.recursion_level = 0;
-	viewleaf = Mod_PointInLeaf( refState.vieworg, cl.worldmodel->nodes );
+	viewleaf = Mod_PointInLeaf( refState.vieworg, cl.worldmodel->nodes, cl.worldmodel );
 
-	//pglEnable( GL_BLEND );
-	//pglBlendFunc( GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA );
-	//pglTexEnvi( GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE );
+	ref.dllFuncs.TriRenderMode( kRenderTransTexture );
 
 	//pglLineWidth( 2.0f );
 	ref.dllFuncs.Color4f( 1, 0.7f, 0, 1.0f );
@@ -535,9 +533,10 @@ void V_PostRender( void )
 		SCR_NetSpeeds();
 		SCR_DrawPos();
 		SCR_DrawEnts();
-		#if !XASH_DREAMCAST
+#if !XASH_DREAMCAST
 		SCR_DrawNetGraph();
-		#endif
+#endif
+		SCR_DrawUserCmd();
 		SV_DrawOrthoTriangles();
 		CL_DrawDemoRecording();
 		CL_DrawHUD( CL_CHANGELEVEL );

@@ -679,10 +679,8 @@ static void GAME_EXPORT pfnFillRGBA( int x, int y, int width, int height, int r,
 	g = bound( 0, g, 255 );
 	b = bound( 0, b, 255 );
 	a = bound( 0, a, 255 );
-	ref.dllFuncs.Color4ub( r, g, b, a );
-	ref.dllFuncs.GL_SetRenderMode( kRenderTransTexture );
-	ref.dllFuncs.R_DrawStretchPic( x, y, width, height, 0, 0, 1, 1, R_GetBuiltinTexture( REF_WHITE_TEXTURE ) );
-	ref.dllFuncs.Color4ub( 255, 255, 255, 255 );
+
+	ref.dllFuncs.FillRGBA( kRenderTransTexture, x, y, width, height, r, g, b, a );
 }
 
 /*
@@ -694,6 +692,11 @@ pfnCvar_RegisterVariable
 static cvar_t *GAME_EXPORT pfnCvar_RegisterGameUIVariable( const char *szName, const char *szValue, int flags )
 {
 	return (cvar_t *)Cvar_Get( szName, szValue, flags|FCVAR_GAMEUIDLL, Cvar_BuildAutoDescription( szName, flags|FCVAR_GAMEUIDLL ));
+}
+
+static int GAME_EXPORT Cmd_AddGameUICommand( const char *cmd_name, xcommand_t function )
+{
+	return Cmd_AddCommandEx( cmd_name, function, "gameui command", CMD_GAMEUIDLL, __func__ );
 }
 
 /*
@@ -1112,7 +1115,7 @@ static void GAME_EXPORT UI_ShellExecute( const char *path, const char *parms, in
 	Platform_ShellExecute( path, parms );
 #endif // !XASH_DREAMCAST
 	if( shouldExit )
-		Sys_Quit();
+		Sys_Quit( __func__ );
 }
 
 /*
@@ -1168,6 +1171,17 @@ static void GAME_EXPORT pfnSetCursor( void *hCursor )
 		return;
 
 	Platform_SetCursorType( cursor );
+}
+
+static void GAME_EXPORT pfnGetGameDir( char *out )
+{
+	if( !out )
+		return;
+#if XASH_DREAMCAST
+	Q_strncpy( out, "valve", sizeof( "valve" ));
+#else
+	Q_strncpy( out, GI->gamefolder, sizeof( GI->gamefolder ));
+#endif
 }
 
 // engine callbacks
@@ -1252,7 +1266,7 @@ static const ui_enginefuncs_t gEngfuncs =
 	pfnSetCursor,
 	pfnIsMapValid,
 	GL_ProcessTexture,
-	COM_CompareFileTime,
+	pfnCompareFileTime,
 	VID_GetModeString,
 	(void*)COM_SaveFile,
 	pfnDelete
@@ -1304,6 +1318,16 @@ static gameinfo2_t *pfnGetModInfo( int gi_version, int i )
 	return &gameui.modsInfo[i];
 }
 
+static int pfnIsCvarReadOnly( const char *name )
+{
+	convar_t *cv = Cvar_FindVar( name );
+
+	if( !cv )
+		return -1;
+
+	return FBitSet( cv->flags, FCVAR_READ_ONLY ) ? 1 : 0;
+}
+
 static ui_extendedfuncs_t gExtendedfuncs =
 {
 	pfnEnableTextInput,
@@ -1319,6 +1343,7 @@ static ui_extendedfuncs_t gExtendedfuncs =
 	&gNetApi,
 	pfnGetGameInfo,
 	pfnGetModInfo,
+	pfnIsCvarReadOnly,
 };
 
 void UI_UnloadProgs( void )

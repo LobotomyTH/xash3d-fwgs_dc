@@ -20,7 +20,6 @@ GNU General Public License for more details.
 #define LERPBYTE( i )	r = resamplerow1[i]; out[i] = (byte)(((( resamplerow2[i] - r ) * lerp)>>16 ) + r )
 #define FILTER_SIZE		5
 
-
 uint d_8toQ1table[256];
 uint d_8toHLtable[256];
 uint d_8to24table[256];
@@ -99,7 +98,9 @@ static const loadpixformat_t load_game[] =
 { "%s%s.%s", "dds", Image_LoadDDS, IL_HINT_NO },	// dds for world and studio models
 { "%s%s.%s", "bmp", Image_LoadBMP, IL_HINT_NO },	// WON menu images
 { "%s%s.%s", "tga", Image_LoadTGA, IL_HINT_NO },	// hl vgui menus
+#if !XASH_DREAMCAST
 { "%s%s.%s", "png", Image_LoadPNG, IL_HINT_NO },	// NightFire 007 menus
+#endif
 { "%s%s.%s", "mip", Image_LoadMIP, IL_HINT_NO },	// hl textures from wad or buffer
 { "%s%s.%s", "mdl", Image_LoadMDL, IL_HINT_HL },	// hl studio model skins
 { "%s%s.%s", "spr", Image_LoadSPR, IL_HINT_HL },	// hl sprite frames
@@ -129,7 +130,9 @@ static const savepixformat_t save_game[] =
 {
 { "%s%s.%s", "tga", Image_SaveTGA },		// tga screenshots
 { "%s%s.%s", "bmp", Image_SaveBMP },		// bmp levelshots or screenshots
+#if !XASH_DREAMCAST
 { "%s%s.%s", "png", Image_SavePNG },		// png screenshots
+#endif
 { NULL, NULL, NULL }
 };
 
@@ -601,8 +604,6 @@ void Image_CopyParms( rgbdata_t *src )
 
 	memcpy( image.fogParams, src->fogParams, sizeof( image.fogParams ));
 }
-
-
 
 /*
 ============

@@ -5,5 +5,5 @@ INCLUDES = -I$(KOS_PORTS)/include/GL -I../../engine/platform/dreamcast -I../../f
 KOS_CFLAGS +=  $(INCLUDES) $(DEFINES) -Os -fomit-frame-pointer -ffunction-sections -fdata-sections -fno-strict-aliasing -mrelax -fno-asynchronous-unwind-tables -fno-stack-protector
 KOS_CPPFLAGS += $(INCLUDES) $(DEFINES) -fno-exceptions -std=gnu++11 -fpermissive -MMD -MP  $(CFLAGS)
 
-OBJS = gl_alias.o gl_backend.o gl_beams.o gl_context.o gl_cull.o gl_dbghulls.o gl_decals.o link_helper.o gl_draw.o gl_frustum.o gl_image.o gl_opengl.o gl_rlight.o gl_rmath.o gl_rmain.o gl_rmisc.o gl_rpart.o gl_rsurf.o gl_sprite.o gl_studio.o gl_triapi.o gl_warp.o
+OBJS = gl_alias.o gl_backend.o gl_beams.o gl_context.o gl_cull.o gl_decals.o link_helper.o gl_draw.o gl_frustum.o gl_image.o gl_opengl.o gl_rlight.o gl_rmath.o gl_rmain.o gl_rmisc.o gl_rpart.o gl_rsurf.o gl_sprite.o gl_studio.o gl_triapi.o gl_warp.o
 include ../../Makefile.library

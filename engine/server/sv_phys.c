@@ -1784,21 +1784,23 @@ static void SV_Physics_Entity( edict_t *ent )
 
 static void SV_RunLightStyles( void )
 {
-	int		i, ofs;
-	lightstyle_t	*ls;
-	float		scale;
-
-	scale = 1.0f;
+	int	i;
 
 	// run lightstyles animation
-	for( i = 0, ls = sv.lightstyles; i < MAX_LIGHTSTYLES; i++, ls++ )
+	for( i = 0; i < MAX_LIGHTSTYLES; i++ )
 	{
+		lightstyle_t *ls = &sv.lightstyles[i];
+		int ofs;
+
 		ls->time += sv.frametime;
 		ofs = (ls->time * 10);
 
-		if( ls->length == 0 ) ls->value = scale; // disable this light
-		else if( ls->length == 1 ) ls->value = ( ls->map[0] / 12.0f ) * scale;
-		else ls->value = ( ls->map[ofs % ls->length] / 12.0f ) * scale;
+		if( ls->length == 0 )
+			ls->value = 1.0f; // disable this light
+		else if( ls->length == 1 )
+			ls->value = ls->map[0] / 12.0f;
+		else
+			ls->value = ls->map[ofs % ls->length] / 12.0f;
 	}
 }
 
@@ -2146,18 +2148,18 @@ qboolean SV_InitPhysicsAPI( void )
 			if( svgame.physFuncs.SV_CheckFeatures != NULL )
 			{
 				// grab common engine features (it will be shared across the network)
-				Host_ValidateEngineFeatures( svgame.physFuncs.SV_CheckFeatures( ));
+				Host_ValidateEngineFeatures( ENGINE_FEATURES_MASK, svgame.physFuncs.SV_CheckFeatures( ));
 			}
 			return true;
 		}
 
 		// make sure what physic functions is cleared
 		memset( &svgame.physFuncs, 0, sizeof( svgame.physFuncs ));
-		Host_ValidateEngineFeatures( 0 );
+		Host_ValidateEngineFeatures( ENGINE_FEATURES_MASK, 0 );
 		return false; // just tell user about problems
 	}
 
 	// physic interface is missed
-	Host_ValidateEngineFeatures( 0 );
+	Host_ValidateEngineFeatures( ENGINE_FEATURES_MASK, 0 );
 	return true;
 }

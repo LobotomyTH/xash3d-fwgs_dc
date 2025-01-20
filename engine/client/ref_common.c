@@ -45,12 +45,6 @@ REF_HOST_CHECK( realtime );
 REF_HOST_CHECK( frametime );
 REF_HOST_CHECK( features );
 
-void R_GetTextureParms( int *w, int *h, int texnum )
-{
-	if( w ) *w = REF_GET_PARM( PARM_TEX_WIDTH, texnum );
-	if( h ) *h = REF_GET_PARM( PARM_TEX_HEIGHT, texnum );
-}
-
 static qboolean CheckSkybox( const char *name, char out[SKYBOX_MAX_SIDES][MAX_STRING] )
 {
 	static const char *skybox_ext[4] = { "dds", "tga", "bmp", "pvr" };
@@ -189,6 +183,11 @@ static void pfnCvar_FullSet( const char *var_name, const char *value, int flags 
 	Cvar_FullSet( var_name, value, flags | FCVAR_REFDLL );
 }
 
+static int Cmd_AddRefCommand( const char *cmd_name, xcommand_t function, const char *description )
+{
+	return Cmd_AddCommandEx( cmd_name, function, description, CMD_REFDLL, __func__ );
+}
+
 static void pfnStudioEvent( const mstudioevent_t *event, const cl_entity_t *e )
 {
 	clgame.dllFuncs.pfnStudioEvent( event, e );
@@ -307,6 +306,12 @@ static qboolean R_Init_Video_( const int type )
 	return R_Init_Video( type );
 }
 
+static mleaf_t *pfnMod_PointInLeaf( const vec3_t p, mnode_t *node )
+{
+	// FIXME: get rid of this on next RefAPI update
+	return Mod_PointInLeaf( p, node, cl.models[1] );
+}
+
 static const ref_api_t gEngfuncs =
 {
 	pfnEngineGetParm,
@@ -347,8 +352,9 @@ static const ref_api_t gEngfuncs =
 
 	Mod_SampleSizeForFace,
 	Mod_BoxVisible,
-	Mod_PointInLeaf,
-	Mod_CreatePolygonsForHull,
+	pfnMod_PointInLeaf,
+	R_DrawWorldHull,
+	R_DrawModelHull,
 
 	R_StudioGetAnim,
 	pfnStudioEvent,
@@ -406,15 +412,6 @@ static const ref_api_t gEngfuncs =
 	SW_LockBuffer,
 	SW_UnlockBuffer,
 
-	LightToTexGamma,
-	LightToTexGammaEx,
-	TextureToGamma,
-	ScreenGammaTable,
-	LinearGammaTable,
-
-	CL_GetLightStyle,
-	CL_GetDynamicLight,
-	CL_GetEntityLight,
 	R_FatPVS,
 	GL_GetOverviewParms,
 	Sys_DoubleTime,

@@ -129,7 +129,6 @@ typedef struct
 
 	// misc local info
 	qboolean		repredicting;	// repredicting in progress
-	qboolean		thirdperson;
 	qboolean		apply_effects;	// local player will not added but we should apply their effects: flashlight etc
 	float		idealpitch;
 	int		viewmodel;
@@ -212,7 +211,6 @@ typedef struct
 	int		last_command_ack;
 	int		last_incoming_sequence;
 
-	qboolean		send_reply;
 	qboolean		background;		// not real game, just a background
 	qboolean		first_frame;		// first rendering frame
 	qboolean		proxy_redirect;		// spectator stuff
@@ -278,6 +276,8 @@ typedef struct
 	int lostpackets;					// count lost packets and show dialog in menu
 
 	double frametime_remainder;
+
+	uint worldmapCRC;
 } client_t;
 
 /*
@@ -308,14 +308,6 @@ typedef enum
 	CL_PAUSED,	// pause when active
 	CL_CHANGELEVEL,	// draw 'loading' during changelevel
 } scrstate_t;
-
-typedef enum
-{
-	PROTO_CURRENT = 0, // Xash3D 49
-	PROTO_LEGACY  = 1, // Xash3D 48
-	PROTO_QUAKE   = 2, // Quake 15
-	PROTO_GOLDSRC = 3, // GoldSrc 48
-} connprotocol_t;
 
 typedef struct
 {
@@ -503,7 +495,9 @@ typedef struct
 
 	cl_entity_t	viewent;			// viewmodel
 
+#if XASH_WIN32
 	qboolean client_dll_uses_sdl;
+#endif
 } clgame_static_t;
 
 typedef struct
@@ -567,7 +561,6 @@ typedef struct
 	byte		datagram_buf[MAX_DATAGRAM];
 
 	netchan_t		netchan;
-	int		challenge;		// from the server to use for connecting
 
 	float		packet_loss;
 	double		packet_loss_recalc_time;
@@ -642,6 +635,9 @@ typedef struct
 
 	// do we accept utf8 as input
 	qboolean accept_utf8;
+
+	// server's build number (might be zero)
+	int build_num;
 } client_static_t;
 
 #ifdef __cplusplus
@@ -660,6 +656,7 @@ extern gameui_static_t	gameui;
 //
 // cvars
 //
+extern convar_t	showpause;
 extern convar_t	mp_decals;
 extern convar_t	cl_logomaxdim;
 extern convar_t	cl_allow_download;
@@ -754,13 +751,13 @@ void CL_Particle( const vec3_t org, int color, float life, int zpos, int zvel );
 void CL_Init( void );
 void CL_Disconnect_f( void );
 void CL_ProcessFile( qboolean successfully_received, const char *filename );
-void CL_WriteUsercmd( sizebuf_t *msg, int from, int to );
-int CL_GetFragmentSize( void *unused , fragsize_t mode );
+void CL_WriteUsercmd( connprotocol_t proto, sizebuf_t *msg, int from, int to );
+void CL_SetupNetchanForProtocol( connprotocol_t proto );
 qboolean CL_PrecacheResources( void );
 void CL_SetupOverviewParams( void );
 void CL_UpdateFrameLerp( void );
 int CL_IsDevOverviewMode( void );
-void CL_SignonReply( void );
+void CL_SignonReply( connprotocol_t proto );
 void CL_ClearState( void );
 
 //
@@ -770,7 +767,7 @@ void CL_StartupDemoHeader( void );
 void CL_DrawDemoRecording( void );
 void CL_WriteDemoUserCmd( int cmdnumber );
 void CL_WriteDemoMessage( qboolean startup, int start, sizebuf_t *msg );
-void CL_WriteDemoUserMessage( const byte *buffer, size_t size );
+void CL_WriteDemoUserMessage( int size, byte *buffer );
 qboolean CL_DemoReadMessage( byte *buffer, size_t *length );
 void CL_DemoInterpolateAngles( void );
 void CL_CheckStartupDemos( void );
@@ -790,8 +787,8 @@ int CL_GetDemoComment( const char *demoname, char *comment );
 //
 // cl_events.c
 //
-void CL_ParseEvent( sizebuf_t *msg );
-void CL_ParseReliableEvent( sizebuf_t *msg );
+void CL_ParseEvent( sizebuf_t *msg, connprotocol_t proto );
+void CL_ParseReliableEvent( sizebuf_t *msg, connprotocol_t proto );
 void CL_SetEventIndex( const char *szEvName, int ev_index );
 void CL_PlaybackEvent( int flags, const edict_t *pInvoker, word eventindex, float delay, float *origin,
 	float *angles, float fparam1, float fparam2, int iparam1, int iparam2, int bparam1, int bparam2 );
@@ -812,7 +809,7 @@ int CL_DrawCharacter( float x, float y, int number, rgba_t color, cl_font_t *fon
 int CL_DrawString( float x, float y, const char *s, rgba_t color, cl_font_t *font, int flags );
 void CL_DrawCharacterLen( cl_font_t *font, int number, int *width, int *height );
 void CL_DrawStringLen( cl_font_t *font, const char *s, int *width, int *height, int flags );
-int CL_DrawStringf( cl_font_t *font, float x, float y, rgba_t color, int flags, const char *fmt, ... ) _format( 6 );
+int CL_DrawStringf( cl_font_t *font, float x, float y, rgba_t color, int flags, const char *fmt, ... ) FORMAT_CHECK( 6 );
 
 
 //
@@ -830,9 +827,7 @@ void CL_ClearSpriteTextures( void );
 void CL_CenterPrint( const char *text, float y );
 void CL_TextMessageParse( byte *pMemFile, int fileSize );
 client_textmessage_t *CL_TextMessageGet( const char *pName );
-model_t *CL_ModelHandle( int modelindex );
 void NetAPI_CancelAllRequests( void );
-cl_entity_t *CL_GetLocalPlayer( void );
 model_t *CL_LoadClientSprite( const char *filename );
 model_t *CL_LoadModel( const char *modelname, int *index );
 HSPRITE pfnSPR_LoadExt( const char *szPicName, uint texFlags );
@@ -843,13 +838,11 @@ const char *PM_CL_TraceTexture( int ground, float *vstart, float *vend );
 int PM_CL_PointContents( const float *p, int *truecontents );
 physent_t *pfnGetPhysent( int idx );
 struct msurface_s *pfnTraceSurface( int ground, float *vstart, float *vend );
-movevars_t *pfnGetMoveVars( void );
 void CL_EnableScissor( scissor_state_t *scissor, int x, int y, int width, int height );
 void CL_DisableScissor( scissor_state_t *scissor );
 qboolean CL_Scissor( const scissor_state_t *scissor, float *x, float *y, float *width, float *height, float *u0, float *v0, float *u1, float *v1 );
-struct cl_entity_s *CL_GetEntityByIndex( int index );
 
-_inline cl_entity_t *CL_EDICT_NUM( int n )
+static inline cl_entity_t *CL_EDICT_NUM( int n )
 {
 	if( !clgame.entities )
 	{
@@ -864,24 +857,65 @@ _inline cl_entity_t *CL_EDICT_NUM( int n )
 	return NULL;
 }
 
+static inline cl_entity_t *CL_GetEntityByIndex( int index )
+{
+	if( !clgame.entities ) // not in game yet
+		return NULL;
+
+	if( index < 0 || index >= clgame.maxEntities )
+		return NULL;
+
+	if( index == 0 )
+		return clgame.entities;
+
+	return CL_EDICT_NUM( index );
+}
+
+static inline model_t *CL_ModelHandle( int modelindex )
+{
+	return modelindex >= 0 && modelindex < MAX_MODELS ? cl.models[modelindex] : NULL;
+}
+
+#if XASH_DREAMCAST
+static inline qboolean CL__IsThirdPerson( void ) // renamed due to linking
+#else
+static inline qboolean CL_IsThirdPerson( void )
+#endif
+{
+	return clgame.dllFuncs.CL_IsThirdPerson() ? true : false;
+}
+
+static inline cl_entity_t *CL_GetLocalPlayer( void )
+{
+	cl_entity_t	*player = CL_GetEntityByIndex( cl.playernum + 1 );
+
+	// HACKHACK: GoldSrc doesn't do this, but some mods actually check it for null pointer
+	// this is a lesser evil than changing semantics of HUD_VidInit and call it after entities are allocated
+	if( !player )
+		Con_Printf( S_WARN "%s: client entities are not initialized yet! Returning NULL...\n", __func__ );
+
+	return player;
+}
+
 //
 // cl_parse.c
 //
 void CL_ParseSetAngle( sizebuf_t *msg );
-void CL_ParseServerData( sizebuf_t *msg, qboolean legacy );
-void CL_ParseLightStyle( sizebuf_t *msg );
-void CL_UpdateUserinfo( sizebuf_t *msg, qboolean legacy );
+void CL_ParseServerData( sizebuf_t *msg, connprotocol_t proto );
+void CL_ParseLightStyle( sizebuf_t *msg, connprotocol_t proto );
+void CL_UpdateUserinfo( sizebuf_t *msg, connprotocol_t proto );
 void CL_ParseResource( sizebuf_t *msg );
-void CL_ParseClientData( sizebuf_t *msg );
+void CL_ParseClientData( sizebuf_t *msg, connprotocol_t proto );
 void CL_UpdateUserPings( sizebuf_t *msg );
-void CL_ParseParticles( sizebuf_t *msg );
+void CL_ParseParticles( sizebuf_t *msg, connprotocol_t proto );
 void CL_ParseRestoreSoundPacket( sizebuf_t *msg );
-void CL_ParseBaseline( sizebuf_t *msg, qboolean legacy );
-void CL_ParseSignon( sizebuf_t *msg );
+void CL_ParseBaseline( sizebuf_t *msg, connprotocol_t proto );
+void CL_ParseSignon( sizebuf_t *msg, connprotocol_t proto );
 void CL_ParseRestore( sizebuf_t *msg );
 void CL_ParseStaticDecal( sizebuf_t *msg );
 void CL_ParseAddAngle( sizebuf_t *msg );
-void CL_RegisterUserMessage( sizebuf_t *msg );
+void CL_RegisterUserMessage( sizebuf_t *msg, connprotocol_t proto );
+void CL_ParseResourceList( sizebuf_t *msg, connprotocol_t proto );
 void CL_ParseMovevars( sizebuf_t *msg );
 void CL_ParseResourceRequest( sizebuf_t *msg );
 void CL_ParseCustomization( sizebuf_t *msg );
@@ -890,18 +924,22 @@ void CL_ParseSoundFade( sizebuf_t *msg );
 void CL_ParseFileTransferFailed( sizebuf_t *msg );
 void CL_ParseHLTV( sizebuf_t *msg );
 void CL_ParseDirector( sizebuf_t *msg );
+void CL_ParseVoiceInit( sizebuf_t *msg );
+void CL_ParseVoiceData( sizebuf_t *msg, connprotocol_t proto );
 void CL_ParseResLocation( sizebuf_t *msg );
 void CL_ParseCvarValue( sizebuf_t *msg, const qboolean ext, const connprotocol_t proto );
 void CL_ParseServerMessage( sizebuf_t *msg );
-void CL_ParseTempEntity( sizebuf_t *msg );
+qboolean CL_ParseCommonDLLMessage( sizebuf_t *msg, connprotocol_t proto, int svc_num, int startoffset );
+void CL_ParseTempEntity( sizebuf_t *msg, connprotocol_t proto );
 qboolean CL_DispatchUserMessage( const char *pszName, int iSize, void *pbuf );
 qboolean CL_RequestMissingResources( void );
-void CL_RegisterResources ( sizebuf_t *msg );
+void CL_RegisterResources( sizebuf_t *msg, connprotocol_t proto );
 void CL_ParseViewEntity( sizebuf_t *msg );
-void CL_ParseServerTime( sizebuf_t *msg );
-void CL_ParseUserMessage( sizebuf_t *msg, int svc_num );
+void CL_ParseServerTime( sizebuf_t *msg, connprotocol_t proto );
+void CL_ParseUserMessage( sizebuf_t *msg, int svc_num, connprotocol_t proto );
 void CL_ParseFinaleCutscene( sizebuf_t *msg, int level );
 void CL_ParseTextMessage( sizebuf_t *msg );
+void CL_ParseExec( sizebuf_t *msg );
 void CL_BatchResourceRequest( qboolean initialize );
 int CL_EstimateNeededResources( void );
 
@@ -912,12 +950,18 @@ void CL_ParseLegacyServerMessage( sizebuf_t *msg );
 void CL_LegacyPrecache_f( void );
 
 //
+// cl_parse_gs.c
+//
+void CL_ParseGoldSrcServerMessage( sizebuf_t *msg );
+
+//
 // cl_scrn.c
 //
 void SCR_VidInit( void );
 void SCR_TileClear( void );
 void SCR_DirtyScreen( void );
 void SCR_EndLoadingPlaque( void );
+int SCR_LoadPauseIcon( void );
 void SCR_RegisterTextures( void );
 void SCR_LoadCreditsFont( void );
 void SCR_MakeScreenShot( void );
@@ -927,6 +971,7 @@ void SCR_RSpeeds( void );
 void SCR_DrawFPS( int height );
 void SCR_DrawPos( void );
 void SCR_DrawEnts( void );
+void SCR_DrawUserCmd( void );
 
 //
 // cl_netgraph.c
@@ -952,7 +997,6 @@ void CL_SetSolidPlayers( int playernum );
 void CL_InitClientMove( void );
 void CL_PredictMovement( qboolean repredicting );
 void CL_CheckPredictionError( void );
-qboolean CL_IsPredicted( void );
 int CL_WaterEntity( const float *rgflPos );
 cl_entity_t *CL_GetWaterEntity( const float *rgflPos );
 pmtrace_t *CL_VisTraceLine( vec3_t start, vec3_t end, int flags );
@@ -975,7 +1019,9 @@ void CL_ParseQuakeMessage( sizebuf_t *msg );
 //
 struct channel_s;
 struct rawchan_s;
-int CL_ParsePacketEntities( sizebuf_t *msg, qboolean delta );
+qboolean CL_ValidateDeltaPacket( uint oldpacket, frame_t *oldframe );
+int CL_UpdateOldEntNum( int oldindex, frame_t *oldframe, entity_state_t **oldent );
+int CL_ParsePacketEntities( sizebuf_t *msg, qboolean delta, connprotocol_t proto );
 qboolean CL_AddVisibleEntity( cl_entity_t *ent, int entityType );
 void CL_ResetLatchedVars( cl_entity_t *ent, qboolean full_reset );
 qboolean CL_GetEntitySpatialization( struct channel_s *ch );
@@ -983,8 +1029,12 @@ qboolean CL_GetMovieSpatialization( struct rawchan_s *ch );
 void CL_ComputePlayerOrigin( cl_entity_t *clent );
 void CL_ProcessPacket( frame_t *frame );
 void CL_MoveThirdpersonCamera( void );
-qboolean CL_IsPlayerIndex( int idx );
 void CL_EmitEntities( void );
+
+static inline qboolean CL_IsPlayerIndex( int idx )
+{
+	return idx >= 1 && idx <= cl.maxclients ? true : false;
+}
 
 //
 // cl_remap.c
@@ -1025,7 +1075,6 @@ void CL_InitParticles( void );
 void CL_ClearParticles( void );
 void CL_FreeParticles( void );
 void CL_InitTempEnts( void );
-void CL_ClearTempEnts( void );
 void CL_FreeTempEnts( void );
 void CL_TempEntUpdate( void );
 void CL_InitViewBeams( void );
@@ -1154,10 +1203,9 @@ void Key_Init( void );
 void Key_WriteBindings( dc_file_t *f );
 const char *Key_GetBinding( int keynum );
 void Key_SetBinding( int keynum, const char *binding );
+const char *Key_LookupBinding( const char *pBinding );
 void Key_ClearStates( void );
 const char *Key_KeynumToString( int keynum );
-int Key_StringToKeynum( const char *str );
-int Key_GetKey( const char *binding );
 void Key_EnumCmds_f( void );
 void Key_SetKeyDest( int key_dest );
 void Key_EnableTextInput( qboolean enable, qboolean force );

@@ -175,7 +175,7 @@ typedef struct fs_api_t
 	int (*UnGetc)( dc_file_t *file, char c );
 	int (*Getc)( dc_file_t *file );
 	int (*VPrintf)( dc_file_t *file, const char *format, va_list ap );
-	int (*Printf)( dc_file_t *file, const char *format, ... ) _format( 2 );
+	int (*Printf)( dc_file_t *file, const char *format, ... ) FORMAT_CHECK( 2 );
 	int (*Print)( dc_file_t *file, const char *msg );
 	fs_offset_t (*FileLength)( dc_file_t *f );
 	qboolean (*FileCopy)( dc_file_t *pOutput, dc_file_t *pInput, int fileSize );
@@ -207,7 +207,8 @@ typedef struct fs_api_t
 	// like LoadFile but returns pointer that can be free'd using standard library function
 	byte *(*LoadFileMalloc)( const char *path, fs_offset_t *filesizeptr, qboolean gamedironly );
 
-	// queries supported archive formats
+	// **** archive interface ****
+	// query supported formats
 	qboolean (*IsArchiveExtensionSupported)( const char *ext, uint flags );
 
 	// to speed up archive lookups, this function can be used to get the archive object by it's name
@@ -224,6 +225,9 @@ typedef struct fs_api_t
 	// Use FindFileInArchive to retrieve real path from caseinsensitive FS emulation!
 	byte *(*LoadFileFromArchive)( searchpath_t *sp, const char *path, int pack_ind, fs_offset_t *filesizeptr, const qboolean sys_malloc );
 
+	// gets current root directory, set by InitStdio
+	qboolean (*GetRootDirectory)( char *path, size_t size );
+
 	void (*MakeGameInfo)( void );
 
 } fs_api_t;
@@ -231,17 +235,19 @@ typedef struct fs_api_t
 typedef struct fs_interface_t
 {
 	// logging
-	void    (*_Con_Printf)( const char *fmt, ... ) _format( 1 ); // typical console allowed messages
-	void    (*_Con_DPrintf)( const char *fmt, ... ) _format( 1 ); // -dev 1
-	void    (*_Con_Reportf)( const char *fmt, ... ) _format( 1 ); // -dev 2
+	void    (*_Con_Printf)( const char *fmt, ... ) FORMAT_CHECK( 1 ); // typical console allowed messages
+	void    (*_Con_DPrintf)( const char *fmt, ... ) FORMAT_CHECK( 1 ); // -dev 1
+	void    (*_Con_Reportf)( const char *fmt, ... ) FORMAT_CHECK( 1 ); // -dev 2
 
-	void    (*_Sys_Error)( const char *fmt, ... ) _format( 1 );
+	void    (*_Sys_Error)( const char *fmt, ... ) FORMAT_CHECK( 1 );
 
 	// memory
 	poolhandle_t (*_Mem_AllocPool)( const char *name, const char *filename, int fileline );
 	void  (*_Mem_FreePool)( poolhandle_t *poolptr, const char *filename, int fileline );
-	void *(*_Mem_Alloc)( poolhandle_t poolptr, size_t size, qboolean clear, const char *filename, int fileline ) ALLOC_CHECK( 2 );
-	void *(*_Mem_Realloc)( poolhandle_t poolptr, void *memptr, size_t size, qboolean clear, const char *filename, int fileline ) ALLOC_CHECK( 3 );
+	void *(*_Mem_Alloc)( poolhandle_t poolptr, size_t size, qboolean clear, const char *filename, int fileline )
+		ALLOC_CHECK( 2 ) WARN_UNUSED_RESULT;
+	void *(*_Mem_Realloc)( poolhandle_t poolptr, void *memptr, size_t size, qboolean clear, const char *filename, int fileline )
+		ALLOC_CHECK( 3 ) WARN_UNUSED_RESULT;
 	void  (*_Mem_Free)( void *data, const char *filename, int fileline );
 
 	// platform

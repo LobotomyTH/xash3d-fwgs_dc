@@ -44,7 +44,7 @@ void R_AllowFog( qboolean allowed )
 {
 	if( allowed )
 	{
-		if( glState.isFogEnabled )
+		if( glState.isFogEnabled && gl_fog.value )
 			glEnable( GL_FOG );
 	}
 	else
@@ -556,7 +556,7 @@ void R_SetupGL( qboolean set_gl_state )
 
 	glMatrixMode( GL_MODELVIEW );
 	GL_LoadMatrix( RI.worldviewMatrix );
-
+#if !XASH_DREAMCAST
 	if( FBitSet( RI.params, RP_CLIPPLANE ))
 	{
 		GLdouble	clip[4];
@@ -566,12 +566,11 @@ void R_SetupGL( qboolean set_gl_state )
 		clip[1] = p->normal[1];
 		clip[2] = p->normal[2];
 		clip[3] = -p->dist;
-		#if !XASH_DREAMCAST
-		glClipPlane( GL_CLIP_PLANE0, clip );
-		glEnable( GL_CLIP_PLANE0 );
-		#endif
-	}
 
+		pglClipPlane( GL_CLIP_PLANE0, clip );
+		pglEnable( GL_CLIP_PLANE0 );
+	}
+#endif
 	GL_Cull( GL_FRONT );
 
 	glDisable( GL_BLEND );
@@ -601,6 +600,7 @@ watertexture to grab fog values from it
 static gl_texture_t *R_RecursiveFindWaterTexture( const mnode_t *node, const mnode_t *ignore, qboolean down )
 {
 	gl_texture_t *tex = NULL;
+	mnode_t *children[2];
 
 	// assure the initial node is not null
 	// we could check it here, but we would rather check it
@@ -638,15 +638,17 @@ static gl_texture_t *R_RecursiveFindWaterTexture( const mnode_t *node, const mno
 
 	// this is a regular node
 	// traverse children
-	if( node->children[0] && ( node->children[0] != ignore ))
+	node_children( children, node, WORLDMODEL );
+
+	if( children[0] && ( children[0] != ignore ))
 	{
-		tex = R_RecursiveFindWaterTexture( node->children[0], node, true );
+		tex = R_RecursiveFindWaterTexture( children[0], node, true );
 		if( tex ) return tex;
 	}
 
-	if( node->children[1] && ( node->children[1] != ignore ))
+	if( children[1] && ( children[1] != ignore ))
 	{
-		tex = R_RecursiveFindWaterTexture( node->children[1], node, true );
+		tex = R_RecursiveFindWaterTexture( children[1], node, true );
 		if( tex )	return tex;
 	}
 
@@ -802,7 +804,8 @@ R_DrawFog
 void R_DrawFog( void )
 {
 #if !XASH_DREAMCAST
-	if( !RI.fogEnabled ) return;
+	if( !RI.fogEnabled || !gl_fog.value )
+		return;
 
 	glEnable( GL_FOG );
 	if( ENGINE_GET_PARM( PARM_QUAKE_COMPATIBLE ))
@@ -840,11 +843,11 @@ static void R_DrawEntitiesOnList( void )
 		case mod_brush:
 			R_DrawBrushModel( RI.currententity );
 			break;
+#if !XASH_DREAMCAST
 		case mod_alias:
-		#if !XASH_DREAMCAST
 			R_DrawAliasModel( RI.currententity );
-		#endif
 			break;
+#endif
 		case mod_studio:
 			R_DrawStudioModel( RI.currententity );
 			break;
@@ -909,11 +912,11 @@ static void R_DrawEntitiesOnList( void )
 		case mod_brush:
 			R_DrawBrushModel( RI.currententity );
 			break;
+#if !XASH_DREAMCAST
 		case mod_alias:
-		#if !XASH_DREAMCAST
 			R_DrawAliasModel( RI.currententity );
-		#endif
 			break;
+#endif
 		case mod_studio:
 			R_DrawStudioModel( RI.currententity );
 			break;

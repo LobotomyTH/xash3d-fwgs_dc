@@ -176,7 +176,6 @@ static dlumpinfo_t *W_FindLump(wfile_t *wad, const char *name, const signed char
     {
         int middle = (left + right) / 2;
         int diff = Q_stricmp(wad->lumps[middle].name, name);
-
         if(!diff)
         {
             if((matchtype == TYP_ANY) ||
@@ -457,7 +456,6 @@ static int FS_FindFile_WAD( searchpath_t *search, const char *path, char *fixedn
 		string wadbasename;
 
 		COM_FileBase( wadname, wadbasename, sizeof( wadbasename ));
-
 		Q_snprintf( wadname, sizeof( wadname ), "%s.wad", wadbasename );
 		anywadname = false;
 	}

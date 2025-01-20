@@ -49,13 +49,16 @@ CL_FillRGBA
 
 =============
 */
-static void CL_FillRGBA( float _x, float _y, float _w, float _h, int r, int g, int b, int a )
+static void CL_FillRGBA( int rendermode, float _x, float _y, float _w, float _h, byte r, byte g, byte b, byte a )
 {
 	glDisable( GL_TEXTURE_2D );
 	glEnable( GL_BLEND );
 	glTexEnvi( GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE );
-	glBlendFunc( GL_SRC_ALPHA, GL_ONE );
-	glColor4f( r / 255.0f, g / 255.0f, b / 255.0f, a / 255.0f );
+	if( rendermode == kRenderTransAdd )
+		glBlendFunc( GL_SRC_ALPHA, GL_ONE );
+	else
+		glBlendFunc( GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA );
+	glColor4ub( r, g, b, a );
 
 	glBegin( GL_QUADS );
 		glVertex2f( _x, _y );
@@ -64,33 +67,6 @@ static void CL_FillRGBA( float _x, float _y, float _w, float _h, int r, int g, i
 		glVertex2f( _x, _y + _h );
 	glEnd ();
 
-	glColor3f( 1.0f, 1.0f, 1.0f );
-	glEnable( GL_TEXTURE_2D );
-	glDisable( GL_BLEND );
-}
-
-/*
-=============
-pfnFillRGBABlend
-
-=============
-*/
-static void GAME_EXPORT CL_FillRGBABlend( float _x, float _y, float _w, float _h, int r, int g, int b, int a )
-{
-	glDisable( GL_TEXTURE_2D );
-	glEnable( GL_BLEND );
-	glTexEnvi( GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE );
-	glBlendFunc( GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA );
-	glColor4f( r / 255.0f, g / 255.0f, b / 255.0f, a / 255.0f );
-
-	glBegin( GL_QUADS );
-		glVertex2f( _x, _y );
-		glVertex2f( _x + _w, _y );
-		glVertex2f( _x + _w, _y + _h );
-		glVertex2f( _x, _y + _h );
-	glEnd ();
-
-	glColor3f( 1.0f, 1.0f, 1.0f );
 	glEnable( GL_TEXTURE_2D );
 	glDisable( GL_BLEND );
 }
@@ -102,14 +78,15 @@ static void Mod_BrushUnloadTextures( model_t *mod )
 	for( i = 0; i < mod->numtextures; i++ )
 	{
 		texture_t *tx = mod->textures[i];
-		if( !tx || tx->gl_texturenum == tr.defaultTexture )
+		if( !tx )
 			continue; // free slot
 
-		GL_FreeTexture( tx->gl_texturenum );    // main texture
-		GL_FreeTexture( tx->fb_texturenum );    // luma texture
+		if( tx->gl_texturenum != tr.defaultTexture )
+			GL_FreeTexture( tx->gl_texturenum ); // main texture
+		GL_FreeTexture( tx->fb_texturenum ); // luma texture
+		GL_FreeTexture( tx->dt_texturenum ); // detail texture
 	}
 }
-
 static void Mod_UnloadTextures( model_t *mod )
 {
 	Assert( mod != NULL );
@@ -119,11 +96,11 @@ static void Mod_UnloadTextures( model_t *mod )
 	case mod_studio:
 		Mod_StudioUnloadTextures( mod->cache.data );
 		break;
+#if !XASH_DREAMCAST
 	case mod_alias:
-	#if !XASH_DREAMCAST
 		Mod_AliasUnloadTextures( mod->cache.data );
-	#endif
 		break;
+#endif
 	case mod_brush:
 		Mod_BrushUnloadTextures( mod );
 		break;
@@ -148,17 +125,17 @@ static qboolean Mod_ProcessRenderData( model_t *mod, qboolean create, const byte
 				// Mod_LoadStudioModel( mod, buf, loaded );
 				break;
 			case mod_sprite:
-			#if XASH_DREAMCAST
+#if XASH_DREAMCAST
 				DC_Mod_LoadSpriteModel( mod, buf, &loaded, mod->numtexinfo );
-			#else
+#else
 				Mod_LoadSpriteModel( mod, buf, &loaded, mod->numtexinfo );
-			#endif
+#endif
 				break;
+#if !XASH_DREAMCAST
 			case mod_alias:
-			#if !XASH_DREAMCAST
 				_Mod_LoadAliasModel( mod, buf, &loaded );
-			#endif
 				break;
+#endif
 			case mod_brush:
 				// Mod_LoadBrushModel( mod, buf, loaded );
 				break;
@@ -430,15 +407,15 @@ static const char *R_GetConfigName( void )
 	return "opengl";
 }
 
-static ref_interface_t gReffuncs =
+static const ref_interface_t gReffuncs =
 {
-	#if XASH_DREAMCAST
+#if XASH_DREAMCAST
 	DC_R_Init,
 	DC_R_Shutdown,
-	#else
+#else
 	R_Init,
 	R_Shutdown,
-	#endif
+#endif
 	R_GetConfigName,
 	R_SetDisplayTransform,
 
@@ -474,9 +451,7 @@ static ref_interface_t gReffuncs =
 	R_Set2DMode,
 	R_DrawStretchRaw,
 	R_DrawStretchPic,
-	R_DrawTileClear,
 	CL_FillRGBA,
-	CL_FillRGBABlend,
 	R_WorldToScreen,
 
 	VID_ScreenShot,
@@ -500,7 +475,6 @@ static ref_interface_t gReffuncs =
 	R_GetSpriteParms,
 	R_GetSpriteTexture,
 
-	Mod_LoadMapSprite,
 	Mod_ProcessRenderData,
 	Mod_StudioLoadTextures,
 

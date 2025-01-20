@@ -160,6 +160,7 @@ static qboolean GL_UpdateContext( void )
 
 qboolean R_Init_Video( const int type )
 {
+    GLdcConfig config;
 	qboolean retval;
 
 	if( type != REF_GL ) // software not supported 
@@ -171,6 +172,22 @@ qboolean R_Init_Video( const int type )
 	{
 		return retval;
 	}
+
+    glKosInitConfig(&config);
+    config.autosort_enabled = GL_FALSE;
+    config.fsaa_enabled = GL_FALSE;
+
+    config.initial_op_capacity = 4096 * 3;
+    config.initial_pt_capacity = 256 * 3;
+    config.initial_tr_capacity = 1024 * 3;
+    config.initial_immediate_capacity = 256 * 3;
+
+    // RGBA4444 is the fastest general format - 8888 will cause a perf issue
+    config.internal_palette_format = GL_RGBA4;
+
+    config.texture_twiddle = GL_FALSE;
+
+    glKosInitEx(&config);
 
 	host.renderinfo_changed = false;
 	glw_state.safe = 0;
@@ -210,7 +227,6 @@ qboolean VID_SetMode(void) {
 
 
     vid_init(dm, pm); 
-	glKosInit();
 
     return true; 
 }

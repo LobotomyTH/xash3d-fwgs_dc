@@ -59,7 +59,7 @@ gl_texture_t *R_GetTexture( GLenum texnum )
 GL_TargetToString
 =================
 */
-static const char *GL_TargetToString( GLenum target )
+const char *GL_TargetToString( GLenum target )
 {
 	switch( target )
 	{
@@ -249,7 +249,6 @@ R_SetTextureParameters
 void R_SetTextureParameters( void )
 {
 	int	i;
-
 
 	if( GL_Support( GL_ANISOTROPY_EXT ))
 	{
@@ -849,7 +848,6 @@ static byte *GL_ApplyFilter( const byte *source, int width, int height )
 	return out;
 }
 
-
 /*
 =================
 GL_BuildMipMap
@@ -1402,7 +1400,6 @@ static gl_texture_t *GL_AllocTexture( const char *name, texFlags_t flags )
 	return tex;
 }
 
-
 /*
 ================
 GL_DeleteTexture
@@ -1479,7 +1476,6 @@ recalc image room
 */
 void GL_UpdateTexSize( int texnum, int width, int height, int depth )
 {
-
 	int		i, j, texsize;
 	int		numSides;
 	gl_texture_t	*tex;
@@ -1502,7 +1498,6 @@ void GL_UpdateTexSize( int texnum, int width, int height, int depth )
 			tex->size += texsize;
 		}
 	}
-
 }
 
 /*
@@ -2028,7 +2023,6 @@ GL_CreateInternalTextures
 */
 static void GL_CreateInternalTextures( void )
 {
-
 	int	dx2, dy, d;
 	int	x, y;
 	rgbdata_t	*pic;
@@ -2084,7 +2078,6 @@ static void GL_CreateInternalTextures( void )
 	// cinematic dummy
 	pic = GL_FakeImage( 640, 100, 1, IMAGE_HAS_COLOR );
 	tr.cinTexture = GL_LoadTextureInternal( "*cintexture", pic, TF_NOMIPMAP|TF_CLAMP );
-
 }
 
 /*
@@ -2320,7 +2313,6 @@ void R_InitImages( void )
 	// validate cvars
 	R_SetTextureParameters();
 	GL_CreateInternalTextures();
-	R_InitRipples();
 
 	gEngfuncs_gl.Cmd_AddCommand( "texturelist", R_TextureList_f, "display loaded textures list" );
 }

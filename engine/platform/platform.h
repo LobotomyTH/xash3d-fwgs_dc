@@ -31,7 +31,6 @@ GNU General Public License for more details.
 ==============================================================================
 */
 double Platform_DoubleTime( void );
-void Platform_Sleep( int msec );
 void Platform_ShellExecute( const char *path, const char *parms );
 void Platform_MessageBox( const char *title, const char *message, qboolean parentMainWindow );
 void Platform_SetStatus( const char *status );
@@ -51,6 +50,8 @@ void IOS_LaunchDialog( void );
 
 #if XASH_POSIX
 void Posix_Daemonize( void );
+void Posix_SetupSigtermHandling( void );
+char *Posix_Input( void );
 #endif
 
 #if XASH_SDL
@@ -100,6 +101,7 @@ void DOS_Shutdown( void );
 void Linux_Init( void );
 void Linux_Shutdown( void );
 void Linux_SetTimer( float time );
+int Linux_GetProcessID( void );
 #endif
 
 static inline void Platform_Init( qboolean con_showalways )
@@ -156,6 +158,40 @@ static inline qboolean Sys_DebuggerPresent( void )
 #endif
 }
 
+static inline void Platform_SetupSigtermHandling( void )
+{
+#if XASH_POSIX
+	Posix_SetupSigtermHandling( );
+#endif
+}
+
+static inline void Platform_Sleep( int msec )
+{
+#if XASH_TIMER == TIMER_SDL
+	SDL_Delay( msec );
+#elif XASH_TIMER == TIMER_POSIX || XASH_TIMER == TIMER_KOS
+	usleep( msec * 1000 );
+#elif XASH_TIMER == TIMER_WIN32
+	Sleep( msec );
+#else
+	// stub
+#endif
+}
+
+#if XASH_WIN32 || XASH_FREEBSD || XASH_NETBSD || XASH_OPENBSD || XASH_ANDROID || XASH_LINUX
+void Sys_SetupCrashHandler( void );
+void Sys_RestoreCrashHandler( void );
+#else
+static inline void Sys_SetupCrashHandler( void )
+{
+}
+
+static inline void Sys_RestoreCrashHandler( void )
+{
+}
+#endif
+
+
 /*
 ==============================================================================
 
@@ -203,6 +239,17 @@ static inline void Platform_SetTimer( float time )
 {
 #if XASH_LINUX
 	Linux_SetTimer( time );
+#endif
+}
+
+static inline char *Platform_Input( void )
+{
+#if XASH_WIN32
+	return Wcon_Input();
+#elif XASH_POSIX && !XASH_MOBILE_PLATFORM && !XASH_LOW_MEMORY
+	return Posix_Input();
+#else
+	return NULL;
 #endif
 }
 
@@ -279,10 +326,12 @@ qboolean VoiceCapture_Lock( qboolean lock );
 	#define INLINE_RAISE(x) asm volatile( "int $3;" );
 	#define INLINE_NANOSLEEP1() // nothing!
 #elif XASH_LINUX && XASH_ARM && !XASH_64BIT
+	#include <sys/syscall.h>
+	#include <sys/types.h>
 	#define INLINE_RAISE(x) do \
 		{ \
 			int raise_pid = getpid(); \
-			int raise_tid = gettid(); \
+			pid_t raise_tid = Linux_GetProcessID(); \
 			int raise_sig = (x); \
 			__asm__ volatile (  \
 				"mov r7,#268\n\t" \
@@ -310,10 +359,12 @@ qboolean VoiceCapture_Lock( qboolean lock );
 			); \
 		} while( 0 )
 #elif XASH_LINUX && XASH_ARM && XASH_64BIT
+	#include <sys/syscall.h>
+	#include <sys/types.h>
 	#define INLINE_RAISE(x) do \
 		{ \
 			int raise_pid = getpid(); \
-			int raise_tid = gettid(); \
+			pid_t raise_tid = Linux_GetProcessID(); \
 			int raise_sig = (x); \
 			__asm__ volatile ( \
 				"mov x8,#131\n\t" \
@@ -341,8 +392,8 @@ qboolean VoiceCapture_Lock( qboolean lock );
 			); \
 		} while( 0 )
 #elif XASH_LINUX
-	#ifdef __NR_tgkill
-		#define INLINE_RAISE(x) syscall( __NR_tgkill, getpid(), gettid(), x )
+	#if defined( __NR_tgkill )
+		#define INLINE_RAISE(x) syscall( __NR_tgkill, getpid(), Linux_GetProcessID(), x )
 	#else // __NR_tgkill
 		#define INLINE_RAISE(x) raise(x)
 	#endif // __NR_tgkill

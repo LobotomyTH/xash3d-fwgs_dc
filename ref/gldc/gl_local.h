@@ -33,7 +33,6 @@ GNU General Public License for more details.
 #include "pm_movevars.h"
 #include "cvardef.h"
 #include "gl_export.h"
-
 #include "wadfile.h"
 #include "common/mod_local.h"
 
@@ -45,7 +44,6 @@ void VGL_ShimEndFrame( void );
 #if !defined(XASH_GL_STATIC)
 #include "gl2_shim/gl2_shim.h"
 #endif
-
 
 #ifndef offsetof
 #ifdef __GNUC__
@@ -91,7 +89,7 @@ extern poolhandle_t r_temppool;
 	#define MAX_DETAILTEXTURES 16		
 #endif
 
-#define LIGHTMAP_BPP	2 //1 2 3 4
+#define LIGHTMAP_BPP	4 //1 2 3 4
 
 #if LIGHTMAP_BPP == 1
 #define LIGHTMAP_FORMAT	PF_RGB_332
@@ -287,6 +285,12 @@ typedef struct
 	movevars_t *movevars;
 	color24 *palette;
 	cl_entity_t *viewent;
+	dlight_t *dlights;
+	dlight_t *elights;
+	byte *texgammatable;
+	uint *lightgammatable;
+	uint *lineargammatable;
+	uint *screengammatable;
 
 	uint max_entities;
 } gl_globals_t;
@@ -399,7 +403,6 @@ void R_ClearDecals( void );
 // gl_draw.c
 //
 void R_Set2DMode( qboolean enable );
-void R_DrawTileClear( int texnum, int x, int y, int w, int h );
 void R_UploadStretchRaw( int texture, int cols, int rows, int width, int height, const byte *data );
 
 //
@@ -413,6 +416,7 @@ void R_DrawModelHull( void );
 //
 void R_SetTextureParameters( void );
 gl_texture_t *R_GetTexture( GLenum texnum );
+const char *GL_TargetToString( GLenum target );
 #define GL_LoadTextureInternal( name, pic, flags ) GL_LoadTextureFromBuffer( name, pic, flags, false )
 #define GL_UpdateTextureInternal( name, pic, flags ) GL_LoadTextureFromBuffer( name, pic, flags, true )
 int GL_LoadTexture( const char *name, const byte *buf, size_t size, int flags );
@@ -433,15 +437,14 @@ void R_TextureList_f( void );
 void R_InitImages( void );
 void R_ShutdownImages( void );
 int GL_TexMemory( void );
-qboolean R_SearchForTextureReplacement( char *out, size_t size, const char *modelname, const char *fmt, ... ) _format( 4 );
+qboolean R_SearchForTextureReplacement( char *out, size_t size, const char *modelname, const char *fmt, ... ) FORMAT_CHECK( 4 );
 void R_TextureReplacementReport( const char *modelname, int gl_texturenum, const char *foundpath );
 
 //
 // gl_rlight.c
 //
-void CL_RunLightStyles( void );
+void CL_RunLightStyles( lightstyle_t *ls );
 void R_PushDlights( void );
-void R_AnimateLight( void );
 void R_GetLightSpot( vec3_t lightspot );
 void R_MarkLights( dlight_t *light, int bit, mnode_t *node );
 colorVec R_LightVec( const vec3_t start, const vec3_t end, vec3_t lightspot, vec3_t lightvec );
@@ -492,8 +495,6 @@ void R_DrawWaterSurfaces( void );
 void R_DrawBrushModel( cl_entity_t *e );
 void GL_SubdivideSurface( model_t *mod, msurface_t *fa );
 void GL_BuildPolygonFromSurface( model_t *mod, msurface_t *fa );
-void DrawGLPoly( glpoly2_t *p, float xScale, float yScale );
-texture_t *R_TextureAnimation( msurface_t *s );
 void GL_SetupFogColorForSurfaces( void );
 void R_DrawAlphaTextureChains( void );
 void GL_RebuildLightmaps( void );
@@ -560,11 +561,10 @@ void R_ClearSkyBox( void );
 void R_DrawSkyBox( void );
 void R_DrawClouds( void );
 void R_UnloadSkybox( void );
-void EmitWaterPolys( msurface_t *warp, qboolean reverse );
-void R_InitRipples( void );
+void EmitWaterPolys( msurface_t *warp, qboolean reverse, qboolean ripples );
 void R_ResetRipples( void );
 void R_AnimateRipples( void );
-void R_UploadRipples( texture_t *image );
+qboolean R_UploadRipples( texture_t *image );
 
 //#include "vid_common.h"
 
@@ -604,7 +604,6 @@ qboolean R_CullBox( const vec3_t mins, const vec3_t maxs );
 int R_WorldToScreen( const vec3_t point, vec3_t screen );
 void R_ScreenToWorld( const vec3_t screen, vec3_t point );
 qboolean R_AddEntity( struct cl_entity_s *pRefEntity, int entityType );
-void Mod_LoadMapSprite( struct model_s *mod, const void *buffer, size_t size, qboolean *loaded );
 void Mod_SpriteUnloadTextures( void *data );
 void Mod_UnloadAliasModel( struct model_s *mod );
 void Mod_AliasUnloadTextures( void *data );
@@ -629,8 +628,6 @@ void GL_CheckForErrors_( const char *filename, const int fileline );
 const char *GL_ErrorString( int err );
 qboolean GL_Support( int r_ext );
 int GL_MaxTextureUnits( void );
-qboolean GL_CheckExtension( const char *name, const dllfunc_t *funcs, const char *cvarname, int r_ext, float minver );
-void GL_SetExtension( int r_ext, int enable );
 
 //
 // gl_triapi.c
@@ -749,8 +746,6 @@ typedef struct
 
 typedef struct
 {
-
-	int width, height;
 	int		activeTMU;
 	GLint		currentTextures[MAX_TEXTURE_UNITS];
 	GLint		currentTexturesIndex[MAX_TEXTURE_UNITS];
@@ -803,6 +798,35 @@ static inline model_t *CL_ModelHandle( int index )
 	return gp_cl->models[index];
 }
 
+static inline byte TextureToGamma( byte b )
+{
+	return !FBitSet( gp_host->features, ENGINE_LINEAR_GAMMA_SPACE ) ? tr.texgammatable[b] : b;
+}
+
+static inline uint LightToTexGamma( uint b )
+{
+	if( unlikely( b >= 1024 ))
+		return 0;
+
+	return !FBitSet( gp_host->features, ENGINE_LINEAR_GAMMA_SPACE ) ? tr.lightgammatable[b] : b;
+}
+
+static inline uint ScreenGammaTable( uint b )
+{
+	if( unlikely( b >= 1024 ))
+		return 0;
+
+	return !FBitSet( gp_host->features, ENGINE_LINEAR_GAMMA_SPACE ) ? tr.screengammatable[b] : b;
+}
+
+static inline uint LinearGammaTable( uint b )
+{
+	if( unlikely( b >= 1024 ))
+		return 0;
+
+	return !FBitSet( gp_host->features, ENGINE_LINEAR_GAMMA_SPACE ) ? tr.lineargammatable[b] : b;
+}
+
 #define WORLDMODEL (gp_cl->models[1])
 
 //
@@ -824,6 +848,7 @@ extern convar_t	gl_test;		// cvar to testify new effects
 extern convar_t	gl_msaa;
 extern convar_t	gl_stencilbits;
 extern convar_t	gl_overbright;
+extern convar_t gl_fog;
 
 extern convar_t	r_lighting_extended;
 extern convar_t	r_lighting_ambient;
@@ -840,6 +865,7 @@ extern convar_t	r_vbo_detail;
 extern convar_t	r_vbo_overbrightmode;
 extern convar_t r_studio_sort_textures;
 extern convar_t r_studio_drawelements;
+extern convar_t r_shadows;
 extern convar_t r_ripple;
 extern convar_t r_ripple_updatetime;
 extern convar_t r_ripple_spawntime;

@@ -19,7 +19,7 @@ XASH_CLIENT_OBJS = \
 	engine/client/cl_main.o \
 	engine/client/cl_netgraph.o \
 	engine/client/cl_parse.o \
-	engine/client/cl_parse_48.o \
+	engine/client/cl_parse_gs.o \
 	engine/client/cl_qparse.o \
 	engine/client/cl_pmove.o \
 	engine/client/cl_remap.o \
@@ -38,6 +38,21 @@ XASH_CLIENT_OBJS = \
 	engine/client/keys.o \
 	engine/client/mod_dbghulls.o \
 	engine/client/ref_common.o \
+	engine/client/soundlib/libmpg/dct36.o \
+	engine/client/soundlib/libmpg/dct64.o \
+	engine/client/soundlib/libmpg/format.o \
+	engine/client/soundlib/libmpg/frame.o \
+	engine/client/soundlib/libmpg/index.o \
+	engine/client/soundlib/libmpg/layer3.o \
+	engine/client/soundlib/libmpg/libmpg.o \
+	engine/client/soundlib/libmpg/mpg123.o \
+	engine/client/soundlib/libmpg/parse.o \
+	engine/client/soundlib/libmpg/reader.o \
+	engine/client/soundlib/libmpg/synth.o \
+	engine/client/soundlib/libmpg/tabinit.o \
+	engine/client/soundlib/snd_main.o \
+	engine/client/soundlib/snd_mp3.o \
+	engine/client/soundlib/snd_wav.o \
 	engine/client/s_dsp.o \
 	engine/client/s_load.o \
 	engine/client/s_main.o \
@@ -54,7 +69,6 @@ XASH_OBJS = \
 	engine/common/cmd.o \
 	engine/common/common.o \
 	engine/common/con_utils.o\
-	engine/common/crashhandler.o \
 	engine/common/custom.o \
 	engine/common/cvar.o \
 	engine/common/dedicated.o \
@@ -83,35 +97,23 @@ XASH_OBJS = \
 	engine/common/mod_sprite.o \
 	engine/common/mod_studio.o \
 	engine/common/model.o \
+	engine/common/munge.o \
 	engine/common/net_buffer.o \
 	engine/common/net_chan.o \
 	engine/common/net_encode.o \
 	engine/common/net_ws.o \
-	engine/common/pm_debug.o \
+	engine/common/net_http.o \
 	engine/common/pm_surface.o \
 	engine/common/pm_trace.o \
-	engine/common/soundlib/libmpg/dct36.o \
-	engine/common/soundlib/libmpg/dct64.o \
-	engine/common/soundlib/libmpg/format.o \
-	engine/common/soundlib/libmpg/frame.o \
-	engine/common/soundlib/libmpg/index.o \
-	engine/common/soundlib/libmpg/layer3.o \
-	engine/common/soundlib/libmpg/libmpg.o \
-	engine/common/soundlib/libmpg/mpg123.o \
-	engine/common/soundlib/libmpg/parse.o \
-	engine/common/soundlib/libmpg/reader.o \
-	engine/common/soundlib/libmpg/synth.o \
-	engine/common/soundlib/libmpg/tabinit.o \
-	engine/common/soundlib/snd_main.o \
-	engine/common/soundlib/snd_mp3.o \
 	engine/common/soundlib/snd_utils.o \
-	engine/common/soundlib/snd_wav.o \
 	engine/common/sounds.o \
 	engine/common/sys_con.o \
 	engine/common/system.o \
 	engine/common/world.o \
 	engine/common/zone.o \
 	public/build.o \
+	public/build_vcs.o \
+	public/dllhelpers.o \
 	public/crclib.o \
 	public/crtlib.o \
 	public/matrixlib.o \
@@ -149,21 +151,19 @@ INCLUDE = -Icommon \
 -Iengine/client \
 -Iengine \
 -Iengine/common \
+-Iengine/common/soundlib \
 -Iimagelib \
 -Ifilesystem \
 -Ipublic \
 -Ipm_shared \
 -Iengine/platform \
 -Iengine/platform/dreamcast \
+-I3rdparty/MultiEmulator/include \
 -I$(KOS_PORTS)/include/opus \
--I$(KOS_PORTS)/include/GL 
+-I$(KOS_PORTS)/include/GL \
+-I$(KOS_PORTS)/include/bzlib 
 
 
-
-DEFINES = -DENGINE_DLL -D_KOS_ -D_SH4_ -DXASH_BUILD_COMMIT="64726f13-dirty" -DXASH_BUILD_BRANCH="master" -DFRAME_POINTERS=1 -DXASH_STATIC_LIBS=1 -DXASH_LOW_MEMORY=2 -DXASH_ENABLE_MAIN=1 -DXASH_REF_SOFT_ENABLED=0  -DXASH_REF_GL_ENABLED=1 -DHAVE_TGMATH_H=0 -DHAVE_STRNICMP=1 -DHAVE_STRICMP=1 -D_snprintf=snprintf 
+DEFINES = -DENGINE_DLL -D_KOS_ -D_SH4_ -DXASH_BUILD_COMMIT=\"64726f13-dirty\" -DXASH_BUILD_BRANCH=\"master\" -DFRAME_POINTERS=1 -DXASH_STATIC_LIBS=1 -DXASH_LOW_MEMORY=2 -DXASH_ENABLE_MAIN=1 -DXASH_REF_SOFT_ENABLED=0  -DXASH_REF_GL_ENABLED=1 -DHAVE_TGMATH_H=0 -DHAVE_STRNICMP=1 -DHAVE_STRICMP=1 -D_snprintf=snprintf 
 FLAGS = -Os -fno-omit-frame-pointer -fno-common -fno-strict-aliasing -fno-stack-protector -mrelax -ffunction-sections -fdata-sections -fno-exceptions -freorder-blocks-algorithm=simple -flto=auto
 CFLAGS +=  $(INCLUDE) $(DEFINES) $(FLAGS)  
-
-
-public/matrixlib.o: CFLAGS := $(filter-out -Os,$(CFLAGS)) -Ofast -fbuiltin -ffast-math -ffp-contract=fast -mfsrra -mfsca
-public/xash3d_mathlib.o: CFLAGS := $(filter-out -Os,$(CFLAGS)) -Ofast -fbuiltin -ffast-math -ffp-contract=fast -mfsrra -mfsca

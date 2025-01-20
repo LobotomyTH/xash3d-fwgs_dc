@@ -24,18 +24,27 @@ GNU General Public License for more details.
 
 typedef struct
 {
-	byte		*data;
-	int		cursize;
-	int		maxsize;
+	byte *const data;
+	const int maxsize;
+	int cursize;
 } cmdbuf_t;
 
-qboolean			cmd_wait;
-cmdbuf_t			cmd_text, filteredcmd_text;
-byte			cmd_text_buf[MAX_CMD_BUFFER];
-byte			filteredcmd_text_buf[MAX_CMD_BUFFER];
-cmdalias_t		*cmd_alias;
-uint			cmd_condition;
-int			cmd_condlevel;
+static qboolean cmd_wait;
+static byte     cmd_text_buf[MAX_CMD_BUFFER];
+static byte     filteredcmd_text_buf[MAX_CMD_BUFFER];
+static cmdbuf_t cmd_text =
+{
+	.data = cmd_text_buf,
+	.maxsize = ARRAYSIZE( cmd_text_buf ),
+};
+static cmdbuf_t filteredcmd_text =
+{
+	.data = filteredcmd_text_buf,
+	.maxsize = ARRAYSIZE( filteredcmd_text_buf ),
+};
+static cmdalias_t *cmd_alias;
+static uint cmd_condition;
+static int  cmd_condlevel;
 static qboolean cmd_currentCommandIsPrivileged;
 
 static void Cmd_ExecuteStringWithPrivilegeCheck( const char *text, qboolean isPrivileged );
@@ -47,20 +56,6 @@ static void Cmd_ExecuteStringWithPrivilegeCheck( const char *text, qboolean isPr
 
 =============================================================================
 */
-
-/*
-============
-Cbuf_Init
-============
-*/
-static void Cbuf_Init( void )
-{
-	cmd_text.data = cmd_text_buf;
-	filteredcmd_text.data = filteredcmd_text_buf;
-
-	filteredcmd_text.maxsize = cmd_text.maxsize = MAX_CMD_BUFFER;
-	filteredcmd_text.cursize = cmd_text.cursize = 0;
-}
 
 /*
 ============
@@ -147,28 +142,33 @@ void Cbuf_AddFilteredText( const char *text )
 Cbuf_InsertText
 
 Adds command text immediately after the current command
-Adds a \n to the text
 ============
 */
-static void Cbuf_InsertTextToBuffer( cmdbuf_t *buf, const char *text )
+static void Cbuf_InsertTextToBuffer( cmdbuf_t *buf, const char *text, size_t len, size_t requested_len )
 {
-	int	l = Q_strlen( text );
-
-	if(( buf->cursize + l ) >= buf->maxsize )
+	if(( buf->cursize + requested_len ) >= buf->maxsize )
 	{
 		Con_Reportf( S_WARN "%s: overflow\n", __func__ );
 	}
 	else
 	{
-		memmove( buf->data + l, buf->data, buf->cursize );
-		memcpy( buf->data, text, l );
-		buf->cursize += l;
+		memmove( buf->data + len, buf->data, buf->cursize );
+		memcpy( buf->data, text, len );
+		buf->cursize += len;
 	}
+}
+
+void Cbuf_InsertTextLen( const char *text, size_t len, size_t requested_len )
+{
+	// sometimes we need to insert more data than we have
+	// but also prevent overflow
+	Cbuf_InsertTextToBuffer( &cmd_text, text, len, requested_len );
 }
 
 void Cbuf_InsertText( const char *text )
 {
-	Cbuf_InsertTextToBuffer( &cmd_text, text );
+	size_t l = Q_strlen( text );
+	Cbuf_InsertTextToBuffer( &cmd_text, text, l, l );
 }
 
 /*
@@ -268,10 +268,16 @@ Cbuf_Execute
 void Cbuf_Execute( void )
 {
 	Cbuf_ExecuteCommandsFromBuffer( &cmd_text, true, -1 );
-	// a1ba: unlimited commands for filtered buffer per frame
+
+	// a1ba: goldsrc limits unprivileged commands per frame to 1 here
 	// I don't see any sense in restricting that at this moment
 	// but in future we may limit this
-	Cbuf_ExecuteCommandsFromBuffer( &filteredcmd_text, false, -1 );
+
+	// a1ba: there is little to no sense limit privileged commands in
+	// local game, as client runs server code anyway
+	// do this for singleplayer only though, to make it easier to catch
+	// possible bugs during local multiplayer testing
+	Cbuf_ExecuteCommandsFromBuffer( &filteredcmd_text, SV_Active() && SV_GetMaxClients() == 1, -1 );
 }
 
 /*
@@ -517,14 +523,14 @@ static void Cmd_UnAlias_f ( void )
 
 =============================================================================
 */
-typedef struct cmd_s
+struct cmd_s
 {
 	struct cmd_s	*next;
 	char		*name;
 	xcommand_t	function;
 	int		flags;
 	char		*desc;
-} cmd_t;
+};
 
 static int		cmd_argc;
 static const char	*cmd_args = NULL;
@@ -675,8 +681,7 @@ void Cmd_TokenizeString( const char *text )
 Cmd_AddCommandEx
 ============
 */
-static int Cmd_AddCommandEx( const char *funcname, const char *cmd_name, xcommand_t function,
-	const char *cmd_desc, int iFlags )
+int Cmd_AddCommandEx( const char *cmd_name, xcommand_t function, const char *cmd_desc, int iFlags, const char *funcname )
 {
 	cmd_t	*cmd, *cur, *prev;
 
@@ -693,11 +698,28 @@ static int Cmd_AddCommandEx( const char *funcname, const char *cmd_name, xcomman
 		return 0;
 	}
 
-	// fail if the command already exists
-	if( Cmd_Exists( cmd_name ))
+	// fail if the command already exists and cannot be overriden
+	cmd = Cmd_Exists( cmd_name );
+	if( cmd )
 	{
-		Con_DPrintf( S_ERROR "%s: %s already defined\n", funcname, cmd_name );
-		return 0;
+		// some mods register commands that share the name with some engine's commands
+		// when they aren't critical to keep engine running, we can let mods to override them
+		// unfortunately, we lose original command this way
+		if( FBitSet( cmd->flags, CMD_OVERRIDABLE ))
+		{
+			Mem_Free( cmd->desc );
+			cmd->desc = copystring( cmd_desc );
+			cmd->function = function;
+			cmd->flags = iFlags;
+
+			Con_DPrintf( S_WARN "%s: %s already defined but is allowed to be overriden\n", funcname, cmd_name );
+			return 1;
+		}
+		else
+		{
+			Con_DPrintf( "%s%s: %s already defined\n", cmd->function == function ? S_WARN : S_ERROR, funcname, cmd_name );
+			return 0;
+		}
 	}
 
 	// use a small malloc to avoid zone fragmentation
@@ -719,75 +741,6 @@ static int Cmd_AddCommandEx( const char *funcname, const char *cmd_name, xcomman
 #endif
 
 	return 1;
-}
-
-/*
-============
-Cmd_AddCommand
-============
-*/
-void Cmd_AddCommand( const char *cmd_name, xcommand_t function, const char *cmd_desc )
-{
-	Cmd_AddCommandEx( __func__, cmd_name, function, cmd_desc, 0 );
-}
-
-
-/*
-============
-Cmd_AddRestrictedCommand
-============
-*/
-void Cmd_AddRestrictedCommand( const char *cmd_name, xcommand_t function, const char *cmd_desc )
-{
-	Cmd_AddCommandEx( __func__, cmd_name, function, cmd_desc, CMD_PRIVILEGED );
-}
-
-/*
-============
-Cmd_AddServerCommand
-============
-*/
-void GAME_EXPORT Cmd_AddServerCommand( const char *cmd_name, xcommand_t function )
-{
-	Cmd_AddCommandEx( __func__, cmd_name, function, "server command", CMD_SERVERDLL );
-}
-
-/*
-============
-Cmd_AddClientCommand
-============
-*/
-int GAME_EXPORT Cmd_AddClientCommand( const char *cmd_name, xcommand_t function )
-{
-	int flags = CMD_CLIENTDLL;
-
-	// a1ba: try to mitigate outdated client.dll vulnerabilities
-	if( !Q_stricmp( cmd_name, "motd_write" ))
-	{
-		flags |= CMD_PRIVILEGED;
-	}
-
-	return Cmd_AddCommandEx( __func__, cmd_name, function, "client command", flags );
-}
-
-/*
-============
-Cmd_AddGameUICommand
-============
-*/
-int GAME_EXPORT Cmd_AddGameUICommand( const char *cmd_name, xcommand_t function )
-{
-	return Cmd_AddCommandEx( __func__, cmd_name, function, "gameui command", CMD_GAMEUIDLL );
-}
-
-/*
-============
-Cmd_AddRefCommand
-============
-*/
-int Cmd_AddRefCommand( const char *cmd_name, xcommand_t function, const char *description )
-{
-	return Cmd_AddCommandEx( __func__, cmd_name, function, description, CMD_REFDLL );
 }
 
 /*
@@ -858,19 +811,18 @@ void Cmd_LookupCmds( void *buffer, void *ptr, setpair_t callback )
 Cmd_Exists
 ============
 */
-qboolean Cmd_Exists( const char *cmd_name )
+cmd_t *Cmd_Exists( const char *cmd_name )
 {
 #if defined(XASH_HASHED_VARS)
-	return BaseCmd_Find( HM_CMD, cmd_name ) != NULL;
+	return BaseCmd_Find( HM_CMD, cmd_name );
 #else
 	cmd_t	*cmd;
-
 	for( cmd = cmd_functions; cmd; cmd = cmd->next )
 	{
 		if( !Q_strcmp( cmd_name, cmd->name ))
-			return true;
+			return cmd;
 	}
-	return false;
+	return NULL;
 #endif
 }
 
@@ -1063,9 +1015,10 @@ static void Cmd_ExecuteStringWithPrivilegeCheck( const char *text, qboolean isPr
 
 		if( a )
 		{
+			size_t len = Q_strlen( a->value );
 			Cbuf_InsertTextToBuffer(
 				isPrivileged ? &cmd_text : &filteredcmd_text,
-				a->value );
+				a->value, len, len );
 			return;
 		}
 	}
@@ -1219,13 +1172,13 @@ void Cmd_Unlink( int group )
 	cmd_t	**prev;
 	int	count = 0;
 
-	if( Cvar_VariableInteger( "host_gameloaded" ) && FBitSet( group, CMD_SERVERDLL ))
+	if( FBitSet( group, CMD_SERVERDLL ) && Cvar_VariableInteger( "host_gameloaded" ))
 		return;
 
-	if( Cvar_VariableInteger( "host_clientloaded" ) && FBitSet( group, CMD_CLIENTDLL ))
+	if( FBitSet( group, CMD_CLIENTDLL ) && Cvar_VariableInteger( "host_clientloaded" ))
 		return;
 
-	if( Cvar_VariableInteger( "host_gameuiloaded" ) && FBitSet( group, CMD_GAMEUIDLL ))
+	if( FBitSet( group, CMD_GAMEUIDLL ) && Cvar_VariableInteger( "host_gameuiloaded" ))
 		return;
 
 	prev = &cmd_functions;
@@ -1283,10 +1236,9 @@ static void Cmd_Apropos_f( void )
 
 	for( var = (convar_t*)Cvar_GetList(); var; var = var->next )
 	{
-		#if !XASH_DREAMCAST
+#if !XASH_DREAMCAST
 		if( !matchpattern_with_separator( var->name, partial, true, "", false ) )
 		{
-			
 			const char *desc;
 
 			if( var->flags & FCVAR_EXTENDED )
@@ -1299,19 +1251,19 @@ static void Cmd_Apropos_f( void )
 			if( !matchpattern_with_separator( desc, partial, true, "", false ))
 				continue;
 		}
-		#endif
+#endif
 		// TODO: maybe add flags output like cvarlist, also
 		// fix inconsistencies in output from different commands
-		#if XASH_DREAMCAST
+#if XASH_DREAMCAST
 		Msg( "cvar ^3%s^7 is \"%s\" [\"%s\"] \n",
 			var->name, var->string,
 			( var->flags & FCVAR_EXTENDED ) ? var->def_string : "");
-		#else
+#else
 		Msg( "cvar ^3%s^7 is \"%s\" [\"%s\"] %s\n",
 			var->name, var->string,
 			( var->flags & FCVAR_EXTENDED ) ? var->def_string : "",
 			( var->flags & FCVAR_EXTENDED ) ? var->desc : "game cvar");
-		#endif
+#endif
 		count++;
 	}
 
@@ -1319,18 +1271,18 @@ static void Cmd_Apropos_f( void )
 	{
 		if( cmd->name[0] == '@' )
 			continue;	// never show system cmds
-		#if XASH_DREAMCAST
+#if XASH_DREAMCAST
 		if( !matchpattern_with_separator( cmd->name, partial, true, "", false ))
 			continue;
 
 		Msg( "command ^2%s\n", cmd->name);
-		#else
+#else
 		if( !matchpattern_with_separator( cmd->name, partial, true, "", false ) &&
 			!matchpattern_with_separator( cmd->desc, partial, true, "", false ))
 			continue;
 
 		Msg( "command ^2%s^7: %s\n", cmd->name, cmd->desc );
-		#endif
+#endif
 		count++;
 	}
 
@@ -1401,8 +1353,6 @@ Cmd_Init
 */
 void Cmd_Init( void )
 {
-	Cbuf_Init();
-
 	cmd_functions = NULL;
 	cmd_condition = 0;
 	cmd_alias = NULL;

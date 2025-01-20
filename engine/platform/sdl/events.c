@@ -265,7 +265,7 @@ static void SDLash_KeyEvent( SDL_KeyboardEvent key )
 			break;
 		}
 		case SDL_SCANCODE_PAUSE: keynum = K_PAUSE; break;
-		case SDL_SCANCODE_SCROLLLOCK: keynum = K_SCROLLOCK; break;
+		case SDL_SCANCODE_SCROLLLOCK: keynum = K_SCROLLLOCK; break;
 #if SDL_VERSION_ATLEAST( 2, 0, 0 )
 		case SDL_SCANCODE_APPLICATION: keynum = K_WIN; break; // (compose key) ???
 		// don't console spam on known functional buttons, not used in engine
@@ -396,8 +396,12 @@ static void SDLash_ActiveEvent( int gain )
 		}
 #endif
 		host.status = HOST_NOFOCUS;
+
 		if( cls.key_dest == key_game )
+		{
+			Key_ClearStates();
 			IN_DeactivateMouse();
+		}
 
 		host.force_draw_version_time = host.realtime + 2.0;
 		VID_RestoreScreenResolution();
@@ -498,7 +502,7 @@ static void SDLash_EventHandler( SDL_Event *event )
 		break;
 
 	case SDL_QUIT:
-		Sys_Quit();
+		Sys_Quit( "caught SDL_QUIT" );
 		break;
 #if SDL_VERSION_ATLEAST( 2, 0, 0 )
 	case SDL_MOUSEWHEEL:

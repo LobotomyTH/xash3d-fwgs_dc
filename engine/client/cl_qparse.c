@@ -431,7 +431,7 @@ static void CL_ParseQuakeEntityData( sizebuf_t *msg, int bits )
 		cls.signon = SIGNONS;
 
 		// Clear loading plaque.
-		CL_SignonReply ();
+		CL_SignonReply( PROTO_QUAKE );
 	}
 
 	// alloc next slot to store update
@@ -626,13 +626,14 @@ CL_ParseStaticEntity
 
 ===================
 */
-static void CL_ParseStaticEntity( sizebuf_t *msg )
+static void CL_ParseQuakeStaticEntity( sizebuf_t *msg )
 {
-	entity_state_t	state;
+	entity_state_t state = { 0 };
 	cl_entity_t	*ent;
 	int		i;
 
-	memset( &state, 0, sizeof( state ));
+	if( !clgame.static_entities )
+		clgame.static_entities = Mem_Calloc( clgame.mempool, sizeof( cl_entity_t ) * MAX_STATIC_ENTITIES );
 
 	state.modelindex = MSG_ReadByte( msg );
 	state.frame = MSG_ReadByte( msg );
@@ -950,7 +951,7 @@ void CL_ParseQuakeMessage( sizebuf_t *msg )
 			break;
 		case svc_time:
 			Cbuf_AddText( "\n" ); // new frame was started
-			CL_ParseServerTime( msg );
+			CL_ParseServerTime( msg, PROTO_QUAKE );
 			break;
 		case svc_print:
 			str = MSG_ReadString( msg );
@@ -969,9 +970,7 @@ void CL_ParseQuakeMessage( sizebuf_t *msg )
 			CL_ParseQuakeServerInfo( msg );
 			break;
 		case svc_lightstyle:
-			param1 = MSG_ReadByte( msg );
-			str = MSG_ReadString( msg );
-			CL_SetLightstyle( param1, str, cl.mtime[0] );
+			CL_ParseLightStyle( msg, PROTO_QUAKE );
 			break;
 		case svc_updatename:
 			param1 = MSG_ReadByte( msg );
@@ -1006,7 +1005,7 @@ void CL_ParseQuakeMessage( sizebuf_t *msg )
 			CL_ParseQuakeDamage( msg );
 			break;
 		case svc_spawnstatic:
-			CL_ParseStaticEntity( msg );
+			CL_ParseQuakeStaticEntity( msg );
 			break;
 		case svc_spawnbinary:
 			// never used in Quake

@@ -34,9 +34,9 @@ typedef struct
 } player_model_t;
 
 // never gonna change, just shut up const warning
-cvar_t r_shadows = { (char *)"r_shadows", (char *)"0", 0 };
+CVAR_DEFINE_AUTO( r_shadows, "0", 0, "draw ugly shadows" );
 
-static vec3_t hullcolor[8] =
+static const vec3_t hullcolor[8] =
 {
 { 1.0f, 1.0f, 1.0f },
 { 1.0f, 0.5f, 0.5f },
@@ -159,9 +159,6 @@ void R_StudioInit( void )
 #endif
 
 	Matrix3x4_LoadIdentity( g_studio.rotationmatrix );
-
-	// g-cont. cvar disabled by Valve
-//	gEngfuncs_gl.Cvar_RegisterVariable( &r_shadows );
 
 	g_studio.interpolate = true;
 	g_studio.framecount = 0;
@@ -1459,7 +1456,7 @@ static void R_StudioDynamicLight( cl_entity_t *ent, alight_t *plight )
 
 	for( lnum = 0; lnum < MAX_DLIGHTS; lnum++ )
 	{
-		dl = gEngfuncs_gl.GetDynamicLight( lnum );
+		dl = &tr.dlights[lnum];
 
 		if( dl->die < g_studio.time || !r_dynamic->value )
 			continue;
@@ -1526,7 +1523,6 @@ static void R_StudioEntityLight( alight_t *lightinfo )
 	float		lstrength[MAX_LOCALLIGHTS];
 	cl_entity_t	*ent = RI.currententity;
 	vec3_t		mid, origin, pos;
-	dlight_t		*el;
 
 	g_studio.numlocallights = 0;
 
@@ -1542,7 +1538,7 @@ static void R_StudioEntityLight( alight_t *lightinfo )
 
 	for( lnum = 0; lnum < MAX_ELIGHTS; lnum++ )
 	{
-		el = gEngfuncs_gl.GetEntityLight( lnum );
+		dlight_t *el = &tr.elights[lnum];
 
 		if( el->die < g_studio.time || el->radius <= 0.0f )
 			continue;
@@ -1581,9 +1577,9 @@ static void R_StudioEntityLight( alight_t *lightinfo )
 
 			if( k != -1 )
 			{
-				g_studio.locallightcolor[k][0] = gEngfuncs_gl.LinearGammaTable( el->color.r << 2 );
-				g_studio.locallightcolor[k][1] = gEngfuncs_gl.LinearGammaTable( el->color.g << 2 );
-				g_studio.locallightcolor[k][2] = gEngfuncs_gl.LinearGammaTable( el->color.b << 2 );
+				g_studio.locallightcolor[k][0] = LinearGammaTable( el->color.r << 2 );
+				g_studio.locallightcolor[k][1] = LinearGammaTable( el->color.g << 2 );
+				g_studio.locallightcolor[k][2] = LinearGammaTable( el->color.b << 2 );
 				g_studio.locallightR2[k] = r2;
 				g_studio.locallight[k] = el;
 				lstrength[k] = minstrength;
@@ -1679,7 +1675,7 @@ static void R_StudioLighting( float *lv, int bone, int flags, vec3_t normal )
 
 	illum = Q_min( illum, 255.0f );
 
-	*lv = gEngfuncs_gl.LightToTexGammaEx( illum * 4 ) / 1023.0f;
+	*lv = LightToTexGamma( illum * 4 ) / 1023.0f;
 }
 
 /*
@@ -1734,12 +1730,12 @@ static void R_LightLambert( vec4_t light[MAX_LOCALLIGHTS], const vec3_t normal, 
 	{
 		for( i = 0; i < 3; i++ )
 		{
-			float c = finalLight[i] + gEngfuncs_gl.LinearGammaTable( color[i] * 1023.0f );
+			float c = finalLight[i] + LinearGammaTable( color[i] * 1023.0f );
 
 			if( c > 1023.0f )
 				out[i] = 255;
 			else
-				out[i] = gEngfuncs_gl.ScreenGammaTable( c ) >> 2;
+				out[i] = ScreenGammaTable( c ) >> 2;
 		}
 	}
 	else
@@ -1999,10 +1995,10 @@ R_StudioDrawNormalMesh
 generic path
 ===============
 */
-static void R_StudioDrawFloatMesh(short *ptricmds, vec3_t *pstudionorms)
+static void R_StudioDrawFloatMesh( short *ptricmds, vec3_t *pstudionorms )
 {
 #if XASH_DREAMCAST
-    int i;
+    int  i;
     static fast_vert_aligned_t vertices[MAXSTUDIOVERTS];
     
     glEnableClientState(GL_VERTEX_ARRAY);
@@ -2381,7 +2377,7 @@ static void R_StudioBuildArrayChromeMesh( short *ptricmds, vec3_t *pstudionorms,
 
 static void R_StudioDrawArrays( uint startverts, uint startelems )
 {
-	#if !XASH_DREAMCAST
+#if !XASH_DREAMCAST
 	glEnableClientState( GL_VERTEX_ARRAY );
 	glVertexPointer( 3, GL_FLOAT, 12, g_studio.arrayverts );
 
@@ -2405,7 +2401,7 @@ static void R_StudioDrawArrays( uint startverts, uint startelems )
 	glDisableClientState( GL_TEXTURE_COORD_ARRAY );
 	if( !( g_nForceFaceFlags & STUDIO_NF_CHROME ) )
 		glDisableClientState( GL_COLOR_ARRAY );
-	#endif
+#endif
 }
 
 /*
@@ -2872,18 +2868,19 @@ check for texture flags
 */
 int R_GetEntityRenderMode( cl_entity_t *ent )
 {
-	int		i, opaque, trans;
-	mstudiotexture_t	*ptexture;
-	cl_entity_t	*oldent;
-	model_t		*model;
-	studiohdr_t	*phdr;
+	int              i, opaque, trans;
+	mstudiotexture_t *ptexture;
+	cl_entity_t      *oldent;
+	model_t          *model = NULL;
+	studiohdr_t      *phdr;
 
 	oldent = RI.currententity;
 	RI.currententity = ent;
 
 	if( ent->player ) // check it for real playermodel
 		model = R_StudioSetupPlayerModel( ent->curstate.number - 1 );
-	else model = ent->model;
+	if( !model )
+		model = ent->model;
 
 	RI.currententity = oldent;
 
@@ -3875,11 +3872,11 @@ void R_DrawViewModel( void )
 
 	switch( RI.currententity->model->type )
 	{
+#if !XASH_DREAMCAST		
 	case mod_alias:
-		#if !XASH_DREAMCAST
 		R_DrawAliasModel( RI.currententity );
-		#endif
 		break;
+#endif
 	case mod_studio:
 		R_StudioSetupTimings();
 		R_StudioDrawModelInternal( RI.currententity, STUDIO_RENDER );
