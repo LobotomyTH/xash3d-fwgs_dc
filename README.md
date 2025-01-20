@@ -6,14 +6,14 @@ Xash3D (pronounced `[ksɑʂ]`) FWGS is a game engine, aimed to provide compatibi
 
 1. KallistiOS (KOS) development environment
 2. GLDC
-3. HLSDK-portable 
+3. FatFs
+4. libbz2
 
 ## Repository Setup
 
 1. Create a development directory (e.g., `Xash3D_DC`)
 2. Clone the following repositories in the same directory:
    ```
-   git clone https://github.com/maximqaxd/hlsdk-portable_dc.git
    git clone https://github.com/maximqaxd/xash3d-fwgs_dc
    ```
 
@@ -52,12 +52,14 @@ Xash3D (pronounced `[ksɑʂ]`) FWGS is a game engine, aimed to provide compatibi
 ## Building Dependencies
 
 1. Build GLDC:
-    ```
+    ```c
    # Modify texture.c line 1700:
    Replace FASTCPY(targetData, conversionBuffer, destBytes);
    With memcpy(targetData, conversionBuffer, destBytes);
    # In include/GL/glext.h
    Remove or comment #define GL_TEXTURE_LOD_BIAS 0x8501
+    # In GL/config.h
+   replace #define MAX_TEXTURE_COUNT to 1536
    ```
 
 ## Building Xash3D
