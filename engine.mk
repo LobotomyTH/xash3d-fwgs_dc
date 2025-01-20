@@ -160,7 +160,8 @@ INCLUDE = -Icommon \
 -Iengine/platform/dreamcast \
 -I3rdparty/MultiEmulator/include \
 -I$(KOS_PORTS)/include/opus \
--I$(KOS_PORTS)/include/GL \
+-I3rdparty/dreamcast/GLdc/include/GL \
+-I3rdparty/dreamcast/FatFs/include \
 -I$(KOS_PORTS)/include/bzlib 
 
 
