@@ -2260,4 +2260,3 @@ void CL_ThinkParticle( double frametime, particle_t *p )
 		break;
 	}
 }
-
