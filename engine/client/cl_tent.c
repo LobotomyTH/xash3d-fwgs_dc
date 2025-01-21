@@ -192,7 +192,7 @@ static void CL_ClearTempEnts( void )
 	cl_free_tents = cl_tempents;
 	cl_active_tents = NULL;
 #else
-#define GI_MAX_TENTS 128
+#define GI_MAX_TENTS 32
 	for( i = 0; i < GI_MAX_TENTS - 1; i++ )
 	{
 		cl_tempents[i].next = &cl_tempents[i+1];
@@ -215,7 +215,7 @@ CL_InitTempents
 void CL_InitTempEnts( void )
 {
 #if XASH_DREAMCAST
-	cl_tempents = Mem_Calloc( cls.mempool, sizeof( TEMPENTITY ) * 128 );
+	cl_tempents = Mem_Calloc( cls.mempool, sizeof( TEMPENTITY ) * 32 );
 #else
 	cl_tempents = Mem_Calloc( cls.mempool, sizeof( TEMPENTITY ) * GI->max_tents );
 #endif

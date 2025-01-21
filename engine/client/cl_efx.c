@@ -366,7 +366,7 @@ CL_InitViewBeams
 void CL_InitViewBeams( void )
 {
 #if XASH_DREAMCAST
-	cl_viewbeams = Mem_Calloc( cls.mempool, sizeof( BEAM ) * 16 );
+	cl_viewbeams = Mem_Calloc( cls.mempool, sizeof( BEAM ) * 4 );
 #else
 	cl_viewbeams = Mem_Calloc( cls.mempool, sizeof( BEAM ) * GI->max_beams );
 #endif
@@ -394,7 +394,7 @@ void CL_ClearViewBeams( void )
 		cl_viewbeams[i].next = &cl_viewbeams[i+1];
 	cl_viewbeams[GI->max_beams - 1].next = NULL;
 #else
-#define GI_MAX_BEAMS 16
+#define GI_MAX_BEAMS 4
 	for( i = 0; i < GI_MAX_BEAMS - 1; i++ )
 		cl_viewbeams[i].next = &cl_viewbeams[i+1];
 	cl_viewbeams[GI_MAX_BEAMS - 1].next = NULL;
