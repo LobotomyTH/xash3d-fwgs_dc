@@ -467,12 +467,11 @@ qboolean Image_LoadMIP( const char *name, const byte *buffer, fs_offset_t filesi
 	
 	fin = (byte *)buffer;
 
-	if (*(uint32_t*)buffer == PVRTSIGN)  
+	if (*(uint32_t*)fin == PVRTSIGN)  
 	{
 		char basename[MAX_QPATH];
-		pvrt_t *pvrt = (pvrt_t*)buffer;
-		byte *texture_data = fin;
-	
+		pvrt_t *pvrt = (pvrt_t*)fin;
+		byte *texture_data = fin + sizeof(pvrt_t);
 
 		// Set dimensions from PVRT header
 		image.width = pvrt->width;
