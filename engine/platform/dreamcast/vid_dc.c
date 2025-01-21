@@ -24,6 +24,7 @@ GNU General Public License for more details.
 
 static int num_vidmodes = 0;
 static void GL_SetupAttributes( void );
+static qboolean vsync;
 
 
 /*
@@ -269,7 +270,18 @@ void* GL_GetProcAddress( const char *name ) // RenderAPI requirement
 
 void GL_UpdateSwapInterval( void )
 {
-	// stub
+	// disable VSync while level is loading
+	if( cls.state < ca_active )
+	{
+		// setup vsync here
+		vsync = false;
+		SetBits( gl_vsync.flags, FCVAR_CHANGED );
+	}
+	else if( FBitSet( gl_vsync.flags, FCVAR_CHANGED ))
+	{
+		ClearBits( gl_vsync.flags, FCVAR_CHANGED );
+		vsync = true;
+	}
 }
 
 void *SW_LockBuffer( void )

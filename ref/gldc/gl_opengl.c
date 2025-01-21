@@ -48,6 +48,7 @@ glconfig_t	glConfig;
 glstate_t	glState;
 #if XASH_DREAMCAST
 glwstate_t	r_glw_state;
+extern convar_t gl_vsync;
 #else
 glwstate_t	glw_state;
 #endif
@@ -795,9 +796,8 @@ static void R_RenderInfo_f( void )
 	gEngfuncs_gl.Con_Printf( "\n" );
 	gEngfuncs_gl.Con_Printf( "MODE: %ix%i\n", gpGlobals_gl->width, gpGlobals_gl->height );
 	gEngfuncs_gl.Con_Printf( "\n" );
-#if !XASH_DREAMCAST
-	gEngfuncs_gl.Con_Printf( "VERTICAL SYNC: %s\n", gl_vsync->value ? "enabled" : "disabled" );
-#endif
+	gEngfuncs_gl.Con_Printf( "VERTICAL SYNC: %s\n", gl_vsync.value ? "enabled" : "disabled" );
+
 	gEngfuncs_gl.Con_Printf( "Color %d bits, Alpha %d bits, Depth %d bits, Stencil %d bits\n", glConfig.color_bits,
 		glConfig.alpha_bits, glConfig.depth_bits, glConfig.stencil_bits );
 }
@@ -992,10 +992,8 @@ static void GL_InitCommands( void )
 	// these cvar not used by engine but some mods requires this
 	gEngfuncs_gl.Cvar_RegisterVariable( &gl_polyoffset );
 
-#if !XASH_DREAMCAST
 	// make sure gl_vsync is checked after vid_restart
-	SetBits( gl_vsync->flags, FCVAR_CHANGED );
-#endif
+	SetBits( gl_vsync.flags, FCVAR_CHANGED );
 	gEngfuncs_gl.Cmd_AddCommand( "r_info", R_RenderInfo_f, "display renderer info" );
 	gEngfuncs_gl.Cmd_AddCommand( "timerefresh", SCR_TimeRefresh_f, "turn quickly and print rendering statistcs" );
 }
