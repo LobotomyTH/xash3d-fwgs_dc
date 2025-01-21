@@ -25,6 +25,9 @@ GNU General Public License for more details.
 
 float		gldepthmin, gldepthmax;
 ref_instance_t	RI;
+#if XASH_DREAMCAST
+extern convar_t *gl_clear;
+#endif
 
 static int R_RankForRenderMode( int rendermode )
 {
@@ -585,8 +588,10 @@ R_EndGL
 */
 static void R_EndGL( void )
 {
+#if !XASH_DREAMCAST
 	if( RI.params & RP_CLIPPLANE )
 		glDisable( GL_CLIP_PLANE0 );
+#endif
 }
 
 /*
@@ -1052,13 +1057,11 @@ void R_BeginFrame( qboolean clearScene )
 	glConfig.softwareGammaUpdate = false;	// in case of possible fails
 
 #if XASH_DREAMCAST
-	glEnable(GL_NEARZ_CLIPPING_KOS);
-
-	//if(( gl_clear->value || ENGINE_GET_PARM( PARM_DEV_OVERVIEW )) &&
-	//	clearScene && ENGINE_GET_PARM( PARM_CONNSTATE ) != ca_cinematic )
-	//{
-	//	glClear( GL_COLOR_BUFFER_BIT );
-	//}
+	if(( gl_clear->value || ENGINE_GET_PARM( PARM_DEV_OVERVIEW )) &&
+	clearScene && ENGINE_GET_PARM( PARM_CONNSTATE ) != ca_cinematic )
+	{
+		glClear( GL_COLOR_BUFFER_BIT );
+	}
 #endif
 
 	R_CheckCvars();
