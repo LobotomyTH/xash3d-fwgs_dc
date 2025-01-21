@@ -3998,6 +3998,17 @@ static void R_StudioLoadTexture( model_t *mod, studiohdr_t *phdr, mstudiotexture
 				size = sizeof(mstudiotexture_t) + (ptexture->width * ptexture->height * 2);
 			}
 		}
+		else if (*(uint32_t*)((byte *)phdr + ptexture->index) == PVRTSIGN)
+		{
+			pvrt_t *pvrt = (pvrt_t*)((byte *)phdr + ptexture->index);
+			
+			if ((pvrt->imageFormat >> 8) == PVR_VQ)
+				size = sizeof(mstudiotexture_t) + 2048 + ((ptexture->width * ptexture->height) / 4);
+
+			else if ((pvrt->imageFormat >> 8) == PVR_RECT)
+				// Regular format:width * height * 2 bytes per pixel
+				size = sizeof(mstudiotexture_t) + (ptexture->width * ptexture->height * 2);
+		}
 		else
 		{
 			size = sizeof( mstudiotexture_t ) + ptexture->width * ptexture->height + 768;
