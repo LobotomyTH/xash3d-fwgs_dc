@@ -186,7 +186,7 @@ qboolean R_Init_Video( const int type )
     // RGBA4444 is the fastest general format - 8888 will cause a perf issue
     config.internal_palette_format = GL_RGBA4;
 
-    config.texture_twiddle = GL_FALSE;
+    config.texture_twiddle = GL_TRUE;
 
     glKosInitEx(&config);
 
